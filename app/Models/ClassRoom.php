@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+
+class ClassRoom extends Model
+{
+    use HasFactory;
+
+    protected $table = 'student_classes';
+
+    protected $fillable = [
+        'class_name',
+        'is_active',
+        'is_ongoing',
+        'teacher_id',
+        'subject_id',
+        'grade_id'
+    ];
+
+    // A class belongs to a teacher
+    public function teacher()
+    {
+        return $this->belongsTo(Teacher::class);
+    }
+
+    // A class belongs to a subject
+    public function subject()
+    {
+        return $this->belongsTo(Subject::class);
+    }
+
+    // A class belongs to a grade
+    public function grade()
+    {
+        return $this->belongsTo(Grade::class);
+    }
+}

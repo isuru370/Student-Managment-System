@@ -1,0 +1,1258 @@
+@extends('layouts.app')
+
+@section('title', 'Manage Students')
+@section('page-title', 'Students Management')
+
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item active">Students</li>
+@endsection
+
+@section('content')
+    <div class="row">
+        <div class="col-12">
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6">
+                    <div class="card stat-card bg-primary bg-gradient">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="card-title text-white">Total Students</h4>
+                                    <h2 class="text-white" id="totalStudents">0</h2>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-users fa-2x text-white-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="card stat-card bg-success bg-gradient">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="card-title text-white">Grade 11</h4>
+                                    <h2 class="text-white" id="grade11Students">0</h2>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-graduation-cap fa-2x text-white-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="card stat-card bg-info bg-gradient">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="card-title text-white">Male Students</h4>
+                                    <h2 class="text-white" id="maleStudents">0</h2>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-male fa-2x text-white-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="card stat-card bg-warning bg-gradient">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="card-title text-white">Female Students</h4>
+                                    <h2 class="text-white" id="femaleStudents">0</h2>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-female fa-2x text-white-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Card -->
+            <div class="card custom-card">
+                <div class="card-header bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title mb-1">Students Management</h5>
+                            <p class="text-muted mb-0">Manage all students and their information</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary" onclick="loadStudents()" title="Refresh">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <a href="{{ route('students.create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Add New Student
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body position-relative">
+                    <!-- Loading Spinner -->
+                    <div id="loadingSpinner" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading students...</p>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="errorMessage" class="alert alert-danger d-none" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="errorText"></span>
+                    </div>
+
+                    <!-- Action Bar -->
+                    <!-- Action Bar -->
+                    <div class="d-none" id="actionBar">
+                        <!-- First Row: Info and Export Controls -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-muted" id="studentCount">Showing 0 students</span>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-outline-primary btn-sm" onclick="exportTo('csv')">
+                                    <i class="fas fa-file-csv me-1"></i>CSV
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="exportTo('excel')">
+                                    <i class="fas fa-file-excel me-1"></i>Excel
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="window.print()">
+                                    <i class="fas fa-print me-1"></i>Print
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="exportTo('pdf')">
+                                    <i class="fas fa-file-pdf me-1"></i>PDF
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Second Row: Filters and Search -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <!-- View Toggle -->
+                                <div class="btn-group btn-group-sm me-2">
+                                    <button type="button" class="btn btn-outline-secondary active" id="tableViewBtn"
+                                        title="Table View">
+                                        <i class="fas fa-table"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="cardViewBtn"
+                                        title="Card View">
+                                        <i class="fas fa-th-large"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Filter Buttons -->
+                                <div class="btn-group btn-group-sm me-2">
+                                    <button type="button" class="btn btn-outline-secondary active" id="filterAll"
+                                        data-status="">All</button>
+                                    <button type="button" class="btn btn-outline-success" id="filterActive"
+                                        data-status="active">Active</button>
+                                    <button type="button" class="btn btn-outline-secondary" id="filterInactive"
+                                        data-status="inactive">Inactive</button>
+                                </div>
+
+                                <!-- Grade Filter -->
+                                <div class="d-flex align-items-center me-2">
+                                    <label for="gradeFilter" class="form-label text-muted mb-0 me-2">Grade:</label>
+                                    <select class="form-select form-select-sm" id="gradeFilter" style="width: 120px;">
+                                        <option value="">All Grades</option>
+                                        <!-- Grades will be dynamically populated via JavaScript -->
+                                    </select>
+                                </div>
+
+                                <!-- Rows Per Page -->
+                                <div class="d-flex align-items-center me-2">
+                                    <label for="rowsPerPage" class="form-label text-muted mb-0 me-2">Show:</label>
+                                    <select class="form-select form-select-sm" id="rowsPerPage" style="width: 80px;">
+                                        <option value="10">10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Search Box -->
+                            <div class="input-group input-group-sm" style="width: 280px;">
+                                <span class="input-group-text bg-transparent">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" class="form-control" placeholder="Search students..." id="searchInput"
+                                    autocomplete="off">
+                                <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn" title="Clear">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Students Cards View -->
+                    <div class="row d-none" id="studentsCardsContainer">
+                        <!-- Student cards will be loaded here via JavaScript -->
+                    </div>
+
+                    <!-- Students Table -->
+                    <div class="table-responsive" id="studentsTableContainer">
+                        <table class="table table-hover" id="studentsTable">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th width="60" class="text-center">#</th>
+                                    <th>Student</th>
+                                    <th>Contact</th>
+                                    <th class="text-center">Grade</th>
+                                    <th class="text-center">Gender</th>
+                                    <th class="text-center">Status</th>
+                                    <th width="140" class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentsTableBody">
+                                <!-- Students will be loaded here via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="row mt-3 d-none" id="paginationSection">
+                        <div class="col-md-6">
+                            <div class="text-muted" id="paginationInfo">
+                                Showing <span id="startRecord">0</span> to <span id="endRecord">0</span> of <span
+                                    id="totalRecords">0</span> entries
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <nav aria-label="Students pagination">
+                                <ul class="pagination justify-content-end mb-0" id="paginationLinks">
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="emptyState" class="text-center py-5 d-none">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-users fa-4x text-muted mb-4"></i>
+                        </div>
+                        <h4 class="text-muted">No Students Found</h4>
+                        <p class="text-muted mb-4">There are no students in the database yet.</p>
+                        <a href="{{ route('students.create') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus me-2"></i>Add First Student
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activate Student Modal -->
+    <div class="modal fade" id="activateStudentModal" tabindex="-1" aria-labelledby="activateStudentModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-check me-2"></i>Activate Student
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to activate this student?</p>
+                    <div class="student-info bg-light p-3 rounded">
+                        <strong id="activateStudentName"></strong><br>
+                        <small class="text-muted" id="activateStudentEmail"></small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-success" id="confirmActivateBtn">
+                        <i class="fas fa-user-check me-2"></i>Activate Student
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deactivate Student Modal -->
+
+    <div class="modal fade" id="deactivateStudentModal" tabindex="-1" aria-labelledby="deactivateStudentModalLabel"
+        aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title" id="deactivateStudentModalLabel">
+                        <i class="fas fa-user-slash me-2"></i>Deactivate Student
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to deactivate this student?</p>
+                    <div class="student-info bg-light p-3 rounded">
+                        <strong id="deactivateStudentName"></strong><br>
+                        <small class="text-muted" id="deactivateStudentEmail"></small>
+                    </div>
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        This student will no longer be able to access the system.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-warning" id="confirmDeactivateBtn"
+                        aria-describedby="deactivateWarning">
+                        <i class="fas fa-user-slash me-2"></i>Deactivate Student
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+@endsection
+
+@push('styles')
+    <style>
+        .stat-card {
+            border: none;
+            border-radius: 15px;
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .custom-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .table th {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            font-weight: 600;
+            border: none;
+            padding: 1rem 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .table td {
+            vertical-align: middle;
+            padding: 1rem 0.75rem;
+            border-color: #f8f9fa;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+            transform: translateY(-1px);
+            transition: all 0.2s ease;
+        }
+
+        .badge.rounded-pill {
+            padding: 0.5em 0.8em;
+            font-size: 0.75rem;
+        }
+
+        .avatar-sm {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .text-pink {
+            color: #e83e8c !important;
+        }
+
+        .btn-group .btn {
+            border-radius: 0;
+        }
+
+        .btn-group .btn:first-child {
+            border-top-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+        }
+
+        .btn-group .btn:last-child {
+            border-top-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            padding: 0.5em 0.75em;
+            border-radius: 10px;
+        }
+
+        .pagination .page-link {
+            border-radius: 8px;
+            margin: 0 2px;
+            border: 1px solid #dee2e6;
+        }
+
+        .pagination .page-item.active .page-link {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            border-color: #2c3e50;
+        }
+
+        .btn-group .btn.active {
+            background-color: #2c3e50;
+            color: white;
+            border-color: #2c3e50;
+        }
+
+        .student-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .student-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .student-card .card-header {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            padding: 15px;
+            border-bottom: none;
+        }
+
+        .student-card .card-body {
+            padding: 20px;
+        }
+
+        .student-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            margin: 0 auto 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .student-info {
+            margin-bottom: 15px;
+        }
+
+        .student-info i {
+            width: 20px;
+            text-align: center;
+            margin-right: 10px;
+            color: #6a11cb;
+        }
+    </style>
+@endpush
+
+@push('scripts')
+    <script>
+        // Global variables for pagination
+        let currentPage = 1;
+        let totalPages = 1;
+        let rowsPerPage = 10;
+        let totalRecords = 0;
+        let currentStatusFilter = '';
+        let currentGradeFilter = '';
+        let currentSearch = '';
+        let allStudents = [];
+        let allGrades = []; // Store grades for filtering
+        let currentView = 'table'; // 'table' or 'card'
+
+        // Wait for the DOM to be loaded
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeStudentsPage();
+        });
+
+        function initializeStudentsPage() {
+            // Load students and grades on page load
+            loadGrades();
+            loadStudents();
+
+            // Check if elements exist before adding event listeners
+            const rowsPerPageEl = document.getElementById('rowsPerPage');
+            const gradeFilterEl = document.getElementById('gradeFilter');
+            const searchInputEl = document.getElementById('searchInput');
+            const clearSearchBtn = document.getElementById('clearSearchBtn');
+            const filterAllEl = document.getElementById('filterAll');
+            const filterActiveEl = document.getElementById('filterActive');
+            const filterInactiveEl = document.getElementById('filterInactive');
+            const tableViewBtn = document.getElementById('tableViewBtn');
+            const cardViewBtn = document.getElementById('cardViewBtn');
+            const confirmActivateBtn = document.getElementById('confirmActivateBtn');
+            const confirmDeactivateBtn = document.getElementById('confirmDeactivateBtn');
+
+            // Only add event listeners if elements exist
+            if (rowsPerPageEl) {
+                rowsPerPageEl.addEventListener('change', function () {
+                    rowsPerPage = parseInt(this.value);
+                    currentPage = 1;
+                    renderFilteredStudents();
+                });
+            }
+
+            if (gradeFilterEl) {
+                gradeFilterEl.addEventListener('change', function () {
+                    currentGradeFilter = this.value;
+                    currentPage = 1;
+                    renderFilteredStudents();
+                });
+            }
+
+            if (searchInputEl) {
+                searchInputEl.addEventListener('input', debounce(function (e) {
+                    currentSearch = e.target.value.toLowerCase();
+                    currentPage = 1;
+                    renderFilteredStudents();
+                }, 300));
+            }
+
+            if (clearSearchBtn) {
+                clearSearchBtn.addEventListener('click', function () {
+                    document.getElementById('searchInput').value = '';
+                    currentSearch = '';
+                    currentPage = 1;
+                    renderFilteredStudents();
+                });
+            }
+
+            // Filter functionality
+            if (filterAllEl) {
+                filterAllEl.addEventListener('click', function () {
+                    setActiveFilter(this, '');
+                });
+            }
+
+            if (filterActiveEl) {
+                filterActiveEl.addEventListener('click', function () {
+                    setActiveFilter(this, 'active');
+                });
+            }
+
+            if (filterInactiveEl) {
+                filterInactiveEl.addEventListener('click', function () {
+                    setActiveFilter(this, 'inactive');
+                });
+            }
+
+            // View toggle
+            if (tableViewBtn) {
+                tableViewBtn.addEventListener('click', function () {
+                    setActiveView('table');
+                });
+            }
+
+            if (cardViewBtn) {
+                cardViewBtn.addEventListener('click', function () {
+                    setActiveView('card');
+                });
+            }
+
+            // Activate/Deactivate modal events
+            if (confirmActivateBtn) {
+                confirmActivateBtn.addEventListener('click', confirmActivateStudent);
+            }
+
+            if (confirmDeactivateBtn) {
+                confirmDeactivateBtn.addEventListener('click', confirmDeactivateStudent);
+            }
+        }
+
+        // NEW FUNCTION: Load grades from API
+        function loadGrades() {
+            const gradeFilter = document.getElementById('gradeFilter');
+            if (!gradeFilter) return;
+
+            fetch("{{ url('/api/grades/dropdown') }}")
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        allGrades = data.data;
+                        populateGradeFilter(allGrades);
+                    } else {
+                        throw new Error(data.message || 'Failed to load grades');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading grades:', error);
+                    // Keep the default "All Grades" option if loading fails
+                });
+        }
+
+        // NEW FUNCTION: Populate grade filter dropdown
+        function populateGradeFilter(grades) {
+            const gradeFilter = document.getElementById('gradeFilter');
+            if (!gradeFilter) return;
+
+            // Clear existing options except the first one ("All Grades")
+            while (gradeFilter.options.length > 1) {
+                gradeFilter.remove(1);
+            }
+
+            // Add grade options from API
+            grades.forEach(grade => {
+                const option = document.createElement('option');
+                option.value = grade.id; // Use grade ID for filtering
+                option.textContent = `Grade ${grade.grade_name}`;
+                gradeFilter.appendChild(option);
+            });
+
+            console.log('Grade filter populated with', grades.length, 'grades');
+        }
+
+        function setActiveFilter(button, status) {
+            // Remove active class from all filter buttons
+            document.querySelectorAll('#actionBar .btn-group .btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Add active class to clicked button
+            button.classList.add('active');
+
+            currentStatusFilter = status;
+            currentPage = 1;
+            renderFilteredStudents();
+        }
+
+        function setActiveView(view) {
+            currentView = view;
+
+            // Update active button
+            const tableViewBtn = document.getElementById('tableViewBtn');
+            const cardViewBtn = document.getElementById('cardViewBtn');
+
+            if (tableViewBtn && cardViewBtn) {
+                tableViewBtn.classList.toggle('active', view === 'table');
+                cardViewBtn.classList.toggle('active', view === 'card');
+            }
+
+            // Show/hide views
+            const tableContainer = document.getElementById('studentsTableContainer');
+            const cardsContainer = document.getElementById('studentsCardsContainer');
+
+            if (tableContainer) tableContainer.classList.toggle('d-none', view !== 'table');
+            if (cardsContainer) cardsContainer.classList.toggle('d-none', view !== 'card');
+
+            renderFilteredStudents();
+        }
+
+        function loadStudents() {
+            showLoadingState();
+
+            // Use the correct API endpoint from your controller
+            fetch("{{ url('/api/students') }}")
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Normalize is_active to boolean for consistent handling
+                        allStudents = data.data.map(student => ({
+                            ...student,
+                            is_active: Boolean(Number(student.is_active)) // Convert "0"/"1" to boolean
+                        }));
+                        renderFilteredStudents();
+                        updateStatistics(allStudents);
+                        showContentState();
+                    } else {
+                        throw new Error(data.message || 'Failed to load students');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading students:', error);
+                    showErrorState('Error loading students: ' + error.message);
+                });
+        }
+
+        function renderFilteredStudents() {
+            let filteredStudents = allStudents;
+
+            // Apply status filter
+            if (currentStatusFilter === 'active') {
+                filteredStudents = filteredStudents.filter(student => student.is_active);
+            } else if (currentStatusFilter === 'inactive') {
+                filteredStudents = filteredStudents.filter(student => !student.is_active);
+            }
+
+            // Apply grade filter - UPDATED to use grade_id
+            if (currentGradeFilter) {
+                filteredStudents = filteredStudents.filter(student =>
+                    student.grade_id && student.grade_id.toString() === currentGradeFilter
+                );
+            }
+
+            // Apply search filter
+            if (currentSearch) {
+                filteredStudents = filteredStudents.filter(student =>
+                    (student.custom_id && student.custom_id.toLowerCase().includes(currentSearch)) ||
+                    (student.fname && student.fname.toLowerCase().includes(currentSearch)) ||
+                    (student.lname && student.lname.toLowerCase().includes(currentSearch)) ||
+                    (student.email && student.email.toLowerCase().includes(currentSearch)) ||
+                    (student.mobile && student.mobile.includes(currentSearch)) ||
+                    (student.grade && student.grade.grade_name && student.grade.grade_name.toLowerCase().includes(currentSearch))
+                );
+            }
+
+            totalRecords = filteredStudents.length;
+            totalPages = Math.ceil(totalRecords / rowsPerPage);
+
+            // Ensure current page is valid
+            if (currentPage > totalPages && totalPages > 0) {
+                currentPage = totalPages;
+            } else if (currentPage < 1) {
+                currentPage = 1;
+            }
+
+            // Get students for current page
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+            const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
+
+            if (currentView === 'table') {
+                renderStudentsTable(paginatedStudents);
+            } else {
+                renderStudentsCards(paginatedStudents);
+            }
+
+            updatePagination();
+        }
+
+        function renderStudentsTable(students) {
+            const tbody = document.getElementById('studentsTableBody');
+            const tableContainer = document.getElementById('studentsTableContainer');
+            const emptyState = document.getElementById('emptyState');
+            const paginationSection = document.getElementById('paginationSection');
+            const studentCount = document.getElementById('studentCount');
+
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            if (students.length === 0) {
+                if (tableContainer) tableContainer.classList.add('d-none');
+                if (paginationSection) paginationSection.classList.add('d-none');
+                if (emptyState) emptyState.classList.remove('d-none');
+                if (studentCount) studentCount.textContent = 'Showing 0 students';
+                return;
+            }
+
+            if (tableContainer) tableContainer.classList.remove('d-none');
+            if (paginationSection) paginationSection.classList.remove('d-none');
+            if (emptyState) emptyState.classList.add('d-none');
+            if (studentCount) studentCount.textContent = `Showing ${students.length} students`;
+
+            students.forEach((student, index) => {
+                const startRecord = (currentPage - 1) * rowsPerPage;
+
+                // FIX: Use the normalized boolean is_active value
+                const isActive = student.is_active;
+                const statusBadge = isActive ?
+                    '<span class="badge bg-success rounded-pill"><i class="fas fa-circle me-1"></i>Active</span>' :
+                    '<span class="badge bg-secondary rounded-pill"><i class="fas fa-circle me-1"></i>Inactive</span>';
+
+                // Convert to lowercase for case-insensitive comparison
+                const gender = (student.gender || '').toLowerCase();
+
+                const genderIcon = student.gender === 'Male' || student.gender === 'male' || student.gender === 'Males' ?
+                    '<i class="fas fa-mars text-primary"></i>' :
+                    student.gender === 'Female' || student.gender === 'female' || student.gender === 'Females' ?
+                        '<i class="fas fa-venus text-pink"></i>' :
+                        student.gender === 'Other' || student.gender === 'other' || student.gender === 'outer' ?
+                            '<i class="fas fa-genderless text-muted"></i>' :
+                            '<i class="fas fa-question text-secondary"></i>'; // Fallback for unknown values
+
+                // Use placeholder icon if img_url is null or invalid
+                const avatarContent = student.img_url && isValidImageUrl(student.img_url) ?
+                    `<img src="${student.img_url}" alt="${student.fname} ${student.lname}" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">` :
+                    `<div class="avatar-sm bg-primary bg-gradient rounded-circle text-white d-flex align-items-center justify-content-center">
+                                                            <span class="fw-bold">${student.fname ? student.fname.charAt(0) : ''}${student.lname ? student.lname.charAt(0) : ''}</span>
+                                                        </div>`;
+
+                const row = `
+                <tr class="align-middle">
+                    <td class="text-center fw-bold text-muted">${startRecord + index + 1}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            ${avatarContent}
+                            <div class="ms-3">
+                                <h6 class="mb-0 fw-bold">${student.fname || ''} ${student.lname || ''}</h6>
+                                <small class="text-muted">${student.custom_id || 'No ID'}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            <div class="mb-1">
+                                <i class="fas fa-envelope text-muted me-2"></i>
+                                <small>${student.email || 'No email'}</small>
+                            </div>
+                            <div>
+                                <i class="fas fa-phone text-muted me-2"></i>
+                                <small>${student.mobile || 'No phone'}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-light text-dark border">
+                            <i class="fas fa-graduation-cap me-1 text-primary"></i>
+                            ${student.grade ? student.grade.grade_name : 'N/A'}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <span class="fs-5">${genderIcon}</span>
+                    </td>
+                    <td class="text-center">
+                        ${statusBadge}
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary rounded-start" title="View" 
+                                    onclick="viewStudent('${student.custom_id}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-warning" title="Edit" 
+                                    onclick="editStudent('${student.custom_id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            ${isActive ?
+                        `<button class="btn btn-outline-danger rounded-end" title="Deactivate" 
+                                        onclick="showDeactivateModal(${student.id}, '${escapeHtml(student.fname)} ${escapeHtml(student.lname)}', '${escapeHtml(student.email || 'No email')}')">
+                                    <i class="fas fa-user-slash"></i>
+                                </button>` :
+                        `<button class="btn btn-outline-success rounded-end" title="Activate" 
+                                        onclick="showActivateModal(${student.id}, '${escapeHtml(student.fname)} ${escapeHtml(student.lname)}', '${escapeHtml(student.email || 'No email')}')">
+                                    <i class="fas fa-user-check"></i>
+                                </button>`
+                    }
+                        </div>
+                    </td>
+                </tr>
+            `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function renderStudentsCards(students) {
+            const cardsContainer = document.getElementById('studentsCardsContainer');
+            const emptyState = document.getElementById('emptyState');
+            const paginationSection = document.getElementById('paginationSection');
+            const studentCount = document.getElementById('studentCount');
+
+            if (!cardsContainer) return;
+
+            cardsContainer.innerHTML = '';
+
+            if (students.length === 0) {
+                cardsContainer.classList.add('d-none');
+                if (paginationSection) paginationSection.classList.add('d-none');
+                if (emptyState) emptyState.classList.remove('d-none');
+                if (studentCount) studentCount.textContent = 'Showing 0 students';
+                return;
+            }
+
+            cardsContainer.classList.remove('d-none');
+            if (paginationSection) paginationSection.classList.remove('d-none');
+            if (emptyState) emptyState.classList.add('d-none');
+            if (studentCount) studentCount.textContent = `Showing ${students.length} students`;
+
+            students.forEach((student) => {
+                // FIX: Use the normalized boolean is_active value
+                const isActive = student.is_active;
+                const statusBadge = isActive ?
+                    '<span class="badge bg-success rounded-pill"><i class="fas fa-circle me-1"></i>Active</span>' :
+                    '<span class="badge bg-secondary rounded-pill"><i class="fas fa-circle me-1"></i>Inactive</span>';
+
+                const genderIcon = student.gender === 'male' ?
+                    '<i class="fas fa-mars text-primary"></i>' :
+                    student.gender === 'female' ?
+                        '<i class="fas fa-venus text-pink"></i>' :
+                        '<i class="fas fa-genderless text-muted"></i>';
+
+                // Use placeholder icon if img_url is null or invalid
+                const avatarContent = student.img_url && isValidImageUrl(student.img_url) ?
+                    `<img src="${student.img_url}" alt="${student.fname} ${student.lname}" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;">` :
+                    `<div class="student-avatar bg-primary bg-gradient">
+                                                            <span class="fw-bold">${student.fname ? student.fname.charAt(0) : ''}${student.lname ? student.lname.charAt(0) : ''}</span>
+                                                        </div>`;
+
+                const card = `
+                    <div class="col-xl-4 col-lg-6 col-md-6">
+                        <div class="card student-card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">${student.custom_id || 'No ID'}</h6>
+                                </div>
+                                <div>
+                                    ${statusBadge}
+                                </div>
+                            </div>
+                            <div class="card-body text-center">
+                                ${avatarContent}
+                                <h5 class="card-title">${student.fname || ''} ${student.lname || ''}</h5>
+                                <p class="text-muted">${student.grade ? student.grade.grade_name : 'No Grade'}</p>
+
+                                <div class="student-info text-start">
+                                    <div class="mb-2">
+                                        <i class="fas fa-envelope"></i>
+                                        <span>${student.email || 'No email'}</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <i class="fas fa-phone"></i>
+                                        <span>${student.mobile || 'No phone'}</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <i class="fas fa-venus-mars"></i>
+                                        <span>${student.gender ? student.gender.charAt(0).toUpperCase() + student.gender.slice(1) : 'Not specified'}</span>
+                                    </div>
+                                    <div>
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span>${student.address1 || 'No address'}</span>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-center gap-2 mt-3">
+                                    <button class="btn btn-outline-primary btn-sm" 
+                                            onclick="viewStudent('${student.custom_id}')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-warning btn-sm" 
+                                            onclick="editStudent('${student.custom_id}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    ${isActive ?
+                        `<button class="btn btn-outline-danger btn-sm" 
+                                                onclick="showDeactivateModal(${student.id}, '${escapeHtml(student.fname)} ${escapeHtml(student.lname)}', '${escapeHtml(student.email || 'No email')}')">
+                                            <i class="fas fa-user-slash"></i>
+                                        </button>` :
+                        `<button class="btn btn-outline-success btn-sm" 
+                                                onclick="showActivateModal(${student.id}, '${escapeHtml(student.fname)} ${escapeHtml(student.lname)}', '${escapeHtml(student.email || 'No email')}')">
+                                            <i class="fas fa-user-check"></i>
+                                        </button>`
+                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                cardsContainer.innerHTML += card;
+            });
+        }
+        function updatePagination() {
+            const startRecord = totalRecords > 0 ? ((currentPage - 1) * rowsPerPage) + 1 : 0;
+            const endRecord = Math.min(currentPage * rowsPerPage, totalRecords);
+
+            const startRecordEl = document.getElementById('startRecord');
+            const endRecordEl = document.getElementById('endRecord');
+            const totalRecordsEl = document.getElementById('totalRecords');
+
+            if (startRecordEl) startRecordEl.textContent = startRecord;
+            if (endRecordEl) endRecordEl.textContent = endRecord;
+            if (totalRecordsEl) totalRecordsEl.textContent = totalRecords;
+
+            renderPaginationLinks();
+        }
+
+        function renderPaginationLinks() {
+            const paginationLinks = document.getElementById('paginationLinks');
+            if (!paginationLinks) return;
+
+            paginationLinks.innerHTML = '';
+
+            // Previous button
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `
+                                                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1})" aria-label="Previous">
+                                                        <span aria-hidden="true">Previous</span>
+                                                    </a>
+                                                `;
+            paginationLinks.appendChild(prevLi);
+
+            // Page numbers
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const li = document.createElement('li');
+                li.className = `page-item ${currentPage === i ? 'active' : ''}`;
+                li.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i})">${i}</a>`;
+                paginationLinks.appendChild(li);
+            }
+
+            // Next button
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `
+                                                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1})" aria-label="Next">
+                                                        <span aria-hidden="true">Next</span>
+                                                    </a>
+                                                `;
+            paginationLinks.appendChild(nextLi);
+        }
+
+        function changePage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            renderFilteredStudents();
+        }
+
+        function updateStatistics(students) {
+            const totalStudents = students.length;
+            const grade11Students = students.filter(s => s.grade && s.grade.grade_name && s.grade.grade_name.includes('11')).length;
+            const maleStudents = students.filter(s => s.gender === 'male').length;
+            const femaleStudents = students.filter(s => s.gender === 'female').length;
+
+            const totalStudentsEl = document.getElementById('totalStudents');
+            const grade11StudentsEl = document.getElementById('grade11Students');
+            const maleStudentsEl = document.getElementById('maleStudents');
+            const femaleStudentsEl = document.getElementById('femaleStudents');
+
+            if (totalStudentsEl) totalStudentsEl.textContent = totalStudents;
+            if (grade11StudentsEl) grade11StudentsEl.textContent = grade11Students;
+            if (maleStudentsEl) maleStudentsEl.textContent = maleStudents;
+            if (femaleStudentsEl) femaleStudentsEl.textContent = femaleStudents;
+        }
+
+        function showActivateModal(studentId, studentName, studentEmail) {
+            const activateStudentName = document.getElementById('activateStudentName');
+            const activateStudentEmail = document.getElementById('activateStudentEmail');
+            const confirmActivateBtn = document.getElementById('confirmActivateBtn');
+
+            if (activateStudentName) activateStudentName.textContent = studentName;
+            if (activateStudentEmail) activateStudentEmail.textContent = studentEmail;
+
+            const modal = new bootstrap.Modal(document.getElementById('activateStudentModal'));
+            modal.show();
+
+            // Store student ID for the confirm action
+            if (confirmActivateBtn) confirmActivateBtn.setAttribute('data-student-id', studentId);
+        }
+
+        function showDeactivateModal(studentId, studentName, studentEmail) {
+            const deactivateStudentName = document.getElementById('deactivateStudentName');
+            const deactivateStudentEmail = document.getElementById('deactivateStudentEmail');
+            const confirmDeactivateBtn = document.getElementById('confirmDeactivateBtn');
+
+            if (deactivateStudentName) deactivateStudentName.textContent = studentName;
+            if (deactivateStudentEmail) deactivateStudentEmail.textContent = studentEmail;
+
+            const modal = new bootstrap.Modal(document.getElementById('deactivateStudentModal'));
+            modal.show();
+
+            // Store student ID for the confirm action
+            if (confirmDeactivateBtn) confirmDeactivateBtn.setAttribute('data-student-id', studentId);
+        }
+
+        function confirmActivateStudent() {
+            const confirmActivateBtn = document.getElementById('confirmActivateBtn');
+            if (!confirmActivateBtn) return;
+
+            const studentId = confirmActivateBtn.getAttribute('data-student-id');
+
+            fetch(`/api/students/${studentId}/reactivate`, {
+                method: 'PUT',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Close modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('activateStudentModal'));
+                        if (modal) modal.hide();
+
+                        // Show success message and reload
+                        showAlert('Student activated successfully!', 'success');
+                        loadStudents();
+                    } else {
+                        throw new Error(data.message || 'Failed to activate student');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error activating student:', error);
+                    showAlert('Error activating student: ' + error.message, 'danger');
+                });
+        }
+
+        function confirmDeactivateStudent() {
+            const confirmDeactivateBtn = document.getElementById('confirmDeactivateBtn');
+            if (!confirmDeactivateBtn) {
+                console.error('Confirm deactivate button not found');
+                return;
+            }
+
+            const studentId = confirmDeactivateBtn.getAttribute('data-student-id');
+            console.log('Attempting to deactivate student ID:', studentId);
+
+            fetch(`/api/students/${studentId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            })
+                .then(async response => {
+                    console.log('Response status:', response.status);
+                    const data = await response.json();
+                    console.log('Response data:', data);
+
+                    if (!response.ok) {
+                        throw new Error(data.message || `HTTP ${response.status}`);
+                    }
+                    return data;
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        console.log('Deactivation successful');
+                        // Close modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('deactivateStudentModal'));
+                        if (modal) modal.hide();
+
+                        // Show success message and reload
+                        showAlert('Student deactivated successfully!', 'success');
+                        loadStudents();
+                    } else {
+                        throw new Error(data.message || 'Failed to deactivate student');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deactivating student:', error);
+                    showAlert('Error deactivating student: ' + error.message, 'danger');
+                });
+        }
+
+        function viewStudent(customId) {
+            // Use custom_id instead of id
+            window.location.href = `/students/${customId}`;
+        }
+
+        function editStudent(customId) {
+            // Use custom_id instead of id  
+            window.location.href = `/students/${customId}/edit`;
+        }
+
+        // Helper functions
+        function showLoadingState() {
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const actionBar = document.getElementById('actionBar');
+            const studentsTableContainer = document.getElementById('studentsTableContainer');
+            const studentsCardsContainer = document.getElementById('studentsCardsContainer');
+            const paginationSection = document.getElementById('paginationSection');
+            const emptyState = document.getElementById('emptyState');
+            const errorMessage = document.getElementById('errorMessage');
+
+            if (loadingSpinner) loadingSpinner.classList.remove('d-none');
+            if (actionBar) actionBar.classList.add('d-none');
+            if (studentsTableContainer) studentsTableContainer.classList.add('d-none');
+            if (studentsCardsContainer) studentsCardsContainer.classList.add('d-none');
+            if (paginationSection) paginationSection.classList.add('d-none');
+            if (emptyState) emptyState.classList.add('d-none');
+            if (errorMessage) errorMessage.classList.add('d-none');
+        }
+
+        function showContentState() {
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const actionBar = document.getElementById('actionBar');
+
+            if (loadingSpinner) loadingSpinner.classList.add('d-none');
+            if (actionBar) actionBar.classList.remove('d-none');
+        }
+
+        function showErrorState(message) {
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+
+            if (loadingSpinner) loadingSpinner.classList.add('d-none');
+            if (errorMessage) errorMessage.classList.remove('d-none');
+            if (errorText) errorText.textContent = message;
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function isValidImageUrl(url) {
+            // Simple validation to check if URL might be valid
+            return url &&
+                typeof url === 'string' &&
+                url.length > 0 &&
+                !url.includes('undefined') &&
+                !url.includes('null');
+        }
+
+        // FIX: Add escapeHtml function to prevent XSS and string issues
+        function escapeHtml(unsafe) {
+            if (unsafe === null || unsafe === undefined) return '';
+            return String(unsafe)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                                                    ${message}
+                                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                                `;
+
+            const container = document.querySelector('.container') || document.querySelector('.card-body');
+            if (container) {
+                container.insertBefore(alertDiv, container.firstChild);
+
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.remove();
+                    }
+                }, 5000);
+            }
+        }
+
+        function exportTo(format) {
+            // Simple export functionality - in a real app, this would make API calls
+            showAlert(`Exporting to ${format.toUpperCase()} format...`, 'info');
+        }
+    </script>
+@endpush
