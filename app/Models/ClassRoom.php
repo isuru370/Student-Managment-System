@@ -24,18 +24,18 @@ class ClassRoom extends Model
     // A class belongs to a teacher
     public function teacher()
     {
-        return $this->belongsTo(Teacher::class);
+        return $this->belongsTo(Teacher::class,'teacher_id','id');
     }
 
     // A class belongs to a subject
     public function subject()
     {
-        return $this->belongsTo(Subject::class);
+        return $this->belongsTo(Subject::class,'subject_id','id');
     }
 
     // A class belongs to a grade
     public function grade()
     {
-        return $this->belongsTo(Grade::class);
+        return $this->belongsTo(Grade::class,'grade_id','id');
     }
 }

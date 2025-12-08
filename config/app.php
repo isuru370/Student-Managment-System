@@ -67,7 +67,9 @@ return [
     |
     */
 
-    'timezone' => 'Asia/Colombo', // Sri Lanka time
+    // config/app.php
+    'timezone' => 'Asia/Colombo',
+
 
     /*
     |--------------------------------------------------------------------------

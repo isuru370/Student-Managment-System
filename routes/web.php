@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClassAttendanceController;
 use App\Http\Controllers\ClassHallsController;
 use App\Http\Controllers\ClassRoomController;
+use App\Http\Controllers\PaymentReasonController;
 use App\Http\Controllers\PaymentsController;
 use App\Http\Controllers\SettingsCodeController;
 use App\Http\Controllers\StudentAttendancesController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\SystemUserController;
 use App\Http\Controllers\UserTypesController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\TeacherPaymentsController;
 use Illuminate\Support\Facades\Route;
 
 // Welcome Page Route
@@ -138,9 +140,28 @@ Route::middleware(['auth'])->group(function () {
     });
     Route::prefix('student_attendance')->name('student_attendance.')->group(function () {
         Route::get('/', [StudentAttendancesController::class, 'indexPage'])
-            ->name('index');  
-        Route::get('/daily', [StudentAttendancesController::class, 'dailyMarkPage'])->name('daily');
+            ->name('index');
+        Route::get('/daily', [StudentAttendancesController::class, 'dailyMarkPage'])
+            ->name('daily');
+        // FIXED: Add slashes between parameters
+        Route::get(
+            '/{class_id}/{attendance_id}/{class_category_student_class_id}/details',
+            [StudentAttendancesController::class, 'detailsPage']
+        )->name('details');
     });
+
+    Route::prefix('payment-reason')->name('payment_reason.')->group(function () {
+        Route::get('/', [PaymentReasonController::class, 'indexPage'])->name('index');
+    });
+
+    Route::prefix('teacher-payment')->name('teacher_payment.')->group(function () {
+        Route::get('/', [TeacherPaymentsController::class, 'indexPage'])->name('index');
+        Route::get('/pay/{teacherId}', [TeacherPaymentsController::class, 'paymentPage'])->name('salary');
+        Route::get('/history/{teacherId}', [TeacherPaymentsController::class, 'historyPage'])->name('history');
+        Route::get('/view/{teacherId}', [TeacherPaymentsController::class, 'viewPage'])->name('view');
+        Route::get('/salary-slip/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'showSalarySlip'])->name('salary-slip-exact');
+    });
+
 
 
 

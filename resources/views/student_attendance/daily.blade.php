@@ -453,106 +453,108 @@
                     // Extract IDs from the class item
                     const attendanceId = classItem.attendance_id;
                     const classCategoryStudentClassId = classItem.classCategoryStudentClass?.class_category_student_class_id;
+                    const classId = classItem.class_details?.class_id;
                     const statusText = config.text;
 
                     html += `
-                            <div class="col-xl-4 col-lg-6 col-md-6 mb-4">
-                                <div class="card class-card border-0 shadow-sm h-100">
-                                    <div class="class-header ${config.headerClass} text-white p-4 position-relative">
-                                        ${config.isLive ? `
-                                            <span class="status-badge badge bg-white text-dark ongoing-pulse">
-                                                <i class="fas fa-circle fa-xs me-1"></i> LIVE NOW
-                                            </span>
-                                        ` : ''}
+                    <div class="col-xl-4 col-lg-6 col-md-6 mb-4">
+                        <div class="card class-card border-0 shadow-sm h-100">
+                            <div class="class-header ${config.headerClass} text-white p-4 position-relative">
+                                ${config.isLive ? `
+                                    <span class="status-badge badge bg-white text-dark ongoing-pulse">
+                                        <i class="fas fa-circle fa-xs me-1"></i> LIVE NOW
+                                    </span>
+                                ` : ''}
 
-                                        <div class="mb-3">
-                                            <h6 class="card-title mb-1 fw-bold">
-                                                ${classItem.class_details?.class_name || 'Unnamed Class'}
-                                            </h6>
-                                            <p class="mb-0 opacity-75">
-                                                ${classItem.class_details?.subject_name || ''}
-                                            </p>
-                                        </div>
+                                <div class="mb-3">
+                                    <h6 class="card-title mb-1 fw-bold">
+                                        ${classItem.class_details?.class_name || 'Unnamed Class'}
+                                    </h6>
+                                    <p class="mb-0 opacity-75">
+                                        ${classItem.class_details?.subject_name || ''}
+                                    </p>
+                                </div>
 
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="class-time">
-                                                <i class="fas fa-clock me-2"></i>
-                                                ${classItem.start_time} - ${classItem.end_time}
-                                            </div>
-                                            <span class="badge ${config.badgeClass} px-3 py-2">
-                                                ${config.text}
-                                            </span>
-                                        </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="class-time">
+                                        <i class="fas fa-clock me-2"></i>
+                                        ${classItem.start_time} - ${classItem.end_time}
                                     </div>
+                                    <span class="badge ${config.badgeClass} px-3 py-2">
+                                        ${config.text}
+                                    </span>
+                                </div>
+                            </div>
 
-                                    <div class="card-body p-4">
-                                        <div class="detail-item">
-                                            <div class="detail-icon bg-primary bg-opacity-10">
-                                                <i class="fas fa-chalkboard-teacher text-primary"></i>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <small class="text-muted d-block">Teacher</small>
-                                                <span class="fw-semibold text-truncate-2">
-                                                    ${classItem.class_details?.teacher_name || 'Not assigned'}
-                                                </span>
-                                            </div>
-                                        </div>
+                            <div class="card-body p-4">
+                                <div class="detail-item">
+                                    <div class="detail-icon bg-primary bg-opacity-10">
+                                        <i class="fas fa-chalkboard-teacher text-primary"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <small class="text-muted d-block">Teacher</small>
+                                        <span class="fw-semibold text-truncate-2">
+                                            ${classItem.class_details?.teacher_name || 'Not assigned'}
+                                        </span>
+                                    </div>
+                                </div>
 
-                                        <div class="detail-item">
-                                            <div class="detail-icon bg-info bg-opacity-10">
-                                                <i class="fas fa-graduation-cap text-info"></i>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <small class="text-muted d-block">Grade & Category</small>
-                                                <span class="fw-semibold">
-                                                    ${classItem.class_details?.grade_name || ''} 
-                                                    ${classItem.class_details?.category_name ? `• ${classItem.class_details.category_name}` : ''}
-                                                </span>
-                                            </div>
-                                        </div>
+                                <div class="detail-item">
+                                    <div class="detail-icon bg-info bg-opacity-10">
+                                        <i class="fas fa-graduation-cap text-info"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <small class="text-muted d-block">Grade & Category</small>
+                                        <span class="fw-semibold">
+                                            ${classItem.class_details?.grade_name || ''} 
+                                            ${classItem.class_details?.category_name ? `• ${classItem.class_details.category_name}` : ''}
+                                        </span>
+                                    </div>
+                                </div>
 
-                                        <div class="detail-item">
-                                            <div class="detail-icon bg-warning bg-opacity-10">
-                                                <i class="fas fa-door-open text-warning"></i>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <small class="text-muted d-block">Class Hall</small>
-                                                <span class="fw-semibold">${classItem.class_hall || 'Not assigned'}</span>
-                                            </div>
-                                        </div>
+                                <div class="detail-item">
+                                    <div class="detail-icon bg-warning bg-opacity-10">
+                                        <i class="fas fa-door-open text-warning"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <small class="text-muted d-block">Class Hall</small>
+                                        <span class="fw-semibold">${classItem.class_hall || 'Not assigned'}</span>
+                                    </div>
+                                </div>
 
-                                        <div class="detail-item">
-                                            <div class="detail-icon bg-secondary bg-opacity-10">
-                                                <i class="fas fa-calendar-day text-secondary"></i>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <small class="text-muted d-block">Day & Date</small>
-                                                <span class="fw-semibold">
-                                                    ${classItem.day_of_week}, ${formatDisplayDate(classItem.date)}
-                                                </span>
-                                            </div>
-                                        </div>
+                                <div class="detail-item">
+                                    <div class="detail-icon bg-secondary bg-opacity-10">
+                                        <i class="fas fa-calendar-day text-secondary"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <small class="text-muted d-block">Day & Date</small>
+                                        <span class="fw-semibold">
+                                            ${classItem.day_of_week}, ${formatDisplayDate(classItem.date)}
+                                        </span>
+                                    </div>
+                                </div>
 
-                                        <div class="mt-4 pt-3 border-top">
-                                            <div class="d-grid">
-                                                ${config.showViewButton ? `
-                                                    <button class="btn btn-primary view-button" 
-                                                        data-attendance-id="${attendanceId}"
-                                                        data-class-category-id="${classCategoryStudentClassId}">
-                                                        <i class="fas fa-eye me-2"></i>View Details
-                                                    </button>
-                                                ` : `
-                                                    <div class="alert alert-info alert-sm mb-0 text-center py-2">
-                                                        <i class="fas fa-info-circle me-2"></i>
-                                                        This class is ${statusText.toLowerCase()}
-                                                    </div>
-                                                `}
+                                <div class="mt-4 pt-3 border-top">
+                                    <div class="d-grid">
+                                        ${config.showViewButton ? `
+                                            <button class="btn btn-primary view-button" 
+                                                data-attendance-id="${attendanceId}"
+                                                data-class-category-id="${classCategoryStudentClassId}"
+                                                data-class-id="${classId}">
+                                                <i class="fas fa-eye me-2"></i>View Details
+                                            </button>
+                                        ` : `
+                                            <div class="alert alert-info alert-sm mb-0 text-center py-2">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                This class is ${statusText.toLowerCase()}
                                             </div>
-                                        </div>
+                                        `}
                                     </div>
                                 </div>
                             </div>
-                        `;
+                        </div>
+                    </div>
+                `;
                 });
 
                 classesList.innerHTML = html;
@@ -563,7 +565,10 @@
                     button.addEventListener('click', function () {
                         const attendanceId = this.getAttribute('data-attendance-id');
                         const classCategoryId = this.getAttribute('data-class-category-id');
-                        window.location.href = `/class-attendance/${attendanceId}/details?class_category_id=${classCategoryId}`;
+                        const classId = this.getAttribute('data-class-id');
+
+                        // Construct the URL with all three parameters
+                        window.location.href = `/student_attendance/${classId}/${attendanceId}/${classCategoryId}/details`;
                     });
                 });
             };

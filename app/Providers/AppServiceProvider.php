@@ -13,6 +13,7 @@ use App\Services\ClassRoomService;
 use App\Services\ExamService;
 use App\Services\GradeService;
 use App\Services\ImageUploadService;
+use App\Services\PaymentReasonService;
 use App\Services\QuickPhotoService;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
@@ -25,6 +26,7 @@ use App\Services\StudentService;
 use App\Services\StudentStudentStudentClassService;
 use App\Services\SubjectService;
 use App\Services\SystemUserService;
+use App\Services\TeacherPaymentsService;
 use App\Services\TeacherService;
 use App\Services\UserTypesService;
 
@@ -74,6 +76,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ImageUploadService::class, function ($app) {
             return new ImageUploadService();
         });
+        $this->app->bind(PaymentReasonService::class, function ($app) {
+            return new PaymentReasonService();
+        });
         $this->app->bind(QuickPhotoService::class, function ($app) {
             return new QuickPhotoService();
         });
@@ -100,6 +105,9 @@ class AppServiceProvider extends ServiceProvider
         });
         $this->app->bind(SystemUserService::class, function ($app) {
             return new SystemUserService();
+        });
+        $this->app->bind(TeacherPaymentsService::class, function ($app) {
+            return new TeacherPaymentsService();
         });
         $this->app->bind(TeacherService::class, function ($app) {
             return new TeacherService();

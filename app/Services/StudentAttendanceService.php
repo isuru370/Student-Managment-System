@@ -9,6 +9,7 @@ use App\Models\ClassCategoryHasStudentClass;
 use App\Models\StudentAttendances;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Exception;
 
 class StudentAttendanceService
 {
@@ -42,7 +43,7 @@ class StudentAttendanceService
                 'student_id' => $student->id,
                 'data' => $result
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to fetch student attendance',
@@ -157,7 +158,7 @@ class StudentAttendanceService
         foreach ($formats as $f) {
             try {
                 return Carbon::createFromFormat('Y-m-d ' . $f, $date . ' ' . $time);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 // try next format
             }
         }
@@ -215,7 +216,7 @@ class StudentAttendanceService
                 'message' => 'Attendance added successfully!',
                 'data' => $attendance
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Something went wrong while saving attendance. Please try again.',
@@ -269,7 +270,7 @@ class StudentAttendanceService
                 'total_records' => $records->count(),
                 'data' => $records
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to fetch attendance records.',
@@ -330,7 +331,7 @@ class StudentAttendanceService
                 'message' => 'Attendance updated successfully!',
                 'data' => $attendance
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Something went wrong while updating attendance. Please try again.',
@@ -370,11 +371,271 @@ class StudentAttendanceService
                     'weeks_in_month' => $weeksInMonth
                 ]
             ], 200);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
 
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to fetch monthly attendance count',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function studentAttendClass($class_id, $attendance_id, $class_category_student_class_id)
+    {
+        try {
+            if (is_null($class_id) || is_null($attendance_id) || is_null($class_category_student_class_id)) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'One or more required parameters are missing.',
+                ], 400);
+            }
+
+            // Process category mapping and student grouping
+            $processedData = $this->processStudentCategories($class_id);
+
+            // Find the requested category group
+            $matchedGroup = collect($processedData['grouped_results'])
+                ->firstWhere('class_category_has_student_class_id', $class_category_student_class_id);
+
+            if (!$matchedGroup) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No matching category group found.',
+                    'requested_id' => $class_category_student_class_id,
+                    'available_ids' => collect($processedData['grouped_results'])
+                        ->pluck('class_category_has_student_class_id')
+                        ->toArray(),
+                ], 404);
+            }
+
+            // Extract students belonging to that category
+            $studentIds = collect($matchedGroup['students'])
+                ->pluck('student_id')
+                ->unique()
+                ->values()
+                ->toArray();
+
+            $today = now()->toDateString();
+
+            // Today's attendance records for these students - matching the requested status
+            $attendanceRecords = StudentAttendances::with('student')
+                ->whereIn('student_id', $studentIds)
+                ->whereDate('at_date', $today)
+                ->where('status', $attendance_id)
+                ->get()
+                ->keyBy('student_id');
+
+            // Build attendance list with default ABSENT
+            $attendanceList = [];
+
+            foreach ($studentIds as $studentId) {
+                if (isset($attendanceRecords[$studentId])) {
+                    $record = $attendanceRecords[$studentId];
+                    $attendanceList[] = [
+                        'student_id' => $studentId,
+                        'attendance_status' => 'present',
+                        'status' => $record->status,
+                        'attendance_id' => $record->id,
+                        'attendance_date' => $record->at_date,
+                        'is_present' => true,
+                    ];
+                } else {
+                    $attendanceList[] = [
+                        'student_id' => $studentId,
+                        'attendance_status' => 'absent',
+                        'status' => null,
+                        'attendance_id' => null,
+                        'attendance_date' => $today,
+                        'is_present' => false,
+                    ];
+                }
+            }
+
+            // Append student details
+            $students = Student::whereIn('id', array_column($attendanceList, 'student_id'))
+                ->get(['id', 'custom_id', 'fname', 'lname', 'guardian_mobile'])
+                ->keyBy('id');
+
+            $finalResult = [];
+
+            foreach ($attendanceList as $entry) {
+                $student = $students[$entry['student_id']] ?? null;
+
+                $finalResult[] = [
+                    'student_id' => $entry['student_id'],
+                    'custom_id' => $student->custom_id ?? null,
+                    'fname' => $student->fname ?? null,
+                    'lname' => $student->lname ?? null,
+                    'guardian_mobile' => $student->guardian_mobile ?? null,
+                    'attendance_status' => $entry['attendance_status'],
+                    'status' => $entry['status'],
+                    'attendance_id' => $entry['attendance_id'],
+                    'attendance_date' => $entry['attendance_date'],
+                    'is_present' => $entry['is_present'],
+                ];
+            }
+
+            // Counts
+            $presentCount = count(array_filter($finalResult, fn($x) => $x['is_present']));
+            $absentCount = count(array_filter($finalResult, fn($x) => !$x['is_present']));
+
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'matched_group' => [
+                        'class_category_has_student_class_id' => $matchedGroup['class_category_has_student_class_id'],
+                        'category_name' => $matchedGroup['category_name'],
+                    ],
+                    'attendance_list' => $finalResult,
+                    'summary' => [
+                        'date' => $today,
+                        'requested_status' => $attendance_id,
+                        'total_students' => count($studentIds),
+                        'present' => $presentCount,
+                        'absent' => $absentCount,
+                        'attendance_percentage' =>
+                        count($studentIds) > 0 ? round(($presentCount / count($studentIds)) * 100, 2) : 0,
+                    ],
+                ],
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'An unexpected error occurred while processing the request.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+
+
+    private function processStudentCategories($class_id)
+    {
+        // 1. Get all students in the class and their categories
+        $students = StudentStudentStudentClass::with([
+            'classCategoryHasStudentClass',
+            'classCategoryHasStudentClass.classCategory'
+        ])
+            ->where('student_classes_id', $class_id)
+            ->where('status', 1)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'class_category_has_student_class_id' => $item->class_category_has_student_class_id,
+                    'category_name' => $item->classCategoryHasStudentClass->classCategory->category_name ?? null,
+                    'student_id' => $item->student_id,
+                ];
+            });
+
+        // 2. Extract unique category names
+        $studentCategories = $students->pluck('category_name')->unique()->filter()->toArray();
+
+        // 3. Split combined categories such as "Theory+Revision"
+        $individualCategories = [];
+
+        foreach ($studentCategories as $category) {
+            if (strpos($category, '+') !== false) {
+                foreach (explode('+', $category) as $part) {
+                    $part = trim($part);
+                    if ($part !== '') {
+                        $individualCategories[] = $part;
+                    }
+                }
+            } else {
+                $individualCategories[] = $category;
+            }
+        }
+
+        $individualCategories = array_unique($individualCategories);
+
+        // 4. Get single (non-combined) categories from DB
+        $classCategories = ClassCategoryHasStudentClass::with('classCategory')
+            ->where('student_classes_id', $class_id)
+            ->get()
+            ->filter(fn($item) => strpos($item->classCategory->category_name ?? '', '+') === false)
+            ->map(function ($item) {
+                return [
+                    'class_category_has_student_class_id' => $item->id,
+                    'category_name' => $item->classCategory->category_name ?? null,
+                ];
+            });
+
+        // 5. Match student category names with real category IDs
+        $matchedCategories = [];
+
+        foreach ($individualCategories as $studentCat) {
+            foreach ($classCategories as $classCat) {
+                if ($studentCat === $classCat['category_name']) {
+                    $matchedCategories[] = [
+                        'student_category' => $studentCat,
+                        'class_category_has_student_class_id' => $classCat['class_category_has_student_class_id'],
+                        'category_name' => $classCat['category_name'],
+                    ];
+                    break;
+                }
+            }
+        }
+
+        // 6. Group students by matched category
+        $groupedResults = [];
+
+        foreach ($matchedCategories as $matched) {
+            $categoryId = $matched['class_category_has_student_class_id'];
+
+            $categoryStudents = $students->filter(function ($student) use ($matched, $categoryId) {
+                $catName = $student['category_name'];
+
+                if (strpos($catName, '+') !== false) {
+                    $parts = array_map('trim', explode('+', $catName));
+                    return in_array($matched['student_category'], $parts);
+                }
+
+                return $student['class_category_has_student_class_id'] == $categoryId;
+            })->values();
+
+            $groupedResults[] = [
+                'class_category_has_student_class_id' => $categoryId,
+                'category_name' => $matched['category_name'],
+                'students' => $categoryStudents,
+                'student_count' => $categoryStudents->count(),
+            ];
+        }
+
+        return [
+            'all_students' => $students,
+            'student_categories' => $studentCategories,
+            'individual_student_categories' => array_values($individualCategories),
+            'class_categories_without_combined' => $classCategories,
+            'matched_categories' => $matchedCategories,
+            'grouped_results' => $groupedResults,
+        ];
+    }
+
+    public function attendanceRecoadDelete($id)
+    {
+        try {
+            // Find the attendance record
+            $attendance = StudentAttendances::find($id);
+
+            if (!$attendance) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Attendance record not found'
+                ], 404);
+            }
+
+            // Delete the attendance record
+            $attendance->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Attendance record deleted successfully'
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to delete attendance record',
                 'error' => $e->getMessage()
             ], 500);
         }

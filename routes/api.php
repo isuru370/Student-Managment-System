@@ -13,6 +13,7 @@ use App\Http\Controllers\ClassHallsController;
 use App\Http\Controllers\ClassRoomController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\GradeController;
+use App\Http\Controllers\PaymentReasonController;
 use App\Http\Controllers\PaymentsController;
 use App\Http\Controllers\QuickPhotoController;
 use App\Http\Controllers\ReadQRCodeController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\SystemUserController;
 use App\Http\Controllers\UserTypesController;
 use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\TeacherPaymentsController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -106,10 +108,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('class-rooms')->group(function () {
         Route::get('/active', [ClassRoomController::class, 'fetchActiveClasses']);
         Route::get('/teacher/{teacherId}', [ClassRoomController::class, 'fetchTeacherClasse']);
-         Route::get('/all', [ClassRoomController::class, 'fetchAllClassRoom']);
+        Route::get('/all', [ClassRoomController::class, 'fetchAllClassRoom']);
         // CRUD routes
         Route::get('/', [ClassRoomController::class, 'fetchClasses']);
-       
+
         Route::post('/', [ClassRoomController::class, 'store']);
 
         // Parameterized routes
@@ -183,9 +185,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/student', [StudentAttendancesController::class, 'getAllAttendances']);
         Route::get('/read-attendance', [StudentAttendancesController::class, 'readAttendance']);
         Route::get('/monthly/{student_id}/{student_class_id}/{yearMonth}', [StudentAttendancesController::class, 'monthStudentAttendanceCount']);
+        Route::get('/daily/{student_class_id}/{attendance_id}/{class_category_student_class_id}/details', [StudentAttendancesController::class, 'studentAttendClass']);
         Route::put('/update/{id}', [StudentAttendancesController::class, 'updateAttendance']);
+        Route::delete('/delete/{id}', [StudentAttendancesController::class, 'attendanceRecoadDelete']);
         Route::post('/', [StudentAttendancesController::class, 'storeAttendance']);
     });
+
 
     // Grades
     Route::prefix('grades')->group(function () {
@@ -248,6 +253,14 @@ Route::middleware('auth:sanctum')->group(function () {
      Payment API Sections
     /*================================================= */
 
+    Route::prefix('payment-reason')->group(function () {
+        Route::get('/dropdown', [PaymentReasonController::class, 'getDropdown']);
+        Route::get('/', [PaymentReasonController::class, 'fetchAllPaymentReason']);
+        Route::put('/{id}', [PaymentReasonController::class, 'update']);
+        Route::delete('/{id}', [PaymentReasonController::class, 'destroy']);
+        Route::post('/', [PaymentReasonController::class, 'store']);
+    });
+
     Route::prefix('admissions')->group(function () {
         Route::get('/dropdown', [AdmissionsController::class, 'getDropdownAdmissions']);
         Route::put('/{id}', [AdmissionsController::class, 'updateAdmission']);
@@ -268,5 +281,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{student_id}/{student_class_id}', [PaymentsController::class, 'fetchStudentPayments']);
         Route::put('/{id}', [PaymentsController::class, 'updatePayment']);
         Route::delete('/{id}', [PaymentsController::class, 'deletePayment']);
+    });
+    Route::prefix('teacher-payments')->group(function () {
+        Route::get('/monthly-income', [TeacherPaymentsController::class, 'fetchTeacherPaymentsCurrentMonth']);
+        Route::get('/monthly-income/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'fetchTeacherClassPayments']);
+        Route::get('/class-wise/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'getTeacherClassWiseStudentPaymentStatus']);
+        Route::get('/salary-slip/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'fetchSalarySlipDataTest']);
+        Route::get('/monthly-income/{yearMonth}', [TeacherPaymentsController::class, 'getMonthlyPayments']);
+        Route::post('/', [TeacherPaymentsController::class, 'storeTeacherPayments']);
     });
 });

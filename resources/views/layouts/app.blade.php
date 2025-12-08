@@ -596,6 +596,12 @@
                     <div class="collapse {{ request()->routeIs('admissions.*') ? 'show' : '' }}" id="financialMenu">
                         <ul class="nav flex-column ms-3">
 
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('payment_reason.index') ? 'active' : '' }}"
+                                    href="{{ route('payment_reason.index') }}">
+                                    <i class="fas fa-plus-circle"></i> Payment Reson
+                                </a>
+                            </li>
                             {{-- Submenu: Admissions --}}
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#admissionSubmenu" data-bs-toggle="collapse"
@@ -641,6 +647,26 @@
                                             <a class="nav-link {{ request()->routeIs('student-payment.create') ? 'active' : '' }}"
                                                 href="{{ route('student-payment.create') }}">
                                                 <i class="fas fa-list"></i> Pay Class Fee
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
+
+                            {{-- Submenu: Teacher Payment --}}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#teachersSubmenu" data-bs-toggle="collapse"
+                                    role="button" aria-expanded="false" aria-controls="teachersSubmenu">
+                                    <i class="fas fa-book"></i> Teachers Payment
+                                </a>
+
+                                <div class="collapse {{ request()->routeIs('teacher_payment.*') ? 'show' : '' }}"
+                                    id="teachersSubmenu">
+                                    <ul class="nav flex-column ms-3">
+                                        <li class="nav-item">
+                                            <a class="nav-link {{ request()->routeIs('teacher_payment.index') ? 'active' : '' }}"
+                                                href="{{ route('teacher_payment.index') }}">
+                                                <i class="fas fa-plus-circle"></i> Teacher Income
                                             </a>
                                         </li>
                                     </ul>

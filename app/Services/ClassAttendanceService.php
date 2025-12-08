@@ -68,6 +68,7 @@ class ClassAttendanceService
                             'class_category_student_class_id'=> $attendance->classCategoryStudentClass->id,
                         ],
                         'class_details' => [
+                            'class_id' =>$attendance->classCategoryStudentClass->studentClass->id,
                             'class_name' => $attendance->classCategoryStudentClass->studentClass->class_name ?? null,
                             'teacher_name' => optional($attendance->classCategoryStudentClass->studentClass->teacher)->fname
                                 ? ($attendance->classCategoryStudentClass->studentClass->teacher->fname . ' ' .
