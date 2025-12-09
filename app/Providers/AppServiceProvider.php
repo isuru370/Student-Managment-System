@@ -13,6 +13,7 @@ use App\Services\ClassRoomService;
 use App\Services\ExamService;
 use App\Services\GradeService;
 use App\Services\ImageUploadService;
+use App\Services\InstitutePaymentService;
 use App\Services\PaymentReasonService;
 use App\Services\QuickPhotoService;
 use Illuminate\Support\ServiceProvider;
@@ -108,6 +109,9 @@ class AppServiceProvider extends ServiceProvider
         });
         $this->app->bind(TeacherPaymentsService::class, function ($app) {
             return new TeacherPaymentsService();
+        });
+        $this->app->bind(InstitutePaymentService::class, function ($app) {
+            return new InstitutePaymentService();
         });
         $this->app->bind(TeacherService::class, function ($app) {
             return new TeacherService();
