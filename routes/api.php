@@ -13,6 +13,7 @@ use App\Http\Controllers\ClassHallsController;
 use App\Http\Controllers\ClassRoomController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\GradeController;
+use App\Http\Controllers\InstitutePaymentController;
 use App\Http\Controllers\PaymentReasonController;
 use App\Http\Controllers\PaymentsController;
 use App\Http\Controllers\QuickPhotoController;
@@ -282,6 +283,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{id}', [PaymentsController::class, 'updatePayment']);
         Route::delete('/{id}', [PaymentsController::class, 'deletePayment']);
     });
+
     Route::prefix('teacher-payments')->group(function () {
         Route::get('/monthly-income', [TeacherPaymentsController::class, 'fetchTeacherPaymentsCurrentMonth']);
         Route::get('/monthly-income/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'fetchTeacherClassPayments']);
@@ -289,5 +291,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/salary-slip/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'fetchSalarySlipDataTest']);
         Route::get('/monthly-income/{yearMonth}', [TeacherPaymentsController::class, 'getMonthlyPayments']);
         Route::post('/', [TeacherPaymentsController::class, 'storeTeacherPayments']);
+    });
+
+    Route::prefix('institute-payments')->group(function () {
+        Route::get('/monthly-income/{yearMonth}', [InstitutePaymentController::class, 'fetchInstitutePaymentByMonth']);
+        Route::get('/extra-income/{yearMonth}', [InstitutePaymentController::class, 'fetchExtraIncome']);
+        Route::get('/institute-expenses/{yearMonth}', [InstitutePaymentController::class, 'fetchInstituteExpenses']);
+        Route::get('/yearly-income-chart/{year}', [InstitutePaymentController::class, 'fetchYearlyIncomeChart']);
+        Route::post('/store', [InstitutePaymentController::class, 'institutePaymentStore']);
+        Route::delete('/destroy/{id}', [InstitutePaymentController::class, 'institutePaymentDestroy']);
+        Route::post('/extra-income/store', [InstitutePaymentController::class, 'extraIncomeStore']);
+        Route::delete('/extra-income/delete/{id}', [InstitutePaymentController::class, 'extraIncomeDelete']);
     });
 });

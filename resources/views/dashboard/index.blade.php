@@ -8,6 +8,95 @@
 @endsection
 
 @section('content')
+    <!-- Yearly Income Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-white">
+                        <i class="fas fa-chart-line me-2 text-white"></i>Yearly Income Overview - {{ date('Y') }}
+                    </h6>
+                    <div class="d-flex align-items-center">
+                        <div class="input-group input-group-sm me-2" style="width: 120px;">
+                            <input type="text" class="form-control form-control-sm" id="yearSelector" 
+                                   value="{{ date('Y') }}" placeholder="Year">
+                            <button class="btn btn-primary btn-sm" type="button" id="loadYearlyChartBtn">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <button class="btn btn-sm btn-outline-white" id="downloadChartBtn">
+                            <i class="fas fa-download me-1"></i>Download
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="yearlyIncomeChart"></canvas>
+                        <div class="chart-overlay text-center d-none" id="chartLoading"
+                             style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted mb-0 mt-2">Loading chart...</p>
+                        </div>
+                        <div class="chart-overlay text-center d-none" id="chartNoData"
+                             style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                            <i class="fas fa-chart-line fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">No data available for chart</p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <div class="card bg-light border-left-primary shadow-sm">
+                                <div class="card-body py-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-money-bill-wave text-primary fa-2x"></i>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <small class="text-muted d-block">Yearly Gross Income</small>
+                                            <div class="h5 mb-0 fw-bold text-primary" id="yearlyGrossIncome">Rs 0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light border-left-success shadow-sm">
+                                <div class="card-body py-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-chart-bar text-success fa-2x"></i>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <small class="text-muted d-block">Highest Month</small>
+                                            <div class="h5 mb-0 fw-bold text-success" id="highestMonth">--</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light border-left-info shadow-sm">
+                                <div class="card-body py-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-trend-up text-info fa-2x"></i>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <small class="text-muted d-block">Monthly Average</small>
+                                            <div class="h5 mb-0 fw-bold text-info" id="monthlyAverage">Rs 0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Statistics Cards -->
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6 mb-4">
@@ -80,7 +169,7 @@
         <div class="col-12">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+                    <h6 class="m-0 font-weight-bold text-primary text-white">Quick Actions</h6>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -238,6 +327,20 @@
             color: white;
         }
 
+        /* Chart styles */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .chart-overlay {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
         /* Timetable Styles */
         .timetable-table {
             font-size: 0.85rem;
@@ -393,18 +496,232 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        let yearlyChart = null;
+        let currentYear = new Date().getFullYear();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadYearlyIncomeChart(currentYear);
             loadTimetable();
 
             // Add enter key support for date filter
-            document.getElementById('date-filter').addEventListener('keypress', function (e) {
+            document.getElementById('date-filter').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     loadTimetable();
                 }
             });
+
+            // Yearly chart event listeners
+            document.getElementById('loadYearlyChartBtn').addEventListener('click', function() {
+                const year = document.getElementById('yearSelector').value;
+                if (year && year >= 2000 && year <= 2100) {
+                    currentYear = parseInt(year);
+                    loadYearlyIncomeChart(currentYear);
+                } else {
+                    alert('Please enter a valid year (2000-2100)');
+                }
+            });
+
+            document.getElementById('yearSelector').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const year = this.value;
+                    if (year && year >= 2000 && year <= 2100) {
+                        currentYear = parseInt(year);
+                        loadYearlyIncomeChart(currentYear);
+                    } else {
+                        alert('Please enter a valid year (2000-2100)');
+                    }
+                }
+            });
+
+            document.getElementById('downloadChartBtn').addEventListener('click', function() {
+                if (yearlyChart) {
+                    const link = document.createElement('a');
+                    link.download = `yearly-income-chart-${currentYear}.png`;
+                    link.href = yearlyChart.toBase64Image();
+                    link.click();
+                } else {
+                    showDummyMessage('No chart available to download');
+                }
+            });
         });
 
+        function loadYearlyIncomeChart(year) {
+            const chartLoading = document.getElementById('chartLoading');
+            const chartNoData = document.getElementById('chartNoData');
+            
+            chartLoading.classList.remove('d-none');
+            chartNoData.classList.add('d-none');
+
+            fetch(`/api/institute-payments/yearly-income-chart/${year}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    chartLoading.classList.add('d-none');
+                    
+                    if (data.status === 'success' && data.chart_data && data.chart_data.gross_incomes) {
+                        updateYearlyIncomeChart(data);
+                    } else {
+                        showNoDataChart();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading yearly income chart:', error);
+                    chartLoading.classList.add('d-none');
+                    showNoDataChart();
+                });
+        }
+
+        function updateYearlyIncomeChart(data) {
+            const chartData = data.chart_data;
+            const summary = data.summary || {};
+            
+            // Update summary cards
+            document.getElementById('yearlyGrossIncome').textContent = 'Rs ' + formatNumber(summary.yearly_gross_income || 0);
+            
+            // Calculate highest month
+            const grossIncomes = chartData.gross_incomes || [];
+            const maxIncome = Math.max(...grossIncomes);
+            const maxMonthIndex = grossIncomes.indexOf(maxIncome);
+            const monthLabels = chartData.labels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const highestMonth = maxMonthIndex >= 0 ? monthLabels[maxMonthIndex] : '--';
+            document.getElementById('highestMonth').textContent = highestMonth;
+            
+            // Calculate monthly average
+            const monthlyAverage = grossIncomes.length > 0 ? 
+                grossIncomes.reduce((a, b) => a + b, 0) / grossIncomes.length : 0;
+            document.getElementById('monthlyAverage').textContent = 'Rs ' + formatNumber(monthlyAverage);
+            
+            // Destroy existing chart if it exists
+            if (yearlyChart) {
+                yearlyChart.destroy();
+            }
+            
+            // Create new chart
+            const ctx = document.getElementById('yearlyIncomeChart').getContext('2d');
+            
+            // Prepare chart data
+            const chartLabels = monthLabels.slice(0, grossIncomes.length);
+            const chartIncomes = grossIncomes;
+            
+            yearlyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Monthly Gross Income',
+                        data: chartIncomes,
+                        borderColor: '#4e73df',
+                        backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                        pointBackgroundColor: '#4e73df',
+                        pointBorderColor: '#4e73df',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#4e73df',
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                boxWidth: 12,
+                                font: {
+                                    size: 12
+                                },
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += 'Rs ' + formatNumber(context.raw);
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            ticks: {
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            ticks: {
+                                font: {
+                                    size: 11
+                                },
+                                callback: function(value) {
+                                    return 'Rs ' + formatNumber(value);
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    hover: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        function showNoDataChart() {
+            const chartNoData = document.getElementById('chartNoData');
+            chartNoData.classList.remove('d-none');
+            
+            // Destroy existing chart if it exists
+            if (yearlyChart) {
+                yearlyChart.destroy();
+                yearlyChart = null;
+            }
+            
+            // Reset summary cards
+            document.getElementById('yearlyGrossIncome').textContent = 'Rs 0';
+            document.getElementById('highestMonth').textContent = '--';
+            document.getElementById('monthlyAverage').textContent = 'Rs 0';
+        }
+
+        function formatNumber(num) {
+            const number = Number(num) || 0;
+            return number.toLocaleString('en-US', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+        }
+
+        // Existing timetable functions (keep these as they are)
         function loadTimetable() {
             const loadingSpinner = document.getElementById('loading-spinner');
             const noClassesMessage = document.getElementById('no-classes-message');
@@ -421,7 +738,6 @@
             const emptyStateMessage = document.getElementById('empty-state-message');
 
             const selectedDate = dateFilter.value;
-                            console.log(selectedDate);
 
             // Update display
             const displayDate = new Date(selectedDate).toLocaleDateString('si-LK', {

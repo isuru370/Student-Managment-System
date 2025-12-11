@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClassAttendanceController;
 use App\Http\Controllers\ClassHallsController;
 use App\Http\Controllers\ClassRoomController;
+use App\Http\Controllers\InstitutePaymentController;
 use App\Http\Controllers\PaymentReasonController;
 use App\Http\Controllers\PaymentsController;
 use App\Http\Controllers\SettingsCodeController;
@@ -162,6 +163,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/salary-slip/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'showSalarySlip'])->name('salary-slip-exact');
     });
 
+    Route::prefix('institute-payment')->name('institute_payment.')->group(function () {
+        Route::get('/', [InstitutePaymentController::class, 'indexPage'])->name('index');
+        Route::get('/extra', [InstitutePaymentController::class, 'extraIncomePage'])->name('extra');
+        Route::get('/expenses', [InstitutePaymentController::class, 'expensesPage'])->name('expenses');
+    });
 
 
 

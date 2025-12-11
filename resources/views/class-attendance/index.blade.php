@@ -523,24 +523,24 @@
                     }
 
                     classDetailsDiv.innerHTML = `
-                                            <p class="mb-1"><strong>Class Category Student Class ID:</strong> ${classCategoryHasStudentClassId}</p>
-                                            <p class="mb-1"><strong>Fees:</strong> Rs. ${classData.fees || '0'}</p>
-                                            <p class="mb-1"><strong>Student Class:</strong> ${classRoomDetails}</p>
-                                            <p class="mb-1"><strong>Class Category:</strong> ${categoryDetails}</p>
-                                            ${hallData ? `<p class="mb-0"><strong>Default Hall:</strong> ${hallData.hall_name} (${hallData.hall_id})</p>` : ''}
-                                        `;
+                                                                <p class="mb-1"><strong>Class Category Student Class ID:</strong> ${classCategoryHasStudentClassId}</p>
+                                                                <p class="mb-1"><strong>Fees:</strong> Rs. ${classData.fees || '0'}</p>
+                                                                <p class="mb-1"><strong>Student Class:</strong> ${classRoomDetails}</p>
+                                                                <p class="mb-1"><strong>Class Category:</strong> ${categoryDetails}</p>
+                                                                ${hallData ? `<p class="mb-0"><strong>Default Hall:</strong> ${hallData.hall_name} (${hallData.hall_id})</p>` : ''}
+                                                            `;
                 } else {
                     classDetailsDiv.innerHTML = `
-                                            <p class="mb-0"><strong>Class Category Student Class ID:</strong> ${classCategoryHasStudentClassId}</p>
-                                            <p class="mb-0 text-muted">No detailed information available</p>
-                                        `;
+                                                                <p class="mb-0"><strong>Class Category Student Class ID:</strong> ${classCategoryHasStudentClassId}</p>
+                                                                <p class="mb-0 text-muted">No detailed information available</p>
+                                                            `;
                 }
             } catch (error) {
                 console.error('Error loading class details:', error);
                 document.getElementById('classDetails').innerHTML = `
-                                        <p class="mb-0"><strong>Class Category Student Class ID:</strong> ${classCategoryHasStudentClassId}</p>
-                                        <p class="mb-0 text-muted">Failed to load class details</p>
-                                    `;
+                                                            <p class="mb-0"><strong>Class Category Student Class ID:</strong> ${classCategoryHasStudentClassId}</p>
+                                                            <p class="mb-0 text-muted">Failed to load class details</p>
+                                                        `;
             }
         }
 
@@ -695,7 +695,7 @@
                 });
         }
 
-        // Render Attendance Table - UPDATED LOGIC
+        // Render Attendance Table - UPDATED with date formatting
         function renderAttendanceTable(attendanceData) {
             const tbody = document.getElementById('attendanceTableBody');
             const emptyState = document.getElementById('attendanceEmpty');
@@ -721,99 +721,154 @@
             const endIndex = startIndex + recordsPerPage;
             const paginatedData = attendanceData.slice(startIndex, endIndex);
 
+            // Current date for comparison
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
             // Render table rows
             paginatedData.forEach((record, index) => {
                 const actualIndex = startIndex + index;
                 const classattendanceId = record.id;
                 const classCategoryHasStudentClassId = record.class_category_has_student_class_id;
 
+                // Format the date from ISO to YYYY-MM-DD
+                const formattedDate = formatDate(record.date);
+
+                // Date for comparison (remove time part)
                 const recordDate = new Date(record.date);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+                recordDate.setHours(0, 0, 0, 0);
 
                 const isPastDate = recordDate < today;
                 const isFutureDate = recordDate > today;
+                const isToday = recordDate.getTime() === today.getTime();
                 const isDeleted = record.is_ongoing === 0;
+
+                // Check if marked based on your API
+                const isMarked = record.status === "1" || record.status === 1;
 
                 let statusText, statusClass, canEdit, showCheckbox;
 
-                // FIRST check is_ongoing - if 0, show as DELETED
+                // FIRST: Check if record is deleted
                 if (isDeleted) {
                     statusText = "Deleted";
                     statusClass = "attendance-deleted";
                     canEdit = false;
                     showCheckbox = false;
                 }
-                // If is_ongoing is 1 (active), then check other statuses
-                else if (record.status === "1") {
+                // SECOND: Check if record is marked
+                else if (isMarked) {
                     statusText = "Marked";
                     statusClass = "attendance-marked";
                     canEdit = false;
                     showCheckbox = false;
-                } else if (record.status === "0" && isPastDate) {
-                    statusText = "Not Marked";
-                    statusClass = "attendance-not-marked";
-                    canEdit = false;
-                    showCheckbox = false;
-                } else if (record.status === "0" && isFutureDate) {
-                    statusText = "Pending";
-                    statusClass = "attendance-pending";
-                    canEdit = true;
-                    showCheckbox = true;
-                } else {
-                    statusText = "Not Marked";
-                    statusClass = "attendance-not-marked";
-                    canEdit = false;
-                    showCheckbox = false;
+                }
+                // THIRD: Check if record is not marked
+                else {
+                    if (isPastDate) {
+                        statusText = "Not Marked";
+                        statusClass = "attendance-not-marked";
+                        canEdit = false;
+                        showCheckbox = false;
+                    }
+                    else if (isFutureDate) {
+                        statusText = "Pending";
+                        statusClass = "attendance-pending";
+                        canEdit = true;
+                        showCheckbox = true;
+                    }
+                    else if (isToday) {
+                        // Today's records
+                        const currentTime = new Date();
+                        const recordEndTime = new Date(record.date);
+
+                        if (record.end_time) {
+                            // Combine date with end_time
+                            const [hours, minutes] = record.end_time.split(':');
+                            recordEndTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                        }
+
+                        if (currentTime > recordEndTime) {
+                            // Class time has passed today
+                            statusText = "Not Marked";
+                            statusClass = "attendance-not-marked";
+                            canEdit = false;
+                            showCheckbox = false;
+                        } else {
+                            // Class is still pending for today
+                            statusText = "Pending";
+                            statusClass = "attendance-pending";
+                            canEdit = true;
+                            showCheckbox = true;
+                        }
+                    }
                 }
 
                 const isSelected = selectedAttendanceIds.includes(classattendanceId);
                 const checkbox = showCheckbox ?
                     `<input type="checkbox" class="attendance-checkbox select-checkbox" 
-                                              onchange="toggleSelection(${classattendanceId}, this)" 
-                                              ${isSelected ? 'checked' : ''}>` :
+                      onchange="toggleSelection(${classattendanceId}, this)" 
+                      ${isSelected ? 'checked' : ''}>` :
                     '';
 
                 const row = `
-                                        <tr class="${statusClass}">
-                                            <td>${checkbox}</td>
-                                            <td class="fw-bold text-muted">${actualIndex + 1}</td>
-                                            <td>${record.date}</td>
-                                            <td>${record.day_of_week || 'N/A'}</td>
-                                            <td>${record.start_time || 'N/A'}</td>
-                                            <td>${record.end_time || 'N/A'}</td>
-                                            <td>${record.hall ? record.hall.hall_name : 'N/A'}</td>
-                                            <td>
-                                                <span class="badge ${getStatusBadgeClass(statusClass)}">
-                                                    ${statusText}
-                                                </span>
-                                            </td>
-                                            <td class="text-center">
-                                                ${canEdit ?
+                <tr class="${statusClass}">
+                    <td>${checkbox}</td>
+                    <td class="fw-bold text-muted">${actualIndex + 1}</td>
+                    <td>${formattedDate}</td>
+                    <td>${record.day_of_week || 'N/A'}</td>
+                    <td>${record.start_time || 'N/A'}</td>
+                    <td>${record.end_time || 'N/A'}</td>
+                    <td>${record.hall ? record.hall.hall_name : 'N/A'}</td>
+                    <td>
+                        <span class="badge ${getStatusBadgeClass(statusClass)}">
+                            ${statusText}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        ${canEdit ?
                         `<button class="btn btn-outline-warning btn-sm" title="Edit Attendance" 
-                                                    onclick="editAttendance(
-                                                        ${classattendanceId},
-                                                        ${classCategoryHasStudentClassId},
-                                                        '${record.date}',
-                                                        '${record.day_of_week || ''}',
-                                                        '${record.start_time || ''}',
-                                                        '${record.end_time || ''}',
-                                                        '${record.status}',
-                                                        ${record.class_hall_id}
-                                                    )">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>`
+                                onclick="editAttendance(
+                                    ${classattendanceId},
+                                    ${classCategoryHasStudentClassId},
+                                    '${formattedDate}',
+                                    '${record.day_of_week || ''}',
+                                    '${record.start_time || ''}',
+                                    '${record.end_time || ''}',
+                                    '${record.status}',
+                                    ${record.class_hall_id}
+                                )">
+                                <i class="fas fa-edit"></i>
+                            </button>`
                         :
                         '<button class="btn btn-outline-secondary btn-sm" disabled title="Cannot Edit"><i class="fas fa-edit"></i></button>'
                     }
-                                            </td>
-                                        </tr>
-                                    `;
+                    </td>
+                </tr>
+            `;
                 tbody.innerHTML += row;
             });
 
             // Update pagination controls
             updatePaginationControls(attendanceData.length);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+
+            try {
+                // ISO 8601 format දිනය ගන්න (2025-08-10T18:30:00.000000Z)
+                const date = new Date(dateString);
+
+                // YYYY-MM-DD ආකෘතියට හරවන්න
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0'); // මාස 0-11 නිසා +1 කරන්න
+                const day = String(date.getDate()).padStart(2, '0');
+
+                return `${year}-${month}-${day}`;
+            } catch (error) {
+                console.error('Error formatting date:', dateString, error);
+                return 'Invalid Date';
+            }
         }
 
         // Helper function to get badge class based on status
@@ -904,19 +959,80 @@
                 });
         }
 
-        // Update Attendance Summary - UPDATED LOGIC
         function updateAttendanceSummary(attendanceData) {
             const summaryDiv = document.getElementById('attendanceSummary');
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
             const totalRecords = attendanceData.length;
+
+            // 1. මකා දැමූ පැමිණීම් (Deleted)
             const deletedRecords = attendanceData.filter(record => record.is_ongoing === 0).length;
+
+            // 2. ක්‍රියාකාරී පැමිණීම් (Active)
             const activeRecords = attendanceData.filter(record => record.is_ongoing === 1);
 
-            const markedRecords = activeRecords.filter(record => record.status === "1").length;
-            const notMarkedRecords = activeRecords.filter(record => record.status === "0" && new Date(record.date) < today).length;
-            const pendingRecords = activeRecords.filter(record => record.status === "0" && new Date(record.date) > today).length;
+            // 3. විවිධ කාණ්ඩ ගණන් කරන්න
+            let markedRecords = 0;
+            let notMarkedRecords = 0;
+            let pendingRecords = 0;
+            let todayPendingRecords = 0;
+
+            activeRecords.forEach(record => {
+                const recordDate = new Date(record.date);
+                recordDate.setHours(0, 0, 0, 0);
+
+                // IMPORTANT: Check if status is marked (based on your API)
+                // If status is "1" or 1, it's marked
+                const isMarked = record.status === "1" || record.status === 1;
+
+                if (isMarked) {
+                    markedRecords++;
+                } else {
+                    // Not marked records
+                    if (recordDate < today) {
+                        // Past dates - Not Marked
+                        notMarkedRecords++;
+                    } else if (recordDate > today) {
+                        // Future dates - Pending
+                        pendingRecords++;
+                    } else {
+                        // Today's date
+                        const currentTime = new Date();
+
+                        // Check if class time has ended
+                        if (record.end_time) {
+                            const [hours, minutes] = record.end_time.split(':');
+                            const endTime = new Date();
+                            endTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+                            if (currentTime > endTime) {
+                                // Class time has passed
+                                notMarkedRecords++;
+                            } else {
+                                // Class time hasn't passed yet
+                                pendingRecords++;
+                                todayPendingRecords++;
+                            }
+                        } else {
+                            // No end time specified
+                            pendingRecords++;
+                            todayPendingRecords++;
+                        }
+                    }
+                }
+            });
+
+            // Debug logging
+            console.log('=== ATTENDANCE SUMMARY DEBUG ===');
+            console.log('Total Records:', totalRecords);
+            console.log('Active Records:', activeRecords.length);
+            console.log('Deleted Records:', deletedRecords);
+            console.log('Marked Records:', markedRecords);
+            console.log('Not Marked Records:', notMarkedRecords);
+            console.log('Pending Records:', pendingRecords);
+            console.log('Today Pending:', todayPendingRecords);
+            console.log('===============================');
 
             // Calculate percentages
             const activeTotal = activeRecords.length;
@@ -925,154 +1041,137 @@
             const pendingPercentage = activeTotal > 0 ? ((pendingRecords / activeTotal) * 100).toFixed(1) : 0;
             const deletedPercentage = totalRecords > 0 ? ((deletedRecords / totalRecords) * 100).toFixed(1) : 0;
 
+            // Update the HTML (same as before)
             summaryDiv.innerHTML = `
-                <div class="col-xl-2 col-md-4 mb-4">
-                    <div class="summary-card total-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                        <div class="card-body position-relative">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h2 class="mb-1 fw-bold">${totalRecords}</h2>
-                                    <p class="mb-0 opacity-75">Total Records</p>
+                        <div class="col-xl-2 col-md-4 mb-4">
+                            <div class="summary-card total-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                <div class="card-body position-relative">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h2 class="mb-1 fw-bold">${totalRecords}</h2>
+                                            <p class="mb-0 opacity-75">Total Records</p>
+                                        </div>
+                                        <div class="summary-icon">
+                                            <i class="fas fa-calendar-alt fa-2x opacity-75"></i>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 pt-2 border-top border-white border-opacity-25">
+                                        <small class="opacity-75">All attendance records</small>
+                                    </div>
                                 </div>
-                                <div class="summary-icon">
-                                    <i class="fas fa-calendar-alt fa-2x opacity-75"></i>
-                                </div>
-                            </div>
-                            <div class="mt-3 pt-2 border-top border-white border-opacity-25">
-                                <small class="opacity-75">All attendance records</small>
-                            </div>
-                            <div class="position-absolute top-0 end-0 mt-2 me-3">
-                                <i class="fas fa-database fa-xs opacity-50"></i>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="col-xl-2 col-md-4 mb-4">
-                    <div class="summary-card marked-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                        <div class="card-body position-relative">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h2 class="mb-1 fw-bold">${markedRecords}</h2>
-                                    <p class="mb-0 opacity-75">Marked</p>
+                        <div class="col-xl-2 col-md-4 mb-4">
+                            <div class="summary-card marked-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                                <div class="card-body position-relative">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h2 class="mb-1 fw-bold">${markedRecords}</h2>
+                                            <p class="mb-0 opacity-75">Marked</p>
+                                        </div>
+                                        <div class="summary-icon">
+                                            <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 pt-2 border-top border-white border-opacity-25">
+                                        <div class="progress bg-white bg-opacity-25" style="height: 8px; border-radius: 10px;">
+                                            <div class="progress-bar bg-white" style="width: ${markedPercentage}%"></div>
+                                        </div>
+                                        <small class="opacity-75 d-block mt-1">${markedPercentage}% of active</small>
+                                    </div>
                                 </div>
-                                <div class="summary-icon">
-                                    <i class="fas fa-check-circle fa-2x opacity-75"></i>
-                                </div>
-                            </div>
-                            <div class="mt-3 pt-2 border-top border-white border-opacity-25">
-                                <div class="progress bg-white bg-opacity-25" style="height: 8px; border-radius: 10px;">
-                                    <div class="progress-bar bg-white" style="width: ${markedPercentage}%"></div>
-                                </div>
-                                <small class="opacity-75 d-block mt-1">${markedPercentage}% of active</small>
-                            </div>
-                            <div class="position-absolute top-0 end-0 mt-2 me-3">
-                                <i class="fas fa-chart-line fa-xs opacity-50"></i>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="col-xl-2 col-md-4 mb-4">
-                    <div class="summary-card not-marked-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
-                        <div class="card-body position-relative">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h2 class="mb-1 fw-bold">${notMarkedRecords}</h2>
-                                    <p class="mb-0 opacity-75">Not Marked</p>
+                        <div class="col-xl-2 col-md-4 mb-4">
+                            <div class="summary-card not-marked-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                                <div class="card-body position-relative">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h2 class="mb-1 fw-bold">${notMarkedRecords}</h2>
+                                            <p class="mb-0 opacity-75">Not Marked</p>
+                                        </div>
+                                        <div class="summary-icon">
+                                            <i class="fas fa-times-circle fa-2x opacity-75"></i>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 pt-2 border-top border-white border-opacity-25">
+                                        <div class="progress bg-white bg-opacity-25" style="height: 8px; border-radius: 10px;">
+                                            <div class="progress-bar bg-white" style="width: ${notMarkedPercentage}%"></div>
+                                        </div>
+                                        <small class="opacity-75 d-block mt-1">${notMarkedPercentage}% of active</small>
+                                    </div>
                                 </div>
-                                <div class="summary-icon">
-                                    <i class="fas fa-times-circle fa-2x opacity-75"></i>
-                                </div>
-                            </div>
-                            <div class="mt-3 pt-2 border-top border-white border-opacity-25">
-                                <div class="progress bg-white bg-opacity-25" style="height: 8px; border-radius: 10px;">
-                                    <div class="progress-bar bg-white" style="width: ${notMarkedPercentage}%"></div>
-                                </div>
-                                <small class="opacity-75 d-block mt-1">${notMarkedPercentage}% of active</small>
-                            </div>
-                            <div class="position-absolute top-0 end-0 mt-2 me-3">
-                                <i class="fas fa-exclamation-triangle fa-xs opacity-50"></i>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="col-xl-2 col-md-4 mb-4">
-                    <div class="summary-card pending-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #2c3e50;">
-                        <div class="card-body position-relative">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h2 class="mb-1 fw-bold">${pendingRecords}</h2>
-                                    <p class="mb-0 opacity-75">Pending</p>
+                        <div class="col-xl-2 col-md-4 mb-4">
+                            <div class="summary-card pending-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #2c3e50;">
+                                <div class="card-body position-relative">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h2 class="mb-1 fw-bold">${pendingRecords}</h2>
+                                            <p class="mb-0 opacity-75">Pending</p>
+                                        </div>
+                                        <div class="summary-icon">
+                                            <i class="fas fa-clock fa-2x opacity-75"></i>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 pt-2 border-top border-dark border-opacity-25">
+                                        <div class="progress bg-dark bg-opacity-10" style="height: 8px; border-radius: 10px;">
+                                            <div class="progress-bar bg-warning" style="width: ${pendingPercentage}%"></div>
+                                        </div>
+                                        <small class="opacity-75 d-block mt-1">${pendingPercentage}% of active</small>
+                                    </div>
                                 </div>
-                                <div class="summary-icon">
-                                    <i class="fas fa-clock fa-2x opacity-75"></i>
-                                </div>
-                            </div>
-                            <div class="mt-3 pt-2 border-top border-dark border-opacity-25">
-                                <div class="progress bg-dark bg-opacity-10" style="height: 8px; border-radius: 10px;">
-                                    <div class="progress-bar bg-warning" style="width: ${pendingPercentage}%"></div>
-                                </div>
-                                <small class="opacity-75 d-block mt-1">${pendingPercentage}% of active</small>
-                            </div>
-                            <div class="position-absolute top-0 end-0 mt-2 me-3">
-                                <i class="fas fa-hourglass-half fa-xs opacity-50"></i>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="col-xl-2 col-md-4 mb-4">
-                    <div class="summary-card deleted-card" style="background: linear-gradient(135deg, #868f96 0%, #596164 100%);">
-                        <div class="card-body position-relative">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h2 class="mb-1 fw-bold">${deletedRecords}</h2>
-                                    <p class="mb-0 opacity-75">Deleted</p>
+                        <div class="col-xl-2 col-md-4 mb-4">
+                            <div class="summary-card deleted-card" style="background: linear-gradient(135deg, #868f96 0%, #596164 100%);">
+                                <div class="card-body position-relative">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h2 class="mb-1 fw-bold">${deletedRecords}</h2>
+                                            <p class="mb-0 opacity-75">Deleted</p>
+                                        </div>
+                                        <div class="summary-icon">
+                                            <i class="fas fa-trash fa-2x opacity-75"></i>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 pt-2 border-top border-white border-opacity-25">
+                                        <div class="progress bg-white bg-opacity-25" style="height: 8px; border-radius: 10px;">
+                                            <div class="progress-bar bg-white" style="width: ${deletedPercentage}%"></div>
+                                        </div>
+                                        <small class="opacity-75 d-block mt-1">${deletedPercentage}% of total</small>
+                                    </div>
                                 </div>
-                                <div class="summary-icon">
-                                    <i class="fas fa-trash fa-2x opacity-75"></i>
-                                </div>
-                            </div>
-                            <div class="mt-3 pt-2 border-top border-white border-opacity-25">
-                                <div class="progress bg-white bg-opacity-25" style="height: 8px; border-radius: 10px;">
-                                    <div class="progress-bar bg-white" style="width: ${deletedPercentage}%"></div>
-                                </div>
-                                <small class="opacity-75 d-block mt-1">${deletedPercentage}% of total</small>
-                            </div>
-                            <div class="position-absolute top-0 end-0 mt-2 me-3">
-                                <i class="fas fa-archive fa-xs opacity-50"></i>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="col-xl-2 col-md-4 mb-4">
-                    <div class="summary-card" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #2c3e50;">
-                        <div class="card-body position-relative">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h2 class="mb-1 fw-bold">${activeTotal}</h2>
-                                    <p class="mb-0 opacity-75">Active</p>
+                        <div class="col-xl-2 col-md-4 mb-4">
+                            <div class="summary-card" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #2c3e50;">
+                                <div class="card-body position-relative">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h2 class="mb-1 fw-bold">${activeRecords.length}</h2>
+                                            <p class="mb-0 opacity-75">Active</p>
+                                        </div>
+                                        <div class="summary-icon">
+                                            <i class="fas fa-play-circle fa-2x opacity-75"></i>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 pt-2 border-top border-dark border-opacity-25">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="opacity-75">Active records</small>
+                                            <span class="badge bg-success bg-opacity-25 text-success">Live</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="summary-icon">
-                                    <i class="fas fa-play-circle fa-2x opacity-75"></i>
-                                </div>
-                            </div>
-                            <div class="mt-3 pt-2 border-top border-dark border-opacity-25">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="opacity-75">Active records</small>
-                                    <span class="badge bg-success bg-opacity-25 text-success">Live</span>
-                                </div>
-                            </div>
-                            <div class="position-absolute top-0 end-0 mt-2 me-3">
-                                <i class="fas fa-rocket fa-xs opacity-50"></i>
                             </div>
                         </div>
-                    </div>
-                </div>
-            `;
+                    `;
         }
 
         // Filter by Date
@@ -1145,9 +1244,9 @@
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
             alertDiv.innerHTML = `
-                                    ${message}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                `;
+                                                        ${message}
+                                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                                    `;
 
             const container = document.querySelector('.card-body');
             if (container) {
@@ -1162,45 +1261,45 @@
             const endRecord = Math.min(currentPage * recordsPerPage, totalRecords);
 
             paginationDiv.innerHTML = `
-                                    <div class="row align-items-center">
-                                        <div class="col-md-6">
-                                            <div class="d-flex align-items-center">
-                                                <span class="text-muted me-2">Show:</span>
-                                                <select class="form-select form-select-sm" style="width: auto;" onchange="changeRecordsPerPage(this.value)">
-                                                    <option value="10" ${recordsPerPage === 10 ? 'selected' : ''}>10</option>
-                                                    <option value="25" ${recordsPerPage === 25 ? 'selected' : ''}>25</option>
-                                                    <option value="50" ${recordsPerPage === 50 ? 'selected' : ''}>50</option>
-                                                    <option value="100" ${recordsPerPage === 100 ? 'selected' : ''}>100</option>
-                                                </select>
-                                                <span class="text-muted ms-2">records per page</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6 text-end">
-                                            <div class="d-flex align-items-center justify-content-end">
-                                                <span class="text-muted me-3">
-                                                    Showing ${startRecord} to ${endRecord} of ${totalRecords} records
-                                                </span>
-                                                <nav>
-                                                    <ul class="pagination pagination-sm mb-0">
-                                                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                                                            <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">
-                                                                <i class="fas fa-chevron-left"></i>
-                                                            </a>
-                                                        </li>
+                                                        <div class="row align-items-center">
+                                                            <div class="col-md-6">
+                                                                <div class="d-flex align-items-center">
+                                                                    <span class="text-muted me-2">Show:</span>
+                                                                    <select class="form-select form-select-sm" style="width: auto;" onchange="changeRecordsPerPage(this.value)">
+                                                                        <option value="10" ${recordsPerPage === 10 ? 'selected' : ''}>10</option>
+                                                                        <option value="25" ${recordsPerPage === 25 ? 'selected' : ''}>25</option>
+                                                                        <option value="50" ${recordsPerPage === 50 ? 'selected' : ''}>50</option>
+                                                                        <option value="100" ${recordsPerPage === 100 ? 'selected' : ''}>100</option>
+                                                                    </select>
+                                                                    <span class="text-muted ms-2">records per page</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-6 text-end">
+                                                                <div class="d-flex align-items-center justify-content-end">
+                                                                    <span class="text-muted me-3">
+                                                                        Showing ${startRecord} to ${endRecord} of ${totalRecords} records
+                                                                    </span>
+                                                                    <nav>
+                                                                        <ul class="pagination pagination-sm mb-0">
+                                                                            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                                                                                <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">
+                                                                                    <i class="fas fa-chevron-left"></i>
+                                                                                </a>
+                                                                            </li>
 
-                                                        ${generatePageNumbers()}
+                                                                            ${generatePageNumbers()}
 
-                                                        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                                                            <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">
-                                                                <i class="fas fa-chevron-right"></i>
-                                                            </a>
-                                                        </li>
-                                                    </ul>
-                                                </nav>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `;
+                                                                            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                                                                                <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">
+                                                                                    <i class="fas fa-chevron-right"></i>
+                                                                                </a>
+                                                                            </li>
+                                                                        </ul>
+                                                                    </nav>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    `;
         }
 
         function generatePageNumbers() {
@@ -1215,10 +1314,10 @@
 
             for (let i = startPage; i <= endPage; i++) {
                 pageNumbers += `
-                                        <li class="page-item ${currentPage === i ? 'active' : ''}">
-                                            <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
-                                        </li>
-                                    `;
+                                                            <li class="page-item ${currentPage === i ? 'active' : ''}">
+                                                                <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                                                            </li>
+                                                        `;
             }
 
             return pageNumbers;

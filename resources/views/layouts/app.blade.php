@@ -672,6 +672,26 @@
                                     </ul>
                                 </div>
                             </li>
+                            {{-- Submenu: Institute Payment --}}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#instituteSubmenu" data-bs-toggle="collapse"
+                                    role="button" aria-expanded="false" aria-controls="instituteSubmenu">
+                                    <i class="fas fa-book"></i> Institute Payment
+                                </a>
+
+                                <div class="collapse {{ request()->routeIs('institute_payment.*') ? 'show' : '' }}"
+                                    id="instituteSubmenu">
+                                    <ul class="nav flex-column ms-3">
+                                        <li class="nav-item">
+                                            <a class="nav-link {{ request()->routeIs('institute_payment.index') ? 'active' : '' }}"
+                                                href="{{ route('institute_payment.index') }}">
+                                                <i class="fas fa-plus-circle"></i> Income
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
+                            
 
                         </ul>
                     </div>

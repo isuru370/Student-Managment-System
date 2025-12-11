@@ -64,11 +64,11 @@ class ClassAttendanceService
                         'status' => $attendance->status,
                         'is_ongoing' => $attendance->is_ongoing,
                         'class_hall' => $attendance->hall ? $attendance->hall->hall_name : null,
-                        'classCategoryStudentClass'=>[
-                            'class_category_student_class_id'=> $attendance->classCategoryStudentClass->id,
+                        'classCategoryStudentClass' => [
+                            'class_category_student_class_id' => $attendance->classCategoryStudentClass->id,
                         ],
                         'class_details' => [
-                            'class_id' =>$attendance->classCategoryStudentClass->studentClass->id,
+                            'class_id' => $attendance->classCategoryStudentClass->studentClass->id,
                             'class_name' => $attendance->classCategoryStudentClass->studentClass->class_name ?? null,
                             'teacher_name' => optional($attendance->classCategoryStudentClass->studentClass->teacher)->fname
                                 ? ($attendance->classCategoryStudentClass->studentClass->teacher->fname . ' ' .

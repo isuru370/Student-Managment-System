@@ -11,7 +11,7 @@ class PaymentReasonService
     public function fetchAllPaymentReason()
     {
         try {
-            $result = PaymentReason::all();
+            $result = PaymentReason::where('reason_code', '!=', 'salary')->get();
 
             return response()->json([
                 'status' => "success",
@@ -79,7 +79,9 @@ class PaymentReasonService
     public function getDropdownPaymentReason()
     {
         try {
-            $payment_reasons = PaymentReason::select('id', 'reason_code')->get();
+            $payment_reasons = PaymentReason::select('id', 'reason_code', 'reason')
+                ->where('reason_code', '!=', 'salary') // skip salary payments
+                ->get();
 
             return response()->json([
                 'status' => 'success',

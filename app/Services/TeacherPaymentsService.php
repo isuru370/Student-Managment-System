@@ -226,6 +226,7 @@ class TeacherPaymentsService
             // Load teacher classes
             $classes = ClassRoom::with('subject', 'teacher', 'grade')
                 ->where('teacher_id', $teacherId)
+                ->where('is_active',1)
                 ->select('id', 'class_name', 'subject_id', 'teacher_id', 'grade_id')
                 ->get();
 
@@ -712,6 +713,7 @@ class TeacherPaymentsService
             // Teacher's classes
             $classes = ClassRoom::with(['subject', 'grade'])
                 ->where('teacher_id', $teacherId)
+                ->where('is_active',1)
                 ->get();
 
             if ($classes->isEmpty()) {
