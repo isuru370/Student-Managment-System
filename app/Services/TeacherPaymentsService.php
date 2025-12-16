@@ -226,7 +226,6 @@ class TeacherPaymentsService
             // Load teacher classes
             $classes = ClassRoom::with('subject', 'teacher', 'grade')
                 ->where('teacher_id', $teacherId)
-                ->where('is_active',1)
                 ->select('id', 'class_name', 'subject_id', 'teacher_id', 'grade_id')
                 ->get();
 
@@ -659,7 +658,7 @@ class TeacherPaymentsService
 
             return [
                 "status" => "success",
-                "teacher_id" => $teacherId,
+                "teacher_id" => $teacher->custom_id,
                 "teacher_name" => $teacher->fname ?? 'N/A',
                 "month_year" => "$month $year",
                 "month_year_display" => date('F', mktime(0, 0, 0, $month, 1)) . " $year",
@@ -713,7 +712,7 @@ class TeacherPaymentsService
             // Teacher's classes
             $classes = ClassRoom::with(['subject', 'grade'])
                 ->where('teacher_id', $teacherId)
-                ->where('is_active',1)
+                ->where('is_active', 1)
                 ->get();
 
             if ($classes->isEmpty()) {
@@ -823,17 +822,6 @@ class TeacherPaymentsService
             ], 500);
         }
     }
-
-
-
-
-
-
-
-
-
-
-
 
     public function storeTeacherPayments(Request $request)
     {

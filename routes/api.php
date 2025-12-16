@@ -11,6 +11,7 @@ use App\Http\Controllers\ClassCategoryController;
 use App\Http\Controllers\ClassCategoryHasStudentClassController;
 use App\Http\Controllers\ClassHallsController;
 use App\Http\Controllers\ClassRoomController;
+use App\Http\Controllers\LedgerSummaryController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\InstitutePaymentController;
@@ -302,5 +303,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/destroy/{id}', [InstitutePaymentController::class, 'institutePaymentDestroy']);
         Route::post('/extra-income/store', [InstitutePaymentController::class, 'extraIncomeStore']);
         Route::delete('/extra-income/delete/{id}', [InstitutePaymentController::class, 'extraIncomeDelete']);
+    });
+
+    Route::prefix('ledger')->group(function () {
+        Route::get('/monthly/{yearMonth}', [LedgerSummaryController::class, 'getMonthlySummary'])
+            ->where('yearMonth', '[0-9]{4}-[0-9]{2}');
     });
 });

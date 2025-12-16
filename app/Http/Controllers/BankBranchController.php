@@ -14,13 +14,13 @@ class BankBranchController extends Controller
         $this->bankBranchService = $bankBranchService;
     }
 
-    public function fetchDropdownBranches(Request $request)
+    public function fetchDropdownBranches($bankId)
     {
-        return $this->bankBranchService->fetchDropdownBranches($request);
+        return $this->bankBranchService->fetchDropdownBranches($bankId);
     }
 
-    public function fetchBranches(Request $request)
+    public function fetchBranches($bankId)
     {
-        return $this->bankBranchService->fetchBranches($request);
+        return $this->bankBranchService->fetchBranches($bankId);
     }
 }

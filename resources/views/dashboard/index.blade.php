@@ -175,37 +175,37 @@
                     <div class="row">
                         <div class="col-md-2 col-sm-6 mb-3">
                             <button class="btn btn-primary btn-block btn-action"
-                                onclick="showDummyMessage('Add Student feature is coming soon!')">
+                                onclick="window.location.href='{{ route('students.create') }}'">
                                 <i class="fas fa-user-plus fa-2x mb-2"></i><br>
                                 Add Student
                             </button>
                         </div>
                         <div class="col-md-2 col-sm-6 mb-3">
                             <button class="btn btn-success btn-block btn-action"
-                                onclick="showDummyMessage('Add Teacher feature is coming soon!')">
+                                onclick="window.location.href='{{ route('teachers.create') }}'">
                                 <i class="fas fa-chalkboard-teacher fa-2x mb-2"></i><br>
                                 Add Teacher
                             </button>
                         </div>
                         <div class="col-md-2 col-sm-6 mb-3">
                             <button class="btn btn-info btn-block btn-action"
-                                onclick="showDummyMessage('Create Class feature is coming soon!')">
+                                onclick="window.location.href='{{ route('class_rooms.create') }}'">
                                 <i class="fas fa-book fa-2x mb-2"></i><br>
                                 Create Class
                             </button>
                         </div>
                         <div class="col-md-2 col-sm-6 mb-3">
                             <button class="btn btn-warning btn-block btn-action"
-                                onclick="showDummyMessage('Take Attendance feature is coming soon!')">
+                                onclick="window.location.href='{{ route('student_attendance.index') }}'">
                                 <i class="fas fa-clipboard-check fa-2x mb-2"></i><br>
-                                Take Attendance
+                                Attendance
                             </button>
                         </div>
                         <div class="col-md-2 col-sm-6 mb-3">
                             <button class="btn btn-danger btn-block btn-action"
-                                onclick="showDummyMessage('Manage Payments feature is coming soon!')">
+                                onclick="window.location.href='{{ route('student-payment.create') }}'">
                                 <i class="fas fa-credit-card fa-2x mb-2"></i><br>
-                                Take Payments
+                                Payments
                             </button>
                         </div>
                         <div class="col-md-2 col-sm-6 mb-3">

@@ -688,6 +688,12 @@
                                                 <i class="fas fa-plus-circle"></i> Income
                                             </a>
                                         </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {{ request()->routeIs('institute_payment.ledger') ? 'active' : '' }}"
+                                                href="{{ route('institute_payment.ledger') }}">
+                                                <i class="fas fa-plus-circle"></i> ledger
+                                            </a>
+                                        </li>
                                     </ul>
                                 </div>
                             </li>

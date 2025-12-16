@@ -167,6 +167,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [InstitutePaymentController::class, 'indexPage'])->name('index');
         Route::get('/extra', [InstitutePaymentController::class, 'extraIncomePage'])->name('extra');
         Route::get('/expenses', [InstitutePaymentController::class, 'expensesPage'])->name('expenses');
+         Route::get('/ledger', [InstitutePaymentController::class, 'ledgerPage'])->name('ledger');
     });
 
 

@@ -1019,7 +1019,7 @@
                 const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
                 const currentDay = today.getDate();
 
-                return currentDay > (lastDayOfMonth - 5);
+                return currentDay > (lastDayOfMonth - 25);
             }
 
             // Initialize everything

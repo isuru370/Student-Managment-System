@@ -690,38 +690,38 @@
                     const card = document.createElement('div');
                     card.className = 'col-md-6 col-lg-3 mb-2';
                     card.innerHTML = `
-                                    <div class="card class-card h-100">
-                                        <div class="card-header bg-light py-2">
-                                            <h6 class="mb-0 small">${cls.class_name || 'Unnamed Class'}</h6>
-                                            <small class="text-muted">Grade: ${cls.grade_name || 'N/A'}</small>
-                                        </div>
-                                        <div class="card-body py-2">
-                                            <div class="mb-2">
-                                                <div class="d-flex justify-content-between mb-1">
-                                                    <span class="text-muted small">Paid</span>
-                                                    <span class="fw-bold small">${cls.students_paid || 0}/${cls.total_students || 0}</span>
+                                        <div class="card class-card h-100">
+                                            <div class="card-header bg-light py-2">
+                                                <h6 class="mb-0 small">${cls.class_name || 'Unnamed Class'}</h6>
+                                                <small class="text-muted">Grade: ${cls.grade_name || 'N/A'}</small>
+                                            </div>
+                                            <div class="card-body py-2">
+                                                <div class="mb-2">
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span class="text-muted small">Paid</span>
+                                                        <span class="fw-bold small">${cls.students_paid || 0}/${cls.total_students || 0}</span>
+                                                    </div>
+                                                    <div class="student-progress">
+                                                        <div class="progress">
+                                                            <div class="progress-bar bg-success" style="width: ${percentagePaid}%"></div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div class="student-progress">
-                                                    <div class="progress">
-                                                        <div class="progress-bar bg-success" style="width: ${percentagePaid}%"></div>
+                                                <div class="mb-1">
+                                                    <div class="d-flex justify-content-between">
+                                                        <span class="text-muted small">Collection:</span>
+                                                        <span class="fw-bold small">${formatCurrency(totalPaid)}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-1">
+                                                    <div class="d-flex justify-content-between">
+                                                        <span class="text-muted small">Teacher's:</span>
+                                                        <span class="fw-bold text-success small">${formatCurrency(teacherShare)}</span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="mb-1">
-                                                <div class="d-flex justify-content-between">
-                                                    <span class="text-muted small">Collection:</span>
-                                                    <span class="fw-bold small">${formatCurrency(totalPaid)}</span>
-                                                </div>
-                                            </div>
-                                            <div class="mb-1">
-                                                <div class="d-flex justify-content-between">
-                                                    <span class="text-muted small">Teacher's:</span>
-                                                    <span class="fw-bold text-success small">${formatCurrency(teacherShare)}</span>
-                                                </div>
-                                            </div>
                                         </div>
-                                    </div>
-                                `;
+                                    `;
 
                     classesCards.appendChild(card);
                 });
@@ -837,10 +837,10 @@
 
                     // Total and percentage cells
                     rowHTML += `
-                                    <td class="fw-bold bg-light text-primary">${formatCurrency(rowData.totalCollection)}</td>
-                                    <td class="bg-light text-secondary">${formatCurrency(rowData.institutionShare)}</td>
-                                    <td class="fw-bold bg-success text-white">${formatCurrency(rowData.teacherShare)}</td>
-                                `;
+                                        <td class="fw-bold bg-light text-primary">${formatCurrency(rowData.totalCollection)}</td>
+                                        <td class="bg-light text-secondary">${formatCurrency(rowData.institutionShare)}</td>
+                                        <td class="fw-bold bg-success text-white">${formatCurrency(rowData.teacherShare)}</td>
+                                    `;
 
                     row.innerHTML = rowHTML;
                     paymentTableBody.appendChild(row);
@@ -917,10 +917,10 @@
 
                 // Overall totals
                 footerRow.innerHTML += `
-                                <td class="fw-bold bg-light text-primary">${formatCurrency(totals.totalCollection)}</td>
-                                <td class="fw-bold bg-light text-secondary">${formatCurrency(totals.institutionShare)}</td>
-                                <td class="fw-bold bg-success text-white">${formatCurrency(totals.teacherShare)}</td>
-                            `;
+                                    <td class="fw-bold bg-light text-primary">${formatCurrency(totals.totalCollection)}</td>
+                                    <td class="fw-bold bg-light text-secondary">${formatCurrency(totals.institutionShare)}</td>
+                                    <td class="fw-bold bg-success text-white">${formatCurrency(totals.teacherShare)}</td>
+                                `;
 
                 paymentTableFooter.appendChild(footerRow);
             }
@@ -941,16 +941,16 @@
                 teacherData.salary_payments.forEach(payment => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                                    <td>${formatDate(payment.date)}</td>
-                                    <td class="fw-bold">${formatCurrency(payment.payment)}</td>
-                                    <td><span class="badge bg-info">${payment.reason_code || 'N/A'}</span></td>
-                                    <td>${payment.payment_for || 'N/A'}</td>
-                                    <td>
-                                        <span class="badge ${payment.status === 1 ? 'bg-success' : 'bg-warning'}">
-                                            ${payment.status === 1 ? 'Paid' : 'Pending'}
-                                        </span>
-                                    </td>
-                                `;
+                                        <td>${formatDate(payment.date)}</td>
+                                        <td class="fw-bold">${formatCurrency(payment.payment)}</td>
+                                        <td><span class="badge bg-info">${payment.reason_code || 'N/A'}</span></td>
+                                        <td>${payment.payment_for || 'N/A'}</td>
+                                        <td>
+                                            <span class="badge ${payment.status === 1 ? 'bg-success' : 'bg-warning'}">
+                                                ${payment.status === 1 ? 'Paid' : 'Pending'}
+                                            </span>
+                                        </td>
+                                    `;
 
                     salaryPaymentsTableBody.appendChild(row);
                 });
@@ -985,75 +985,75 @@
                 const modal = document.createElement('div');
                 modal.id = 'paymentConfirmation';
                 modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9998;
-        `;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.6);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9998;
+            `;
 
                 modal.innerHTML = `
-            <div style="
-                background: white;
-                padding: 20px;
-                border-radius: 8px;
-                max-width: 350px;
-                width: 90%;
-                box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            ">
-                <div style="text-align: center; margin-bottom: 15px;">
-                    <h5 style="margin: 0 0 15px 0; color: #333;">Confirm Payment</h5>
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #666;">Teacher:</span>
-                        <strong>${teacherName}</strong>
+                <div style="
+                    background: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    max-width: 350px;
+                    width: 90%;
+                    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+                ">
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <h5 style="margin: 0 0 15px 0; color: #333;">Confirm Payment</h5>
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #666;">Amount:</span>
-                        <strong style="color: #28a745;">${amount}</strong>
+
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: #666;">Teacher:</span>
+                            <strong>${teacherName}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: #666;">Amount:</span>
+                            <strong style="color: #28a745;">${amount}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #666;">Period:</span>
+                            <strong>${monthYear}</strong>
+                        </div>
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: #666;">Period:</span>
-                        <strong>${monthYear}</strong>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button id="confirmBtn" style="
+                            background: #28a745;
+                            color: white;
+                            border: none;
+                            padding: 8px 20px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            flex: 1;
+                        ">
+                            Confirm
+                        </button>
+
+                        <button id="cancelBtn" style="
+                            background: #dc3545;
+                            color: white;
+                            border: none;
+                            padding: 8px 20px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            flex: 1;
+                        ">
+                            Cancel
+                        </button>
                     </div>
                 </div>
-
-                <div style="display: flex; gap: 10px;">
-                    <button id="confirmBtn" style="
-                        background: #28a745;
-                        color: white;
-                        border: none;
-                        padding: 8px 20px;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 14px;
-                        flex: 1;
-                    ">
-                        Confirm
-                    </button>
-
-                    <button id="cancelBtn" style="
-                        background: #dc3545;
-                        color: white;
-                        border: none;
-                        padding: 8px 20px;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 14px;
-                        flex: 1;
-                    ">
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        `;
+            `;
 
                 document.body.appendChild(modal);
 
@@ -1125,49 +1125,49 @@
                 const overlay = document.createElement('div');
                 overlay.id = 'paymentProcessing';
                 overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        `;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+            `;
 
                 overlay.innerHTML = `
-            <div style="
-                background: white;
-                padding: 20px;
-                border-radius: 8px;
-                max-width: 300px;
-                width: 90%;
-                text-align: center;
-            ">
-                <div style="font-size: 30px; color: #007bff; margin-bottom: 10px;">
-                    <i class="fas fa-spinner fa-spin"></i>
-                </div>
-
-                <h5 style="margin-bottom: 15px; color: #333;">Processing Payment</h5>
-
-                <div style="margin-bottom: 15px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                        <span style="color: #666;">Teacher:</span>
-                        <strong>${teacherName}</strong>
+                <div style="
+                    background: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    max-width: 300px;
+                    width: 90%;
+                    text-align: center;
+                ">
+                    <div style="font-size: 30px; color: #007bff; margin-bottom: 10px;">
+                        <i class="fas fa-spinner fa-spin"></i>
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: #666;">Amount:</span>
-                        <strong>${formatCurrency(amount)}</strong>
-                    </div>
-                </div>
 
-                <p style="color: #666; font-size: 13px; margin: 0;">
-                    Please wait...
-                </p>
-            </div>
-        `;
+                    <h5 style="margin-bottom: 15px; color: #333;">Processing Payment</h5>
+
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span style="color: #666;">Teacher:</span>
+                            <strong>${teacherName}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #666;">Amount:</span>
+                            <strong>${formatCurrency(amount)}</strong>
+                        </div>
+                    </div>
+
+                    <p style="color: #666; font-size: 13px; margin: 0;">
+                        Please wait...
+                    </p>
+                </div>
+            `;
 
                 document.body.appendChild(overlay);
             }
@@ -1185,17 +1185,17 @@
                 const modal = document.createElement('div');
                 modal.id = 'paymentSuccess';
                 modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 99999;
-        `;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 99999;
+            `;
 
                 const formattedAmount = formatCurrency(amount);
                 const paymentDate = new Date().toLocaleTimeString('en-LK', {
@@ -1204,86 +1204,86 @@
                 });
 
                 modal.innerHTML = `
-            <div style="
-                background: white;
-                padding: 20px;
-                border-radius: 8px;
-                max-width: 350px;
-                width: 90%;
-            ">
-                <div style="text-align: center; margin-bottom: 15px;">
-                    <div style="
-                        width: 50px;
-                        height: 50px;
-                        background: #28a745;
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        margin: 0 auto 10px;
-                    ">
-                        <i class="fas fa-check" style="font-size: 20px; color: white;"></i>
-                    </div>
-                    <h5 style="margin: 0 0 5px 0; color: #28a745;">Payment Successful</h5>
-                    <p style="color: #666; font-size: 13px; margin: 0;">${teacherName}</p>
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #666;">Amount:</span>
-                        <strong style="color: #28a745;">${formattedAmount}</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #666;">Period:</span>
-                        <strong>${monthYear}</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: #666;">Time:</span>
-                        <strong>${paymentDate}</strong>
-                    </div>
-                </div>
-
                 <div style="
-                    background: #d4edda;
-                    padding: 8px;
-                    border-radius: 4px;
-                    margin-bottom: 15px;
-                    border-left: 3px solid #28a745;
+                    background: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    max-width: 350px;
+                    width: 90%;
                 ">
-                    <p style="margin: 0; color: #155724; font-size: 12px;">
-                        Printing in <span id="countdown" style="font-weight: bold;">5</span> seconds...
-                    </p>
-                </div>
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <div style="
+                            width: 50px;
+                            height: 50px;
+                            background: #28a745;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            margin: 0 auto 10px;
+                        ">
+                            <i class="fas fa-check" style="font-size: 20px; color: white;"></i>
+                        </div>
+                        <h5 style="margin: 0 0 5px 0; color: #28a745;">Payment Successful</h5>
+                        <p style="color: #666; font-size: 13px; margin: 0;">${teacherName}</p>
+                    </div>
 
-                <div style="display: flex; gap: 10px;">
-                    <button id="printBtn" style="
-                        background: #007bff;
-                        color: white;
-                        border: none;
-                        padding: 8px 15px;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 14px;
-                        flex: 1;
-                    ">
-                        Print Now
-                    </button>
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: #666;">Amount:</span>
+                            <strong style="color: #28a745;">${formattedAmount}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: #666;">Period:</span>
+                            <strong>${monthYear}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #666;">Time:</span>
+                            <strong>${paymentDate}</strong>
+                        </div>
+                    </div>
 
-                    <button id="closeBtn" style="
-                        background: #6c757d;
-                        color: white;
-                        border: none;
-                        padding: 8px 15px;
+                    <div style="
+                        background: #d4edda;
+                        padding: 8px;
                         border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 14px;
-                        flex: 1;
+                        margin-bottom: 15px;
+                        border-left: 3px solid #28a745;
                     ">
-                        Close
-                    </button>
+                        <p style="margin: 0; color: #155724; font-size: 12px;">
+                            Printing in <span id="countdown" style="font-weight: bold;">5</span> seconds...
+                        </p>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button id="printBtn" style="
+                            background: #007bff;
+                            color: white;
+                            border: none;
+                            padding: 8px 15px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            flex: 1;
+                        ">
+                            Print Now
+                        </button>
+
+                        <button id="closeBtn" style="
+                            background: #6c757d;
+                            color: white;
+                            border: none;
+                            padding: 8px 15px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            flex: 1;
+                        ">
+                            Close
+                        </button>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
 
                 document.body.appendChild(modal);
 
@@ -1346,61 +1346,61 @@
                 const modal = document.createElement('div');
                 modal.id = 'paymentError';
                 modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 99999;
-        `;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 99999;
+            `;
 
                 modal.innerHTML = `
-            <div style="
-                background: white;
-                padding: 20px;
-                border-radius: 8px;
-                max-width: 350px;
-                width: 90%;
-            ">
-                <div style="text-align: center; margin-bottom: 15px;">
-                    <div style="font-size: 30px; color: #dc3545; margin-bottom: 10px;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <h5 style="margin: 0; color: #dc3545;">Payment Failed</h5>
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <p style="color: #721c24; font-size: 14px; margin: 0 0 10px 0;">
-                        ${errorMessage}
-                    </p>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: #666;">Teacher:</span>
-                        <strong>${teacherName}</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 5px;">
-                        <span style="color: #666;">Amount:</span>
-                        <strong>${formatCurrency(amount)}</strong>
-                    </div>
-                </div>
-
-                <button id="errorCloseBtn" style="
-                    background: #dc3545;
-                    color: white;
-                    border: none;
-                    padding: 8px 20px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 14px;
-                    width: 100%;
+                <div style="
+                    background: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    max-width: 350px;
+                    width: 90%;
                 ">
-                    Try Again
-                </button>
-            </div>
-        `;
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <div style="font-size: 30px; color: #dc3545; margin-bottom: 10px;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h5 style="margin: 0; color: #dc3545;">Payment Failed</h5>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <p style="color: #721c24; font-size: 14px; margin: 0 0 10px 0;">
+                            ${errorMessage}
+                        </p>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #666;">Teacher:</span>
+                            <strong>${teacherName}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                            <span style="color: #666;">Amount:</span>
+                            <strong>${formatCurrency(amount)}</strong>
+                        </div>
+                    </div>
+
+                    <button id="errorCloseBtn" style="
+                        background: #dc3545;
+                        color: white;
+                        border: none;
+                        padding: 8px 20px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        width: 100%;
+                    ">
+                        Try Again
+                    </button>
+                </div>
+            `;
 
                 document.body.appendChild(modal);
 

@@ -14,7 +14,7 @@ use App\Services\ExamService;
 use App\Services\GradeService;
 use App\Services\ImageUploadService;
 use App\Services\InstitutePaymentService;
-use App\Services\LegarSummaryService;
+use App\Services\LedgerSummaryService;
 use App\Services\PaymentReasonService;
 use App\Services\QuickPhotoService;
 use Illuminate\Support\ServiceProvider;
@@ -114,8 +114,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(InstitutePaymentService::class, function ($app) {
             return new InstitutePaymentService();
         });
-        $this->app->bind(LegarSummaryService::class, function ($app) {
-            return new LegarSummaryService();
+        $this->app->bind(LedgerSummaryService::class, function ($app) {
+            return new LedgerSummaryService();
         });
         $this->app->bind(TeacherService::class, function ($app) {
             return new TeacherService();

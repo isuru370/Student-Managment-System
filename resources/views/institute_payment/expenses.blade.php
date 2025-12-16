@@ -34,8 +34,8 @@
                             <span class="input-group-text bg-light py-1">
                                 <i class="fas fa-calendar-alt text-danger"></i>
                             </span>
-                            <input type="month" class="form-control form-control-sm py-1" id="monthSelector" 
-                                   value="{{ date('Y-m') }}">
+                            <input type="month" class="form-control form-control-sm py-1" id="monthSelector"
+                                value="{{ date('Y-m') }}">
                             <button class="btn btn-danger btn-sm py-1 px-3" type="button" id="loadDataBtn">
                                 <i class="fas fa-sync me-1"></i>Load
                             </button>
@@ -172,6 +172,7 @@
     </div>
 
     <!-- Add Expense Modal -->
+    <!-- Add Expense Modal -->
     <div class="modal fade" id="expenseModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -181,42 +182,52 @@
                 </div>
                 <form id="expenseForm">
                     <div class="modal-body p-3">
+                        <!-- Net Total Warning -->
+                        <div class="alert alert-info alert-sm py-1 mb-2 d-none" id="netTotalWarning">
+                            <i class="fas fa-info-circle me-1"></i>
+                            <small>Available Net Total: <strong id="availableNetTotal">Rs 0</strong></small>
+                        </div>
+
                         <div class="mb-2">
-                            <label for="reason_code" class="form-label small">Reason Code <span class="text-danger">*</span></label>
+                            <label for="reason_code" class="form-label small">Reason Code <span
+                                    class="text-danger">*</span></label>
                             <select class="form-select form-select-sm" id="reason_code" name="reason_code" required>
                                 <option value="">Select reason code</option>
                                 <!-- Options will be loaded dynamically -->
                             </select>
                             <div class="invalid-feedback small">Required</div>
                         </div>
-                        
+
                         <div class="mb-2">
                             <label for="reason" class="form-label small">Reason <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm" id="reason" name="reason" 
-                                   placeholder="Reason will auto-fill from code" readonly>
+                            <input type="text" class="form-control form-control-sm" id="reason" name="reason"
+                                placeholder="Reason will auto-fill from code" readonly>
                             <div class="invalid-feedback small">Required</div>
                         </div>
-                        
+
                         <div class="mb-2">
                             <label for="payment" class="form-label small">Amount <span class="text-danger">*</span></label>
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text">Rs</span>
-                                <input type="number" class="form-control" id="payment" name="payment" 
-                                       min="1" step="0.01" placeholder="0.00" required>
-                                <div class="invalid-feedback small">Required</div>
+                                <input type="number" class="form-control" id="payment" name="payment" min="1" step="0.01"
+                                    placeholder="0.00" required>
+                                <div class="invalid-feedback small" id="paymentValidation">
+                                    Required
+                                </div>
                             </div>
+                            <small class="text-muted" id="remainingBalanceText"></small>
                         </div>
 
                         <div class="mb-2">
                             <label for="date" class="form-label small">Date <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control form-control-sm" id="date" name="date" 
-                                   value="{{ date('Y-m-d') }}" required>
+                            <input type="date" disabled class="form-control form-control-sm" id="date" name="date"
+                                value="{{ date('Y-m-d') }}" required>
                             <div class="invalid-feedback small">Required</div>
                         </div>
                     </div>
                     <div class="modal-footer py-2">
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-sm" id="saveBtn">
+                        <button type="submit" class="btn btn-primary btn-sm" id="saveBtn" disabled>
                             <span class="spinner-border spinner-border-sm d-none" role="status"></span>
                             Save
                         </button>
@@ -268,7 +279,8 @@
             padding: 0.5rem !important;
         }
 
-        .table th, .table td {
+        .table th,
+        .table td {
             padding: 0.5rem !important;
         }
 
@@ -281,71 +293,97 @@
             font-size: 0.75rem;
             padding: 0.25rem 0.5rem;
         }
-        
+
         .btn-outline-danger {
             border-color: #dc3545;
             color: #dc3545;
         }
-        
+
         .btn-outline-danger:hover {
             background-color: #dc3545;
             color: white;
         }
-        
+
         .deleted-record {
             text-decoration: line-through;
             opacity: 0.6;
+        }
+
+        .alert-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .alert-sm i {
+            font-size: 0.8rem;
+        }
+
+        #remainingBalanceText {
+            display: block;
+            margin-top: 2px;
+            font-size: 0.8rem;
+        }
+
+        .text-success {
+            color: #198754 !important;
+        }
+
+        .text-danger {
+            color: #dc3545 !important;
         }
     </style>
 @endpush
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             let currentMonth = document.getElementById('monthSelector').value;
             let deleteRecordId = null;
             let isLoading = false;
             let currentSummary = null;
             let reasonCodes = [];
+            let currentNetTotal = 0;
 
             // Initialize
             formatMonthDisplay(currentMonth);
             loadExpenses(currentMonth);
             loadReasonCodes();
             checkAddButtonVisibility(currentMonth);
+            updateNetTotalWarning();
 
             // Event Listeners
-            document.getElementById('monthSelector').addEventListener('change', function() {
+            document.getElementById('monthSelector').addEventListener('change', function () {
                 currentMonth = this.value;
                 formatMonthDisplay(currentMonth);
                 checkAddButtonVisibility(currentMonth);
-                loadExpenses(currentMonth);
+                reloadPageData();
             });
 
-            document.getElementById('loadDataBtn').addEventListener('click', function() {
+            document.getElementById('loadDataBtn').addEventListener('click', function () {
                 currentMonth = document.getElementById('monthSelector').value;
                 formatMonthDisplay(currentMonth);
                 checkAddButtonVisibility(currentMonth);
-                loadExpenses(currentMonth);
+                reloadPageData();
             });
 
-            document.getElementById('backToInstituteBtn').addEventListener('click', function() {
+            document.getElementById('backToInstituteBtn').addEventListener('click', function () {
                 window.location.href = "{{ route('institute_payment.index') }}";
             });
 
             document.getElementById('addExpenseBtn').addEventListener('click', openAddModal);
             document.getElementById('addFirstRecordBtn').addEventListener('click', openAddModal);
 
-            document.getElementById('expenseForm').addEventListener('submit', function(e) {
+            document.getElementById('expenseForm').addEventListener('submit', function (e) {
                 e.preventDefault();
                 saveExpense();
             });
 
-            document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+            document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
                 if (deleteRecordId) deleteExpense(deleteRecordId);
             });
 
-            document.getElementById('reason_code').addEventListener('change', function() {
+            document.getElementById('reason_code').addEventListener('change', function () {
                 const selectedCode = this.value;
                 const selectedReason = reasonCodes.find(rc => rc.reason_code === selectedCode);
                 if (selectedReason) {
@@ -355,6 +393,10 @@
                 }
             });
 
+            // Payment amount validation against Net Total
+            document.getElementById('payment').addEventListener('input', validatePaymentAmount);
+            document.getElementById('payment').addEventListener('change', validatePaymentAmount);
+
             // Modal Functions
             function openAddModal() {
                 document.getElementById('expenseForm').reset();
@@ -362,29 +404,101 @@
                 document.getElementById('reason').value = '';
                 document.getElementById('payment').value = '';
                 document.getElementById('date').value = currentMonth + '-01';
-                
+                document.getElementById('saveBtn').disabled = true;
+
+                // Show/hide net total warning
+                updateNetTotalWarning();
+
                 // Clear validation
                 const invalidElements = document.querySelectorAll('.is-invalid');
                 invalidElements.forEach(el => el.classList.remove('is-invalid'));
-                
+
                 // Show modal
-                new bootstrap.Modal(document.getElementById('expenseModal')).show();
+                const modal = new bootstrap.Modal(document.getElementById('expenseModal'));
+                modal.show();
+
+                // Focus on first input
+                setTimeout(() => {
+                    document.getElementById('reason_code').focus();
+                }, 300);
+            }
+
+            function validatePaymentAmount() {
+                const paymentInput = document.getElementById('payment');
+                const paymentValue = parseFloat(paymentInput.value) || 0;
+                const saveBtn = document.getElementById('saveBtn');
+                const validationDiv = document.getElementById('paymentValidation');
+                const remainingBalanceText = document.getElementById('remainingBalanceText');
+
+                // Hide previous validation
+                paymentInput.classList.remove('is-invalid');
+                validationDiv.textContent = 'Required';
+
+                // Get current net total
+                const currentNetTotalValue = parseFloat(currentNetTotal) || 0;
+
+                if (paymentValue <= 0) {
+                    paymentInput.classList.add('is-invalid');
+                    validationDiv.textContent = 'Amount must be greater than 0';
+                    saveBtn.disabled = true;
+                    remainingBalanceText.textContent = '';
+                    return false;
+                }
+
+                // Check if payment exceeds net total
+                if (paymentValue > currentNetTotalValue) {
+                    paymentInput.classList.add('is-invalid');
+                    validationDiv.textContent = `Amount (Rs ${formatNumber(paymentValue)}) exceeds available Net Total (Rs ${formatNumber(currentNetTotalValue)})`;
+                    saveBtn.disabled = true;
+
+                    const difference = paymentValue - currentNetTotalValue;
+                    remainingBalanceText.innerHTML = `<span class="text-danger">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Exceeds by Rs ${formatNumber(difference)}
+                    </span>`;
+                    return false;
+                } else {
+                    const remaining = currentNetTotalValue - paymentValue;
+                    remainingBalanceText.innerHTML = `<span class="text-success">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Remaining balance: Rs ${formatNumber(remaining)}
+                    </span>`;
+
+                    // Enable save button if other required fields are filled
+                    const reasonCode = document.getElementById('reason_code').value;
+                    const date = document.getElementById('date').value;
+                    saveBtn.disabled = !(reasonCode && date && paymentValue > 0);
+                    return true;
+                }
+            }
+
+            function updateNetTotalWarning() {
+                const netTotalWarning = document.getElementById('netTotalWarning');
+                const availableNetTotal = document.getElementById('availableNetTotal');
+
+                if (currentNetTotal > 0) {
+                    netTotalWarning.classList.remove('d-none');
+                    availableNetTotal.textContent = 'Rs ' + formatNumber(currentNetTotal);
+                } else {
+                    netTotalWarning.classList.add('d-none');
+                }
             }
 
             function openDeleteModal(id) {
                 deleteRecordId = id;
-                new bootstrap.Modal(document.getElementById('deleteModal')).show();
+                const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+                modal.show();
             }
 
             // Check if add button should be visible
             function checkAddButtonVisibility(month) {
                 const currentDate = new Date();
-                const currentYearMonth = currentDate.getFullYear() + '-' + 
-                                       String(currentDate.getMonth() + 1).padStart(2, '0');
-                
+                const currentYearMonth = currentDate.getFullYear() + '-' +
+                    String(currentDate.getMonth() + 1).padStart(2, '0');
+
                 const addBtn = document.getElementById('addExpenseBtn');
                 const addFirstBtn = document.getElementById('addFirstRecordBtn');
-                
+
                 if (month === currentYearMonth) {
                     addBtn.classList.remove('d-none');
                     addFirstBtn.classList.remove('d-none');
@@ -402,29 +516,37 @@
 
                 fetch(`/api/institute-payments/institute-expenses/${month}`, {
                     method: 'GET',
-                    headers: { 
+                    headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                         'Accept': 'application/json'
                     }
                 })
-                .then(response => response.json())
-                .then(response => {
-                    if (response.status === 'success') {
-                        displayExpenses(response.expense_details);
-                        updateSummaryCards(response.summary);
-                        hideNoDataMessage();
-                    } else {
+                    .then(response => response.json())
+                    .then(response => {
+                        if (response.status === 'success') {
+                            displayExpenses(response.expense_details);
+                            updateSummaryCards(response.summary);
+                            hideNoDataMessage();
+
+                            // Store current net total for validation
+                            currentNetTotal = response.summary.net_total || 0;
+                            updateNetTotalWarning();
+                        } else {
+                            showNoDataMessage();
+                            currentNetTotal = 0;
+                            updateNetTotalWarning();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading expenses:', error);
                         showNoDataMessage();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading expenses:', error);
-                    showNoDataMessage();
-                    showNotification('Error loading expenses', 'error');
-                })
-                .finally(() => { 
-                    isLoading = false; 
-                });
+                        showNotification('Error loading expenses', 'error');
+                        currentNetTotal = 0;
+                        updateNetTotalWarning();
+                    })
+                    .finally(() => {
+                        isLoading = false;
+                    });
             }
 
             function loadReasonCodes() {
@@ -432,25 +554,25 @@
                     method: 'GET',
                     headers: { 'Accept': 'application/json' }
                 })
-                .then(response => response.json())
-                .then(response => {
-                    if (Array.isArray(response)) {
-                        reasonCodes = response;
-                        populateReasonCodes(response);
-                    } else if (response.data && Array.isArray(response.data)) {
-                        reasonCodes = response.data;
-                        populateReasonCodes(response.data);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading reason codes:', error);
-                });
+                    .then(response => response.json())
+                    .then(response => {
+                        if (Array.isArray(response)) {
+                            reasonCodes = response;
+                            populateReasonCodes(response);
+                        } else if (response.data && Array.isArray(response.data)) {
+                            reasonCodes = response.data;
+                            populateReasonCodes(response.data);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading reason codes:', error);
+                    });
             }
 
             function populateReasonCodes(data) {
                 const select = document.getElementById('reason_code');
                 select.innerHTML = '<option value="">Select reason code</option>';
-                
+
                 data.forEach(item => {
                     const option = document.createElement('option');
                     option.value = item.reason_code;
@@ -462,7 +584,13 @@
 
             function saveExpense() {
                 if (isLoading) return;
-                
+
+                // Validate payment amount first
+                if (!validatePaymentAmount()) {
+                    showNotification('Please check the payment amount', 'error');
+                    return;
+                }
+
                 const formData = {
                     _token: document.querySelector('meta[name="csrf-token"]').content,
                     reason_code: document.getElementById('reason_code').value,
@@ -486,7 +614,10 @@
                     document.getElementById('date').classList.add('is-invalid');
                     isValid = false;
                 }
-                if (!isValid) return;
+                if (!isValid) {
+                    showNotification('Please fill all required fields correctly', 'error');
+                    return;
+                }
 
                 isLoading = true;
                 const saveBtn = document.getElementById('saveBtn');
@@ -502,30 +633,34 @@
                     },
                     body: JSON.stringify(formData)
                 })
-                .then(response => response.json())
-                .then(response => {
-                    if (response.status === 'success') {
-                        bootstrap.Modal.getInstance(document.getElementById('expenseModal')).hide();
-                        showNotification('Expense added successfully', 'success');
-                        loadExpenses(currentMonth);
-                    } else {
-                        showNotification(response.message || 'Error saving expense', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error saving expense:', error);
-                    showNotification('Error saving expense', 'error');
-                })
-                .finally(() => {
-                    isLoading = false;
-                    saveBtn.disabled = false;
-                    saveBtn.querySelector('.spinner-border').classList.add('d-none');
-                });
+                    .then(response => response.json())
+                    .then(response => {
+                        if (response.status === 'success') {
+                            bootstrap.Modal.getInstance(document.getElementById('expenseModal')).hide();
+                            showNotification('Expense added successfully', 'success');
+
+                            // Auto-reload after successful save
+                            setTimeout(() => {
+                                reloadPageData();
+                            }, 500);
+                        } else {
+                            showNotification(response.message || 'Error saving expense', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error saving expense:', error);
+                        showNotification('Error saving expense', 'error');
+                    })
+                    .finally(() => {
+                        isLoading = false;
+                        saveBtn.disabled = false;
+                        saveBtn.querySelector('.spinner-border').classList.add('d-none');
+                    });
             }
 
             function deleteExpense(id) {
                 if (isLoading) return;
-                
+
                 isLoading = true;
                 const confirmBtn = document.getElementById('confirmDeleteBtn');
                 confirmBtn.disabled = true;
@@ -533,31 +668,41 @@
 
                 fetch(`/api/institute-payments/destroy/${id}`, {
                     method: 'DELETE',
-                    headers: { 
+                    headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                         'Accept': 'application/json'
                     }
                 })
-                .then(response => response.json())
-                .then(response => {
-                    if (response.status === 'success') {
-                        bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
-                        showNotification('Expense deleted successfully', 'success');
-                        loadExpenses(currentMonth);
-                    } else {
-                        showNotification(response.message || 'Error deleting expense', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error deleting expense:', error);
-                    showNotification('Error deleting expense', 'error');
-                })
-                .finally(() => {
-                    isLoading = false;
-                    deleteRecordId = null;
-                    confirmBtn.disabled = false;
-                    confirmBtn.querySelector('.spinner-border').classList.add('d-none');
-                });
+                    .then(response => response.json())
+                    .then(response => {
+                        if (response.status === 'success') {
+                            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+                            showNotification('Expense deleted successfully', 'success');
+
+                            // Auto-reload after successful delete
+                            setTimeout(() => {
+                                reloadPageData();
+                            }, 500);
+                        } else {
+                            showNotification(response.message || 'Error deleting expense', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting expense:', error);
+                        showNotification('Error deleting expense', 'error');
+                    })
+                    .finally(() => {
+                        isLoading = false;
+                        deleteRecordId = null;
+                        confirmBtn.disabled = false;
+                        confirmBtn.querySelector('.spinner-border').classList.add('d-none');
+                    });
+            }
+
+            // Auto-reload function
+            function reloadPageData() {
+                loadExpenses(currentMonth);
+                showNotification('Refreshing data...', 'info');
             }
 
             // Display Functions
@@ -569,8 +714,8 @@
 
                 let html = '';
                 const currentDate = new Date();
-                const currentYearMonth = currentDate.getFullYear() + '-' + 
-                                       String(currentDate.getMonth() + 1).padStart(2, '0');
+                const currentYearMonth = currentDate.getFullYear() + '-' +
+                    String(currentDate.getMonth() + 1).padStart(2, '0');
 
                 expenseDetails.forEach((item, index) => {
                     const date = new Date(item.date);
@@ -579,12 +724,12 @@
                         day: 'numeric',
                         year: 'numeric'
                     });
-                    
+
                     // Get record month (YYYY-MM format)
                     const recordYear = date.getFullYear();
                     const recordMonth = String(date.getMonth() + 1).padStart(2, '0');
                     const recordYearMonth = `${recordYear}-${recordMonth}`;
-                    
+
                     // Check if record is from the CURRENT actual month (not selected month) and status is active
                     const canDelete = (recordYearMonth === currentYearMonth) && (item.status === 1);
                     const isDeleted = item.status === 0;
@@ -619,10 +764,10 @@
 
                 document.getElementById('expensesBody').innerHTML = html;
                 document.getElementById('totalEntries').textContent = `${expenseDetails.length} entries`;
-                
+
                 // Reattach event listeners for delete buttons
                 document.querySelectorAll('.delete-btn').forEach(btn => {
-                    btn.addEventListener('click', function(e) {
+                    btn.addEventListener('click', function (e) {
                         e.preventDefault();
                         e.stopPropagation();
                         const id = this.getAttribute('data-id');
@@ -633,7 +778,7 @@
 
             function updateSummaryCards(summary) {
                 currentSummary = summary;
-                
+
                 document.getElementById('grossIncome').textContent = 'Rs ' + formatNumber(summary.gross_income || 0);
                 document.getElementById('totalExpenses').textContent = 'Rs ' + formatNumber(summary.total_expenses || 0);
                 document.getElementById('netTotal').textContent = 'Rs ' + formatNumber(summary.net_total || 0);
@@ -641,9 +786,9 @@
 
             function formatMonthDisplay(month) {
                 const date = new Date(month + '-01');
-                const formatted = date.toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    year: 'numeric' 
+                const formatted = date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    year: 'numeric'
                 });
                 document.getElementById('selectedMonthDisplay').textContent = formatted;
             }
@@ -685,38 +830,45 @@
             }
 
             function showNotification(message, type = 'info') {
-                const alertClass = type === 'success' ? 'alert-success' : 
-                                 type === 'error' ? 'alert-danger' : 
-                                 type === 'warning' ? 'alert-warning' : 'alert-info';
-                
+                // Remove existing notifications
+                const existingAlerts = document.querySelectorAll('.alert.position-fixed');
+                existingAlerts.forEach(alert => alert.remove());
+
+                const alertClass = type === 'success' ? 'alert-success' :
+                    type === 'error' ? 'alert-danger' :
+                        type === 'warning' ? 'alert-warning' : 'alert-info';
+
                 const notification = document.createElement('div');
                 notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
                 notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
                 notification.innerHTML = `
-                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 
-                                  type === 'error' ? 'fa-exclamation-triangle' : 
-                                  'fa-info-circle'} me-2"></i>
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' :
+                        type === 'error' ? 'fa-exclamation-triangle' :
+                            'fa-info-circle'} me-2"></i>
                     <small>${message}</small>
                     <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
                 `;
 
                 document.body.appendChild(notification);
-                
+
                 // Auto remove after 3 seconds
                 setTimeout(() => {
-                    const bsAlert = new bootstrap.Alert(notification);
-                    bsAlert.close();
+                    if (notification.parentNode) {
+                        const bsAlert = new bootstrap.Alert(notification);
+                        bsAlert.close();
+                    }
                 }, 3000);
             }
 
-            // Input validation
-            document.querySelectorAll('#reason_code, #payment, #date').forEach(input => {
-                input.addEventListener('input', function() {
-                    this.classList.remove('is-invalid');
-                });
-                input.addEventListener('change', function() {
-                    this.classList.remove('is-invalid');
-                });
+            // Input validation for other fields
+            document.getElementById('reason_code').addEventListener('change', function () {
+                this.classList.remove('is-invalid');
+                validatePaymentAmount(); // Re-check to enable/disable save button
+            });
+
+            document.getElementById('date').addEventListener('change', function () {
+                this.classList.remove('is-invalid');
+                validatePaymentAmount(); // Re-check to enable/disable save button
             });
         });
     </script>

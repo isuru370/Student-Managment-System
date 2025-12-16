@@ -17,7 +17,8 @@
             <div class="card-header bg-primary text-white py-2">
                 <div class="d-flex justify-content-between align-items-center">
                     <h6 class="card-title mb-0">
-                        <i class="fas fa-university me-1"></i>Institute Income
+                        <i class="fas fa-university me-1"></i>Institute Income -
+                        {{ date('F Y', strtotime($yearMonth ?? 'now')) }}
                     </h6>
                     <div class="btn-group">
                         <button class="btn btn-sm btn-outline-light px-2" id="prevMonth" title="Previous Month">
@@ -59,6 +60,7 @@
                         </div>
                     </div>
                 </div>
+
 
                 <!-- Summary Cards - Updated to match Quick Stats style -->
                 <div class="row mb-4 g-3" id="summaryCards">
@@ -171,8 +173,9 @@
                                                     </div>
                                                 </div>
                                                 <div class="flex-grow-1 ms-3">
-                                                    <small class="text-muted d-block">Avg. Income/Teacher</small>
-                                                    <div class="h5 mb-0 fw-bold text-warning" id="avgIncomeTeacher">Rs --
+                                                    <small class="text-muted d-block">Avg. Net Earning/Teacher</small>
+                                                    <div class="h5 mb-0 fw-bold text-warning" id="avgNetEarningTeacher">Rs
+                                                        --
                                                     </div>
                                                 </div>
                                             </div>
@@ -203,7 +206,7 @@
                     </div>
                 </div>
 
-                <!-- Teacher Table -->
+                <!-- Teacher Table - Updated with new columns -->
                 <div class="card border">
                     <div class="card-header bg-light py-2">
                         <div class="d-flex justify-content-between align-items-center">
@@ -228,17 +231,18 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th width="3%" class="py-2 px-3">#</th>
-                                        <th width="27%" class="py-2 px-3">Teacher</th>
-                                        <th width="10%" class="py-2 px-3">%</th>
-                                        <th width="15%" class="py-2 px-3">Payments</th>
-                                        <th width="15%" class="py-2 px-3">Earning</th>
-                                        <th width="15%" class="py-2 px-3">Institute</th>
-                                        <th width="15%" class="py-2 px-3">Actions</th>
+                                        <th width="20%" class="py-2 px-3">Teacher</th>
+                                        <th width="8%" class="py-2 px-3">%</th>
+                                        <th width="12%" class="py-2 px-3 text-end">Payments</th>
+                                        <th width="12%" class="py-2 px-3 text-end">Teacher Salary</th>
+                                        <th width="12%" class="py-2 px-3 text-end">Advance</th>
+                                        <th width="12%" class="py-2 px-3 text-end">Net Salary</th>
+                                        <th width="9%" class="py-2 px-3 text-end">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="teacherIncomeBody">
                                     <tr>
-                                        <td colspan="7" class="text-center py-4">
+                                        <td colspan="9" class="text-center py-4">
                                             <div class="spinner-border spinner-border-sm text-primary" role="status">
                                                 <span class="visually-hidden">Loading...</span>
                                             </div>
@@ -382,6 +386,21 @@
             --card-color-light: #4ce3aa;
         }
 
+        .stat-card.teacher-advances {
+            --card-color: #6f42c1;
+            --card-color-light: #9d6ffc;
+        }
+
+        .stat-card.teacher-salaries {
+            --card-color: #fd7e14;
+            --card-color-light: #ffa94d;
+        }
+
+        .stat-card.teacher-net-earnings {
+            --card-color: #20c997;
+            --card-color-light: #5dfcc9;
+        }
+
         .stat-card.institute-income {
             --card-color: #f6c23e;
             --card-color-light: #ffd96a;
@@ -410,6 +429,53 @@
         .stat-card.extra-income {
             --card-color: #858796;
             --card-color-light: #b0b2c3;
+        }
+
+        .stat-card.admission-payments {
+            --card-color: #17a2b8;
+            --card-color-light: #4fd1e5;
+        }
+         .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        .chart-overlay {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Pagination */
+        .pagination-sm .page-link {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        /* Teacher Net Earning Colors */
+        .net-earning-positive {
+            color: #198754 !important;
+            font-weight: 600;
+        }
+        
+        .net-earning-zero {
+            color: #6c757d !important;
+            font-weight: 500;
+        }
+        
+        .net-earning-negative {
+            color: #dc3545 !important;
+            font-weight: 600;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .pagination {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
         }
 
         /* Icon Styling */
@@ -470,6 +536,22 @@
         .pagination-sm .page-link {
             padding: 0.25rem 0.5rem;
             font-size: 0.875rem;
+        }
+
+        /* Teacher Net Earning Colors */
+        .net-earning-positive {
+            color: #198754 !important;
+            font-weight: 600;
+        }
+
+        .net-earning-zero {
+            color: #6c757d !important;
+            font-weight: 500;
+        }
+
+        .net-earning-negative {
+            color: #dc3545 !important;
+            font-weight: 600;
         }
 
         /* Responsive */
@@ -579,12 +661,11 @@
 
             // For navigating in the same window (keeps back button history)
             $('#viewExtraIncomeBtn').click(function () {
-                window.location.assign('http://127.0.0.1:8000/institute-payment/extra');
+                window.location.assign('/institute-payment/extra');
             });
 
             $('#viewExpensesBtn').click(function () {
-                const totalIncome = currentData?.summary?.total_institute_income_including_extra || 0;
-                window.location.assign(`http://127.0.0.1:8000/institute-payment/expenses`);
+                window.location.assign(`/institute-payment/expenses`);
             });
 
             // Export Buttons (Placeholder functionality)
@@ -645,24 +726,24 @@
 
             function showLoadingState() {
                 $('#summaryCards').html(`
-                        <div class="col-12 text-center py-4">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <small class="text-muted ms-2">Loading summary...</small>
-                        </div>
-                    `);
+                                <div class="col-12 text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <small class="text-muted ms-2">Loading summary...</small>
+                                </div>
+                            `);
 
                 $('#teacherIncomeBody').html(`
-                        <tr>
-                            <td colspan="7" class="text-center py-4">
-                                <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <small class="text-muted ms-2">Loading data...</small>
-                            </td>
-                        </tr>
-                    `);
+                                <tr>
+                                    <td colspan="9" class="text-center py-4">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <small class="text-muted ms-2">Loading data...</small>
+                                    </td>
+                                </tr>
+                            `);
 
                 $('#chartLoading').removeClass('d-none');
                 $('#chartNoData').addClass('d-none');
@@ -676,145 +757,319 @@
                 const expenses = parseFloat(summary.total_institute_expenese || 0);
                 const netIncome = totalIncomeWithExtra - expenses;
 
-                const cards = `
-                    <div class="col-xl-3 col-md-6 mb-2">
-                        <div class="stat-card extra-income p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="icon-wrapper bg-secondary bg-opacity-25 p-3 rounded">
-                                        <i class="fas fa-plus-circle text-secondary fa-lg"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <div class="stat-label">Extra Income</div>
-                                    <div class="stat-value">
-                                        <span class="currency">Rs</span>${formatNumber(summary.extra_income_for_month || 0)}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-3 col-md-6 mb-2">
-                        <div class="stat-card teacher-payments p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="icon-wrapper bg-primary bg-opacity-25 p-3 rounded">
-                                        <i class="fas fa-money-bill-wave text-primary fa-lg"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <div class="stat-label">Teacher Payments</div>
-                                    <div class="stat-value">
-                                        <span class="currency">Rs</span>${formatNumber(summary.total_teacher_payments || 0)}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-3 col-md-6 mb-2">
-                        <div class="stat-card teacher-earnings p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="icon-wrapper bg-success bg-opacity-25 p-3 rounded">
-                                        <i class="fas fa-user-tie text-success fa-lg"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <div class="stat-label">Teacher Earnings</div>
-                                    <div class="stat-value">
-                                        <span class="currency">Rs</span>${formatNumber(summary.total_teacher_earnings || 0)}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-3 col-md-6 mb-2">
-                        <div class="stat-card institute-income p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="icon-wrapper bg-warning bg-opacity-25 p-3 rounded">
-                                        <i class="fas fa-school text-warning fa-lg"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <div class="stat-label">Institute Income</div>
-                                    <div class="stat-value">
-                                        <span class="currency">Rs</span>${formatNumber(summary.total_institute_from_classes || 0)}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-4 col-md-6 mb-2">
-                        <div class="stat-card institute-expenses p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="icon-wrapper bg-danger bg-opacity-25 p-3 rounded">
-                                        <i class="fas fa-receipt text-danger fa-lg"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <div class="stat-label">Institute Expenses</div>
-                                    <div class="stat-value">
-                                        <span class="currency">Rs</span>${formatNumber(summary.total_institute_expenese || 0)}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-4 col-md-6 mb-2">
-                        <div class="stat-card institute-total p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="icon-wrapper bg-info bg-opacity-25 p-3 rounded">
-                                        <i class="fas fa-chart-line text-info fa-lg"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <div class="stat-label">Total Income (With Extra)</div>
-                                    <div class="stat-value">
-                                        <span class="currency">Rs</span>${formatNumber(summary.total_institute_income_including_extra || 0)}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-4 col-md-6 mb-2">
-                        <div class="stat-card net-income p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="icon-wrapper bg-teal bg-opacity-25 p-3 rounded">
-                                        <i class="fas fa-calculator text-teal fa-lg"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <div class="stat-label">Net Income</div>
-                                    <div class="stat-value">
-                                        <span class="currency">Rs</span>${formatNumber(netIncome)}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                // Data for summary cards
+                const summaryCardsData = [
+                    {
+                        label: 'Extra Income',
+                        value: summary.extra_income_for_month || 0,
+                        icon: 'plus-circle',
+                        color: 'secondary',
+                        cardClass: 'extra-income',
+                        iconClass: 'text-secondary'
+                    },
+                    {
+                        label: 'Total Payments',
+                        value: summary.total_teacher_payments || 0,
+                        icon: 'money-bill-wave',
+                        color: 'primary',
+                        cardClass: 'teacher-payments',
+                        iconClass: 'text-primary'
+                    },
+                    {
+                        label: 'Teachers Salary',
+                        value: summary.total_teacher_earnings || 0,
+                        icon: 'user-tie',
+                        color: 'success',
+                        cardClass: 'teacher-earnings',
+                        iconClass: 'text-success'
+                    },
+                    {
+                        label: 'Teacher Advances',
+                        value: summary.total_teacher_advances || 0,
+                        icon: 'hand-holding-usd',
+                        color: 'purple',
+                        cardClass: 'teacher-advances',
+                        iconClass: 'text-purple'
+                    },
+                    {
+                        label: 'Teacher Net Salary',
+                        value: summary.total_teacher_net_earnings || 0,
+                        icon: 'calculator',
+                        color: 'teal',
+                        cardClass: 'teacher-net-earnings',
+                        iconClass: 'text-teal'
+                    },
+                    {
+                        label: 'Institute Income',
+                        value: summary.total_institute_from_classes || 0,
+                        icon: 'school',
+                        color: 'warning',
+                        cardClass: 'institute-income',
+                        iconClass: 'text-warning'
+                    },
+                    {
+                        label: 'Institute Expenses',
+                        value: summary.total_institute_expenese || 0,
+                        icon: 'receipt',
+                        color: 'danger',
+                        cardClass: 'institute-expenses',
+                        iconClass: 'text-danger'
+                    },
+                    {
+                        label: 'Admission Payments',
+                        value: summary.admission_payments || 0,
+                        icon: 'user-graduate',
+                        color: 'cyan',
+                        cardClass: 'admission-payments',
+                        iconClass: 'text-cyan'
+                    },
+                    {
+                        label: 'Institute Net Income',
+                        value: summary.institute_net_income || 0,
+                        icon: 'calculator',
+                        color: 'teal',
+                        cardClass: 'net-income',
+                        iconClass: 'text-teal'
+                    }
+                ];
 
-                $('#summaryCards').html(cards);
+                // Create cards HTML - 4 cards per row
+                let cardsHTML = '';
+                let cardCount = 0;
 
-                // Add custom CSS for teal color
-                if (!$('#custom-teal-style').length) {
+                summaryCardsData.forEach((card, index) => {
+                    if (index % 4 === 0) {
+                        // Start new row
+                        if (index > 0) {
+                            cardsHTML += '</div>';
+                        }
+                        cardsHTML += '<div class="row mb-2 g-2">';
+                    }
+
+                    cardsHTML += `
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-6">
+                    <div class="stat-card ${card.cardClass} p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="icon-wrapper bg-${card.color} bg-opacity-25 p-2 rounded">
+                                    <i class="fas fa-${card.icon} ${card.iconClass}"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="stat-label text-truncate" title="${card.label}">${card.label}</div>
+                                <div class="stat-value">
+                                    <span class="currency">Rs</span>${formatNumber(card.value)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+                    cardCount++;
+
+                    // If it's the last card, close the row
+                    if (index === summaryCardsData.length - 1) {
+                        // Fill remaining slots in the row with empty cards for alignment
+                        const remainingSlots = 4 - (cardCount % 4);
+                        if (remainingSlots < 4 && remainingSlots > 0) {
+                            for (let i = 0; i < remainingSlots; i++) {
+                                cardsHTML += `<div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-6"></div>`;
+                            }
+                        }
+                        cardsHTML += '</div>';
+                    }
+                });
+
+                $('#summaryCards').html(cardsHTML);
+
+                // Add custom CSS for colors if not already added
+                if (!$('#custom-colors-style').length) {
                     $('head').append(`
-                            <style id="custom-teal-style">
-                                .bg-teal {
-                                    background-color: #20c997 !important;
-                                }
-                                .text-teal {
-                                    color: #20c997 !important;
-                                }
-                                .bg-teal.bg-opacity-25 {
-                                    background-color: rgba(32, 201, 151, 0.25) !important;
-                                }
-                            </style>
-                        `);
+                <style id="custom-colors-style">
+                    .bg-purple { background-color: #6f42c1 !important; }
+                    .text-purple { color: #6f42c1 !important; }
+                    .bg-purple.bg-opacity-25 { background-color: rgba(111, 66, 193, 0.25) !important; }
+
+                    .bg-orange { background-color: #fd7e14 !important; }
+                    .text-orange { color: #fd7e14 !important; }
+                    .bg-orange.bg-opacity-25 { background-color: rgba(253, 126, 20, 0.25) !important; }
+
+                    .bg-teal { background-color: #20c997 !important; }
+                    .text-teal { color: #20c997 !important; }
+                    .bg-teal.bg-opacity-25 { background-color: rgba(32, 201, 151, 0.25) !important; }
+
+                    .bg-cyan { background-color: #17a2b8 !important; }
+                    .text-cyan { color: #17a2b8 !important; }
+                    .bg-cyan.bg-opacity-25 { background-color: rgba(23, 162, 184, 0.25) !important; }
+
+                    /* Card hover effects */
+                    .stat-card {
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(0, 0, 0, 0.05);
+                        height: 100%;
+                        background: white;
+                        border-radius: 10px;
+                        overflow: hidden;
+                        position: relative;
+                        min-height: 110px;
+                    }
+
+                    .stat-card:hover {
+                        transform: translateY(-3px);
+                        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+                    }
+
+                    .stat-card::before {
+                        content: '';
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        height: 4px;
+                        background: linear-gradient(90deg, var(--card-color, #4e73df) 0%, var(--card-color-light, #86a4ff) 100%);
+                    }
+
+                    /* Card Color Variants */
+                    .stat-card.teacher-payments {
+                        --card-color: #4e73df;
+                        --card-color-light: #86a4ff;
+                    }
+
+                    .stat-card.teacher-earnings {
+                        --card-color: #1cc88a;
+                        --card-color-light: #4ce3aa;
+                    }
+
+                    .stat-card.teacher-advances {
+                        --card-color: #6f42c1;
+                        --card-color-light: #9d6ffc;
+                    }
+
+                    .stat-card.teacher-salaries {
+                        --card-color: #fd7e14;
+                        --card-color-light: #ffa94d;
+                    }
+
+                    .stat-card.teacher-net-earnings {
+                        --card-color: #20c997;
+                        --card-color-light: #5dfcc9;
+                    }
+
+                    .stat-card.institute-income {
+                        --card-color: #f6c23e;
+                        --card-color-light: #ffd96a;
+                    }
+
+                    .stat-card.total-with-extra {
+                        --card-color: #e74a3b;
+                        --card-color-light: #ff7b6b;
+                    }
+
+                    .stat-card.institute-expenses {
+                        --card-color: #dc3545;
+                        --card-color-light: #ff6b7a;
+                    }
+
+                    .stat-card.net-income {
+                        --card-color: #20c997;
+                        --card-color-light: #5dfcc9;
+                    }
+
+                    .stat-card.institute-total {
+                        --card-color: #36b9cc;
+                        --card-color-light: #6cdef1;
+                    }
+
+                    .stat-card.extra-income {
+                        --card-color: #858796;
+                        --card-color-light: #b0b2c3;
+                    }
+
+                    .stat-card.admission-payments {
+                        --card-color: #17a2b8;
+                        --card-color-light: #4fd1e5;
+                    }
+
+                    /* Icon Styling */
+                    .icon-wrapper {
+                        width: 60px;
+                        height: 60px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border-radius: 12px;
+                        transition: all 0.3s ease;
+                    }
+
+                    .stat-card:hover .icon-wrapper {
+                        transform: scale(1.05);
+                    }
+
+                    /* Text Styling */
+                    .stat-label {
+                        font-size: 0.8rem;
+                        font-weight: 600;
+                        color: #6c757d;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        margin-bottom: 0.25rem;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+
+                    .stat-value {
+                        font-size: 1.5rem;
+                        font-weight: 700;
+                        color: #2d3748;
+                        line-height: 1.2;
+                        margin: 0;
+                    }
+
+                    .stat-value .currency {
+                        font-size: 1rem;
+                        font-weight: 500;
+                        color: #718096;
+                        margin-right: 0.25rem;
+                    }
+
+                    /* Responsive */
+                    @media (max-width: 768px) {
+                        .icon-wrapper {
+                            width: 50px;
+                            height: 50px;
+                        }
+
+                        .stat-value {
+                            font-size: 1.25rem;
+                        }
+
+                        .stat-label {
+                            font-size: 0.7rem;
+                        }
+                    }
+
+                    @media (max-width: 576px) {
+                        .icon-wrapper {
+                            width: 45px;
+                            height: 45px;
+                        }
+
+                        .stat-value {
+                            font-size: 1.1rem;
+                        }
+
+                        .stat-label {
+                            font-size: 0.65rem;
+                        }
+
+                        .stat-card {
+                            min-height: 100px;
+                        }
+                    }
+                </style>
+            `);
                 }
             }
 
@@ -839,28 +1094,33 @@
                 let html = '';
                 paginatedTeachers.forEach((teacher, index) => {
                     const globalIndex = startIndex + index + 1;
+                    const netEarning = parseFloat(teacher.teacher_net_earning || 0);
+                    const netEarningClass = netEarning > 0 ? 'net-earning-positive' :
+                        netEarning < 0 ? 'net-earning-negative' : 'net-earning-zero';
+
                     html += `
-                            <tr>
-                                <td class="px-3">${globalIndex}</td>
-                                <td class="px-3">
-                                    <div class="fw-semibold">${teacher.teacher_name}</div>
-                                    <small class="text-muted">ID: ${teacher.teacher_id}</small>
-                                </td>
-                                <td class="px-3">
-                                    <span class="badge bg-info">${teacher.percentage}%</span>
-                                </td>
-                                <td class="text-end px-3">${formatCurrency(teacher.total_payments_this_month)}</td>
-                                <td class="text-end text-success px-3">${formatCurrency(teacher.teacher_total_earning)}</td>
-                                <td class="text-end text-primary px-3">${formatCurrency(teacher.institution_total_income)}</td>
-                                <td class="px-3">
-                                    <button class="btn btn-outline-primary btn-sm view-classes" 
-                                            data-teacher="${teacher.teacher_name}"
-                                            data-classes='${JSON.stringify(teacher.class_wise_totals)}'>
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
+                                <tr>
+                                    <td class="px-3">${globalIndex}</td>
+                                    <td class="px-3">
+                                        <div class="fw-semibold">${teacher.teacher_name}</div>
+                                        <small class="text-muted">ID: ${teacher.teacher_id}</small>
+                                    </td>
+                                    <td class="px-3">
+                                        <span class="badge bg-info">${teacher.percentage}%</span>
+                                    </td>
+                                    <td class="text-end px-3">${formatCurrency(teacher.total_payments_this_month)}</td>
+                                    <td class="text-end text-success px-3">${formatCurrency(teacher.teacher_total_earning)}</td>
+                                    <td class="text-end text-purple px-3">${formatCurrency(teacher.teacher_advance)}</td>
+                                    <td class="text-end text-orange px-3">${formatCurrency(teacher.teacher_salary)}</td>
+                                    <td class="px-3 text-center">
+                                        <button class="btn btn-outline-primary btn-sm view-classes" 
+                                                data-teacher="${teacher.teacher_name}"
+                                                data-classes='${JSON.stringify(teacher.class_wise_totals)}'>
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
                 });
 
                 $('#teacherIncomeBody').html(html);
@@ -944,15 +1204,18 @@
 
                 const summary = data.summary || data;
 
-                // Include expenses in the chart data
+                // Include all components in the chart
                 const chartData = {
                     teacherEarnings: summary.total_teacher_earnings || 0,
+                    teacherAdvances: summary.total_teacher_advances || 0,
+                    teacherSalaries: summary.total_teacher_salaries || 0,
                     instituteIncome: summary.total_institute_from_classes || 0,
                     extraIncome: summary.extra_income_for_month || 0,
                     expenses: summary.total_institute_expenese || 0
                 };
 
-                const total = chartData.teacherEarnings + chartData.instituteIncome +
+                const total = chartData.teacherEarnings + chartData.teacherAdvances +
+                    chartData.teacherSalaries + chartData.instituteIncome +
                     chartData.extraIncome + chartData.expenses;
 
                 if (total === 0) {
@@ -967,22 +1230,26 @@
                 chartInstance = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
-                        labels: ['Teacher Earnings', 'Institute Income', 'Extra Income', 'Expenses'],
+                        labels: ['Teacher Salary', 'Teacher Advances',
+                            'Institute Income', 'Extra Income', 'Expenses'],
                         datasets: [{
                             data: [
                                 chartData.teacherEarnings,
+                                chartData.teacherAdvances,
                                 chartData.instituteIncome,
                                 chartData.extraIncome,
                                 chartData.expenses
                             ],
                             backgroundColor: [
                                 'rgba(40, 167, 69, 0.8)',    // Green for teacher earnings
+                                'rgba(111, 66, 193, 0.8)',   // Purple for teacher advances
                                 'rgba(255, 193, 7, 0.8)',    // Yellow for institute income
                                 'rgba(23, 162, 184, 0.8)',   // Teal for extra income
                                 'rgba(220, 53, 69, 0.8)'     // Red for expenses
                             ],
                             borderColor: [
                                 'rgba(40, 167, 69, 1)',
+                                'rgba(111, 66, 193, 1)',
                                 'rgba(255, 193, 7, 1)',
                                 'rgba(23, 162, 184, 1)',
                                 'rgba(220, 53, 69, 1)'
@@ -1028,11 +1295,13 @@
                 let totalCommission = 0;
                 let activeTeachers = 0;
                 let totalClasses = 0;
+                let totalNetEarning = 0;
 
                 teachers.forEach(teacher => {
-                    if (teacher.percentage && teacher.percentage > 0) {
+                    if (teacher.total_payments_this_month > 0) {
                         totalCommission += parseFloat(teacher.percentage);
                         activeTeachers++;
+                        totalNetEarning += parseFloat(teacher.teacher_net_earning || 0);
                     }
                     if (teacher.class_wise_totals) {
                         // Count only classes that have actual data (not null class_id)
@@ -1042,13 +1311,13 @@
                 });
 
                 const avgCommission = activeTeachers > 0 ? (totalCommission / activeTeachers).toFixed(1) : '0.0';
-                const avgIncomeTeacher = activeTeachers > 0 ?
-                    Math.round((summary.total_teacher_payments || 0) / activeTeachers) : 0;
+                const avgNetEarningTeacher = activeTeachers > 0 ?
+                    Math.round(totalNetEarning / activeTeachers) : 0;
 
                 $('#avgCommission').text(avgCommission + '%');
                 $('#activeTeachers').text(activeTeachers);
                 $('#totalClasses').text(totalClasses);
-                $('#avgIncomeTeacher').text('Rs ' + formatNumber(avgIncomeTeacher));
+                $('#avgNetEarningTeacher').text('Rs ' + formatNumber(avgNetEarningTeacher));
             }
 
             function clearCharts() {
@@ -1063,7 +1332,7 @@
                 $('#quickStats div.h5').each(function () {
                     if ($(this).attr('id') === 'avgCommission') {
                         $(this).text('--%');
-                    } else if ($(this).attr('id') === 'avgIncomeTeacher') {
+                    } else if ($(this).attr('id') === 'avgNetEarningTeacher') {
                         $(this).text('Rs --');
                     } else {
                         $(this).text('--');
@@ -1076,13 +1345,13 @@
                 $('#dataTableContainer').addClass('d-none');
                 $('#paginationContainer').addClass('d-none');
                 $('#summaryCards').html(`
-                        <div class="col-12">
-                            <div class="alert alert-warning py-3">
-                                <i class="fas fa-exclamation-triangle me-1"></i>
-                                <small>No data available for selected month</small>
+                            <div class="col-12">
+                                <div class="alert alert-warning py-3">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <small>No data available for selected month</small>
+                                </div>
                             </div>
-                        </div>
-                    `);
+                        `);
             }
 
             function hideNoDataMessage() {
@@ -1098,18 +1367,18 @@
                     html += `<div class="alert alert-warning py-2"><small>No class data</small></div>`;
                 } else {
                     html += `
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th><small>Class</small></th>
-                                            <th class="text-end"><small>Amount</small></th>
-                                            <th class="text-end"><small>Teacher</small></th>
-                                            <th class="text-end"><small>Institute</small></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                        `;
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th><small>Class</small></th>
+                                                <th class="text-end"><small>Amount</small></th>
+                                                <th class="text-end"><small>Teacher</small></th>
+                                                <th class="text-end"><small>Institute</small></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                            `;
 
                     let totalAmount = 0, totalTeacher = 0, totalInstitute = 0;
 
@@ -1120,29 +1389,29 @@
                             totalInstitute += parseFloat(cls.institute_income || 0);
 
                             html += `
-                                    <tr>
-                                        <td><small>${cls.class_name || 'N/A'}</small></td>
-                                        <td class="text-end"><small>${formatCurrency(cls.total_amount)}</small></td>
-                                        <td class="text-end text-success"><small>${formatCurrency(cls.teacher_earning)}</small></td>
-                                        <td class="text-end text-primary"><small>${formatCurrency(cls.institute_income)}</small></td>
-                                    </tr>
-                                `;
+                                        <tr>
+                                            <td><small>${cls.class_name || 'N/A'}</small></td>
+                                            <td class="text-end"><small>${formatCurrency(cls.total_amount)}</small></td>
+                                            <td class="text-end text-success"><small>${formatCurrency(cls.teacher_earning)}</small></td>
+                                            <td class="text-end text-primary"><small>${formatCurrency(cls.institute_income)}</small></td>
+                                        </tr>
+                                    `;
                         }
                     });
 
                     html += `
-                                    </tbody>
-                                    <tfoot class="table-secondary">
-                                        <tr>
-                                            <th><small>Total</small></th>
-                                            <th class="text-end"><small>${formatCurrency(totalAmount)}</small></th>
-                                            <th class="text-end"><small>${formatCurrency(totalTeacher)}</small></th>
-                                            <th class="text-end"><small>${formatCurrency(totalInstitute)}</small></th>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        `;
+                                        </tbody>
+                                        <tfoot class="table-secondary">
+                                            <tr>
+                                                <th><small>Total</small></th>
+                                                <th class="text-end"><small>${formatCurrency(totalAmount)}</small></th>
+                                                <th class="text-end"><small>${formatCurrency(totalTeacher)}</small></th>
+                                                <th class="text-end"><small>${formatCurrency(totalInstitute)}</small></th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            `;
                 }
 
                 $('#classDetailsContent').html(html);
@@ -1174,13 +1443,13 @@
                         type === 'error' ? 'exclamation-triangle' : 'info-circle';
 
                     const notification = $(`
-                            <div class="alert alert-${alertClass} alert-dismissible fade show position-fixed" 
-                                 style="top: 20px; right: 20px; z-index: 9999; max-width: 300px;">
-                                <i class="fas fa-${icon} me-2"></i>
-                                <small>${message}</small>
-                                <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
-                            </div>
-                        `);
+                                <div class="alert alert-${alertClass} alert-dismissible fade show position-fixed" 
+                                     style="top: 20px; right: 20px; z-index: 9999; max-width: 300px;">
+                                    <i class="fas fa-${icon} me-2"></i>
+                                    <small>${message}</small>
+                                    <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+                                </div>
+                            `);
 
                     $('body').append(notification);
                     setTimeout(() => {

@@ -33,8 +33,8 @@
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <h4 class="card-title text-white">Grade 11</h4>
-                                    <h2 class="text-white" id="grade11Students">0</h2>
+                                    <h4 class="card-title text-white">Active</h4>
+                                    <h2 class="text-white" id="activeStudents">0</h2>
                                 </div>
                                 <div class="flex-shrink-0">
                                     <i class="fas fa-graduation-cap fa-2x text-white-50"></i>
@@ -48,8 +48,8 @@
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <h4 class="card-title text-white">Male Students</h4>
-                                    <h2 class="text-white" id="maleStudents">0</h2>
+                                    <h4 class="card-title text-white">Inactive</h4>
+                                    <h2 class="text-white" id="inactiveStudents">0</h2>
                                 </div>
                                 <div class="flex-shrink-0">
                                     <i class="fas fa-male fa-2x text-white-50"></i>
@@ -63,8 +63,8 @@
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <h4 class="card-title text-white">Female Students</h4>
-                                    <h2 class="text-white" id="femaleStudents">0</h2>
+                                    <h4 class="card-title text-white">Admission Not Paid</h4>
+                                    <h2 class="text-white" id="notPaidStudents">0</h2>
                                 </div>
                                 <div class="flex-shrink-0">
                                     <i class="fas fa-female fa-2x text-white-50"></i>
@@ -787,69 +787,69 @@
                 const avatarContent = student.img_url && isValidImageUrl(student.img_url) ?
                     `<img src="${student.img_url}" alt="${student.fname} ${student.lname}" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">` :
                     `<div class="avatar-sm bg-primary bg-gradient rounded-circle text-white d-flex align-items-center justify-content-center">
-                                                            <span class="fw-bold">${student.fname ? student.fname.charAt(0) : ''}${student.lname ? student.lname.charAt(0) : ''}</span>
-                                                        </div>`;
+                                                                <span class="fw-bold">${student.fname ? student.fname.charAt(0) : ''}${student.lname ? student.lname.charAt(0) : ''}</span>
+                                                            </div>`;
 
                 const row = `
-                <tr class="align-middle">
-                    <td class="text-center fw-bold text-muted">${startRecord + index + 1}</td>
-                    <td>
-                        <div class="d-flex align-items-center">
-                            ${avatarContent}
-                            <div class="ms-3">
-                                <h6 class="mb-0 fw-bold">${student.fname || ''} ${student.lname || ''}</h6>
-                                <small class="text-muted">${student.custom_id || 'No ID'}</small>
+                    <tr class="align-middle">
+                        <td class="text-center fw-bold text-muted">${startRecord + index + 1}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                ${avatarContent}
+                                <div class="ms-3">
+                                    <h6 class="mb-0 fw-bold">${student.fname || ''} ${student.lname || ''}</h6>
+                                    <small class="text-muted">${student.custom_id || 'No ID'}</small>
+                                </div>
                             </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div>
-                            <div class="mb-1">
-                                <i class="fas fa-envelope text-muted me-2"></i>
-                                <small>${student.email || 'No email'}</small>
-                            </div>
+                        </td>
+                        <td>
                             <div>
-                                <i class="fas fa-phone text-muted me-2"></i>
-                                <small>${student.mobile || 'No phone'}</small>
+                                <div class="mb-1">
+                                    <i class="fas fa-envelope text-muted me-2"></i>
+                                    <small>${student.email || 'No email'}</small>
+                                </div>
+                                <div>
+                                    <i class="fas fa-phone text-muted me-2"></i>
+                                    <small>${student.mobile || 'No phone'}</small>
+                                </div>
                             </div>
-                        </div>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge bg-light text-dark border">
-                            <i class="fas fa-graduation-cap me-1 text-primary"></i>
-                            ${student.grade ? student.grade.grade_name : 'N/A'}
-                        </span>
-                    </td>
-                    <td class="text-center">
-                        <span class="fs-5">${genderIcon}</span>
-                    </td>
-                    <td class="text-center">
-                        ${statusBadge}
-                    </td>
-                    <td class="text-center">
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-primary rounded-start" title="View" 
-                                    onclick="viewStudent('${student.custom_id}')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-outline-warning" title="Edit" 
-                                    onclick="editStudent('${student.custom_id}')">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            ${isActive ?
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark border">
+                                <i class="fas fa-graduation-cap me-1 text-primary"></i>
+                                ${student.grade ? student.grade.grade_name : 'N/A'}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="fs-5">${genderIcon}</span>
+                        </td>
+                        <td class="text-center">
+                            ${statusBadge}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary rounded-start" title="View" 
+                                        onclick="viewStudent('${student.custom_id}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-warning" title="Edit" 
+                                        onclick="editStudent('${student.custom_id}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                ${isActive ?
                         `<button class="btn btn-outline-danger rounded-end" title="Deactivate" 
-                                        onclick="showDeactivateModal(${student.id}, '${escapeHtml(student.fname)} ${escapeHtml(student.lname)}', '${escapeHtml(student.email || 'No email')}')">
-                                    <i class="fas fa-user-slash"></i>
-                                </button>` :
+                                            onclick="showDeactivateModal(${student.id}, '${escapeHtml(student.fname)} ${escapeHtml(student.lname)}', '${escapeHtml(student.email || 'No email')}')">
+                                        <i class="fas fa-user-slash"></i>
+                                    </button>` :
                         `<button class="btn btn-outline-success rounded-end" title="Activate" 
-                                        onclick="showActivateModal(${student.id}, '${escapeHtml(student.fname)} ${escapeHtml(student.lname)}', '${escapeHtml(student.email || 'No email')}')">
-                                    <i class="fas fa-user-check"></i>
-                                </button>`
+                                            onclick="showActivateModal(${student.id}, '${escapeHtml(student.fname)} ${escapeHtml(student.lname)}', '${escapeHtml(student.email || 'No email')}')">
+                                        <i class="fas fa-user-check"></i>
+                                    </button>`
                     }
-                        </div>
-                    </td>
-                </tr>
-            `;
+                            </div>
+                        </td>
+                    </tr>
+                `;
                 tbody.innerHTML += row;
             });
         }
@@ -894,68 +894,68 @@
                 const avatarContent = student.img_url && isValidImageUrl(student.img_url) ?
                     `<img src="${student.img_url}" alt="${student.fname} ${student.lname}" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;">` :
                     `<div class="student-avatar bg-primary bg-gradient">
-                                                            <span class="fw-bold">${student.fname ? student.fname.charAt(0) : ''}${student.lname ? student.lname.charAt(0) : ''}</span>
-                                                        </div>`;
+                                                                <span class="fw-bold">${student.fname ? student.fname.charAt(0) : ''}${student.lname ? student.lname.charAt(0) : ''}</span>
+                                                            </div>`;
 
                 const card = `
-                    <div class="col-xl-4 col-lg-6 col-md-6">
-                        <div class="card student-card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-0">${student.custom_id || 'No ID'}</h6>
-                                </div>
-                                <div>
-                                    ${statusBadge}
-                                </div>
-                            </div>
-                            <div class="card-body text-center">
-                                ${avatarContent}
-                                <h5 class="card-title">${student.fname || ''} ${student.lname || ''}</h5>
-                                <p class="text-muted">${student.grade ? student.grade.grade_name : 'No Grade'}</p>
-
-                                <div class="student-info text-start">
-                                    <div class="mb-2">
-                                        <i class="fas fa-envelope"></i>
-                                        <span>${student.email || 'No email'}</span>
-                                    </div>
-                                    <div class="mb-2">
-                                        <i class="fas fa-phone"></i>
-                                        <span>${student.mobile || 'No phone'}</span>
-                                    </div>
-                                    <div class="mb-2">
-                                        <i class="fas fa-venus-mars"></i>
-                                        <span>${student.gender ? student.gender.charAt(0).toUpperCase() + student.gender.slice(1) : 'Not specified'}</span>
+                        <div class="col-xl-4 col-lg-6 col-md-6">
+                            <div class="card student-card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0">${student.custom_id || 'No ID'}</h6>
                                     </div>
                                     <div>
-                                        <i class="fas fa-map-marker-alt"></i>
-                                        <span>${student.address1 || 'No address'}</span>
+                                        ${statusBadge}
                                     </div>
                                 </div>
+                                <div class="card-body text-center">
+                                    ${avatarContent}
+                                    <h5 class="card-title">${student.fname || ''} ${student.lname || ''}</h5>
+                                    <p class="text-muted">${student.grade ? student.grade.grade_name : 'No Grade'}</p>
 
-                                <div class="d-flex justify-content-center gap-2 mt-3">
-                                    <button class="btn btn-outline-primary btn-sm" 
-                                            onclick="viewStudent('${student.custom_id}')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-warning btn-sm" 
-                                            onclick="editStudent('${student.custom_id}')">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    ${isActive ?
+                                    <div class="student-info text-start">
+                                        <div class="mb-2">
+                                            <i class="fas fa-envelope"></i>
+                                            <span>${student.email || 'No email'}</span>
+                                        </div>
+                                        <div class="mb-2">
+                                            <i class="fas fa-phone"></i>
+                                            <span>${student.mobile || 'No phone'}</span>
+                                        </div>
+                                        <div class="mb-2">
+                                            <i class="fas fa-venus-mars"></i>
+                                            <span>${student.gender ? student.gender.charAt(0).toUpperCase() + student.gender.slice(1) : 'Not specified'}</span>
+                                        </div>
+                                        <div>
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            <span>${student.address1 || 'No address'}</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-center gap-2 mt-3">
+                                        <button class="btn btn-outline-primary btn-sm" 
+                                                onclick="viewStudent('${student.custom_id}')">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm" 
+                                                onclick="editStudent('${student.custom_id}')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        ${isActive ?
                         `<button class="btn btn-outline-danger btn-sm" 
-                                                onclick="showDeactivateModal(${student.id}, '${escapeHtml(student.fname)} ${escapeHtml(student.lname)}', '${escapeHtml(student.email || 'No email')}')">
-                                            <i class="fas fa-user-slash"></i>
-                                        </button>` :
+                                                    onclick="showDeactivateModal(${student.id}, '${escapeHtml(student.fname)} ${escapeHtml(student.lname)}', '${escapeHtml(student.email || 'No email')}')">
+                                                <i class="fas fa-user-slash"></i>
+                                            </button>` :
                         `<button class="btn btn-outline-success btn-sm" 
-                                                onclick="showActivateModal(${student.id}, '${escapeHtml(student.fname)} ${escapeHtml(student.lname)}', '${escapeHtml(student.email || 'No email')}')">
-                                            <i class="fas fa-user-check"></i>
-                                        </button>`
+                                                    onclick="showActivateModal(${student.id}, '${escapeHtml(student.fname)} ${escapeHtml(student.lname)}', '${escapeHtml(student.email || 'No email')}')">
+                                                <i class="fas fa-user-check"></i>
+                                            </button>`
                     }
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                `;
+                    `;
                 cardsContainer.innerHTML += card;
             });
         }
@@ -984,10 +984,10 @@
             const prevLi = document.createElement('li');
             prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
             prevLi.innerHTML = `
-                                                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1})" aria-label="Previous">
-                                                        <span aria-hidden="true">Previous</span>
-                                                    </a>
-                                                `;
+                                                        <a class="page-link" href="#" onclick="changePage(${currentPage - 1})" aria-label="Previous">
+                                                            <span aria-hidden="true">Previous</span>
+                                                        </a>
+                                                    `;
             paginationLinks.appendChild(prevLi);
 
             // Page numbers
@@ -1010,10 +1010,10 @@
             const nextLi = document.createElement('li');
             nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
             nextLi.innerHTML = `
-                                                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1})" aria-label="Next">
-                                                        <span aria-hidden="true">Next</span>
-                                                    </a>
-                                                `;
+                                                        <a class="page-link" href="#" onclick="changePage(${currentPage + 1})" aria-label="Next">
+                                                            <span aria-hidden="true">Next</span>
+                                                        </a>
+                                                    `;
             paginationLinks.appendChild(nextLi);
         }
 
@@ -1024,21 +1024,26 @@
         }
 
         function updateStatistics(students) {
+
+            // Counts
             const totalStudents = students.length;
-            const grade11Students = students.filter(s => s.grade && s.grade.grade_name && s.grade.grade_name.includes('11')).length;
-            const maleStudents = students.filter(s => s.gender === 'male').length;
-            const femaleStudents = students.filter(s => s.gender === 'female').length;
+            const activeStudents = students.filter(s => s.is_active == "1").length;
+            const inactiveStudents = students.filter(s => s.is_active == "0").length;
+            const notPaidStudents = students.filter(s => s.admission == 0).length;
 
+            // Elements
             const totalStudentsEl = document.getElementById('totalStudents');
-            const grade11StudentsEl = document.getElementById('grade11Students');
-            const maleStudentsEl = document.getElementById('maleStudents');
-            const femaleStudentsEl = document.getElementById('femaleStudents');
+            const activeStudentsEl = document.getElementById('activeStudents');
+            const inactiveStudentsEl = document.getElementById('inactiveStudents');
+            const notPaidStudentsEl = document.getElementById('notPaidStudents');
 
+            // Update UI
             if (totalStudentsEl) totalStudentsEl.textContent = totalStudents;
-            if (grade11StudentsEl) grade11StudentsEl.textContent = grade11Students;
-            if (maleStudentsEl) maleStudentsEl.textContent = maleStudents;
-            if (femaleStudentsEl) femaleStudentsEl.textContent = femaleStudents;
+            if (activeStudentsEl) activeStudentsEl.textContent = activeStudents;
+            if (inactiveStudentsEl) inactiveStudentsEl.textContent = inactiveStudents;
+            if (notPaidStudentsEl) notPaidStudentsEl.textContent = notPaidStudents;
         }
+
 
         function showActivateModal(studentId, studentName, studentEmail) {
             const activateStudentName = document.getElementById('activateStudentName');
@@ -1234,9 +1239,9 @@
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
             alertDiv.innerHTML = `
-                                                    ${message}
-                                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                                `;
+                                                        ${message}
+                                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                                    `;
 
             const container = document.querySelector('.container') || document.querySelector('.card-body');
             if (container) {

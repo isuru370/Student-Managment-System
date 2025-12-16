@@ -7,15 +7,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class BankBranch extends Model
 {
-
     use HasFactory;
 
-    // Specify the correct table name
+    // DB table එක නිවැරදිව සඳහන් කරන්න
     protected $table = 'bank_branch';
-    protected $fillable = ['bank_id', 'branch_name', 'branch_code'];
+
+    protected $fillable = [
+        'bank_id',
+        'branch_name',
+        'branch_code'
+    ];
 
     public function bank()
     {
-        return $this->belongsTo(Bank::class,'bank_id');
+        return $this->belongsTo(Bank::class, 'bank_id', 'id');
     }
 }

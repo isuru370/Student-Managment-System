@@ -68,4 +68,9 @@ class InstitutePaymentController extends Controller
     {
         return view('institute_payment.expenses');
     }
+
+    public function ledgerPage()
+    {
+        return view('institute_payment.ledger');
+    }
 }

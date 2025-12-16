@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\AdmissionPayments;
 use App\Models\ExtraIncomes;
 use App\Models\InstitutePayment;
 use App\Models\Payments;
 use App\Models\Teacher;
+use App\Models\TeacherPayment;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -15,9 +17,22 @@ class InstitutePaymentService
 
     public function fetchInstitutePaymentByMonth($yearMonth)
     {
+        $monthYear = now()->format('m Y'); // "05 2025"
         try {
             $startOfMonth = Carbon::createFromFormat('Y-m', $yearMonth)->startOfMonth();
             $endOfMonth   = Carbon::createFromFormat('Y-m', $yearMonth)->endOfMonth();
+
+            $admissionPayment = AdmissionPayments::whereBetween('created_at', [$startOfMonth, $endOfMonth])
+                ->sum('amount');
+
+            $teacherAdvance = TeacherPayment::where('reason_code', "!=", 'salary')
+                ->whereBetween('date', [$startOfMonth, $endOfMonth])
+                ->sum('payment');
+
+            $teacherSalary = TeacherPayment::where('reason_code', 'salary')
+                ->where('payment_for', $monthYear)
+                ->sum('payment');
+
 
             // Extra income
             $extraIncome = (float) ExtraIncomes::whereBetween('created_at', [$startOfMonth, $endOfMonth])
@@ -35,6 +50,7 @@ class InstitutePaymentService
             $totalInstituteIncome = 0;
             $totalTeacherPayments = 0;
             $totalTeacherEarnings = 0;
+            $totalTeacherNetEarnings = 0; // Added for net teacher earnings
 
             foreach ($teachers as $teacher) {
                 $payments = Payments::where('status', 1)
@@ -87,20 +103,42 @@ class InstitutePaymentService
                 $totalTeacherPayments += $totalForMonth;
                 $totalTeacherEarnings += $teacherTotalEarning;
 
+                // Calculate teacher's individual advance and salary for this month
+                $teacherMonthlyAdvance = TeacherPayment::where('teacher_id', $teacher->id)
+                    ->where('reason_code', "!=", 'salary')
+                    ->whereBetween('date', [$startOfMonth, $endOfMonth])
+                    ->sum('payment');
+
+                $teacherMonthlySalary = TeacherPayment::where('teacher_id', $teacher->id)
+                    ->where('reason_code', 'salary')
+                    ->where('payment_for', $monthYear)
+                    ->sum('payment');
+
+
+                $teacherNetEarning = round($teacherTotalEarning - ($teacherMonthlyAdvance + $teacherMonthlySalary), 2);
+                $totalTeacherNetEarnings += $teacherNetEarning;
+
                 $result[] = [
                     'teacher_id' => $teacher->id,
                     'teacher_name' => $teacher->fname . ' ' . $teacher->lname,
                     'percentage' => $teacher->precentage,
                     'total_payments_this_month' => round($totalForMonth, 2),
                     'teacher_total_earning' => $teacherTotalEarning,
+                    'teacher_advance' => round($teacherMonthlyAdvance, 2),
+                    'teacher_salary' => round($teacherMonthlySalary, 2),
+                    'teacher_net_earning' => $teacherNetEarning,
                     'institution_total_income' => $institutionTotalIncome,
                     'class_wise_totals' => $classWiseTotals
                 ];
             }
 
-            // Verify calculations
+            // Calculate net institute income
             $calculatedInstituteIncome = round($totalTeacherPayments - $totalTeacherEarnings, 2);
-            $totalWithExtraIncome = round(($totalInstituteIncome + $extraIncome), 2);
+            $instituteIncomeWithAdmission = round($totalInstituteIncome + $admissionPayment, 2);
+            $totalWithExtraIncome = round($instituteIncomeWithAdmission + $extraIncome, 2);
+
+            // Calculate net income after expenses
+            $netIncome = round($totalWithExtraIncome - $totalExpenese, 2);
 
             return response()->json([
                 'status' => 'success',
@@ -108,13 +146,17 @@ class InstitutePaymentService
                 'summary' => [
                     'total_teacher_payments' => round($totalTeacherPayments, 2),
                     'total_teacher_earnings' => round($totalTeacherEarnings, 2),
+                    'total_teacher_advances' => round($teacherAdvance, 2),
+                    'total_teacher_salaries' => round($teacherSalary, 2),
+                    'total_teacher_net_earnings' => round($totalTeacherNetEarnings, 2),
                     'total_institute_from_classes' => round($totalInstituteIncome, 2),
-                    'total_institute_expenese' => round($totalExpenese, 2),
+                    'admission_payments' => round($admissionPayment, 2),
                     'extra_income_for_month' => round($extraIncome, 2),
-                    'total_institute_income_including_extra' => $totalWithExtraIncome,
+                    'total_institute_expenese' => round($totalExpenese, 2),
+                    'institute_gross_income' => $totalWithExtraIncome,
+                    'institute_net_income' => $netIncome,
                     'verification' => [
                         'calculated_institute_income' => $calculatedInstituteIncome,
-                        'difference' => round($totalInstituteIncome - $calculatedInstituteIncome, 2)
                     ]
                 ],
                 'data' => $result
@@ -157,6 +199,8 @@ class InstitutePaymentService
             $startOfMonth = Carbon::createFromFormat('Y-m', $yearMonth)->startOfMonth();
             $endOfMonth   = Carbon::createFromFormat('Y-m', $yearMonth)->endOfMonth();
 
+            $admissionPayment = AdmissionPayments::whereBetween('created_at', [$startOfMonth, $endOfMonth])
+                ->sum('amount');
             // Get total income from classes (without class details)
             $teachers = Teacher::select('id', 'fname', 'lname', 'precentage')
                 ->where('is_active', 1)
@@ -192,7 +236,7 @@ class InstitutePaymentService
 
             // Calculate net total
             $grossIncome = round($totalIncomeFromClasses + $extraIncome, 2);
-            $netTotal = round($grossIncome - $totalExpenses, 2);
+            $netTotal = round($admissionPayment + ($grossIncome - $totalExpenses), 2);
 
             // Format expense details - FIXED: Use Carbon::parse() to convert string to Carbon
             $expenseDetails = $expenses->map(function ($expense) {
