@@ -24,6 +24,7 @@ use App\Services\StudentPaymentService;
 use App\Services\ReadQRCodeService;
 use App\Services\StudentAdmissionPaymentService;
 use App\Services\StudentClassSeparateService;
+use App\Services\StudentIdCardService;
 use App\Services\StudentService;
 use App\Services\StudentStudentStudentClassService;
 use App\Services\SubjectService;
@@ -116,6 +117,9 @@ class AppServiceProvider extends ServiceProvider
         });
         $this->app->bind(LedgerSummaryService::class, function ($app) {
             return new LedgerSummaryService();
+        });
+        $this->app->bind(StudentIdCardService::class, function ($app) {
+            return new StudentIdCardService();
         });
         $this->app->bind(TeacherService::class, function ($app) {
             return new TeacherService();

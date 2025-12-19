@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Student;
 use App\Services\StudentService;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\Storage;
 
 class StudentController extends Controller
 {
@@ -116,15 +116,7 @@ class StudentController extends Controller
         return view('students.images');
     }
 
-    public function ganarateStudentId()
-    {
-        return view('students.ganarate_student_id');
-    }
 
-    public function previewCard($custom_id)
-    {
-        return view('id-cards.design1', compact('custom_id'));
-    }
 
     public function addStudentToClass($class_id)
     {

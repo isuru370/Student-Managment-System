@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\ClassAttendance;
+use App\Models\ClassCategoryHasStudentClass;
 use App\Models\Payments;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -451,12 +454,129 @@ class StudentPaymentService
                 'message' => 'Payments retrieved successfully.',
                 'data' => $formattedData
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to retrieve payments.',
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+
+    // student receipt print
+
+    public function receiptPrint($paymentId)
+    {
+        try {
+            $payment = Payments::with([
+                'student',
+                'studentStudentClass.studentClass.grade',
+                'studentStudentClass.studentClass.subject',
+                'studentStudentClass.studentClass',
+                'studentStudentClass.classCategoryHasStudentClass.classCategory'
+            ])
+                ->select(
+                    'id',
+                    'student_id',
+                    'student_student_student_classes_id',
+                    'payment_date',
+                    'amount',
+                    'payment_for'
+                )
+                ->where('id', $paymentId)
+                ->firstOrFail();
+
+
+            $classId = $payment->studentStudentClass->studentClass->id;
+            $categoryName = $payment->studentStudentClass->classCategoryHasStudentClass->classCategory->category_name;
+
+            $hallPrice = $this->getHallPriceByCategory($classId, $categoryName);
+
+            $total = $payment->amount + ($hallPrice ?? 0);
+
+            $data = [
+                'id' => $payment->id,
+                'student_id' => $payment->student_id,
+                'student_student_student_classes_id' => $payment->student_student_student_classes_id,
+                'payment_date' => $payment->payment_date,
+                'amount' => $payment->amount,
+                'hall_price' => $hallPrice,
+                'total' => $total, // 🔹 add total here
+                'payment_for' => $payment->payment_for,
+
+                'student' => [
+                    'id' => $payment->student->id,
+                    'custom_id' => $payment->student->custom_id,
+                    'fname' => $payment->student->fname,
+                    'lname' => $payment->student->lname,
+                ],
+
+                'student_class' => [
+                    'id' => $payment->studentStudentClass->studentClass->id,
+                    'class_name' => $payment->studentStudentClass->studentClass->class_name,
+                    'grade' => $payment->studentStudentClass->studentClass->grade->grade_name,
+                    'subject' => $payment->studentStudentClass->studentClass->subject->subject_name,
+                    'hall_price' => $hallPrice,
+                ],
+
+                'class_category_has_student_class' => [
+                    'id' => $payment->studentStudentClass->classCategoryHasStudentClass->id,
+                    'fees' => $payment->studentStudentClass->classCategoryHasStudentClass->fees,
+                    'class_category' => [
+                        'id' => $payment->studentStudentClass->classCategoryHasStudentClass->classCategory->id,
+                        'category_name' => $payment->studentStudentClass->classCategoryHasStudentClass->classCategory->category_name,
+                    ]
+                ]
+            ];
+
+
+            return [
+                'status' => 'success',
+                'data' => $data
+            ];
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to retrieve payment receipt',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function getHallPriceByCategory($classId, $categoryName)
+    {
+        $prices = [];
+
+        // Split category if combined
+        $categories = explode('+', $categoryName);
+
+        foreach ($categories as $category) {
+            $category = trim($category);
+
+            // Get the class_category_has_student_class record for this category
+            $ccsc = ClassCategoryHasStudentClass::where('student_classes_id', $classId)
+                ->whereHas('classCategory', function ($q) use ($category) {
+                    $q->where('category_name', $category);
+                })
+                ->first();
+
+            if (!$ccsc) continue;
+
+            // Get class attendance for this class_category_has_student_class_id
+            $attendance = ClassAttendance::where('class_category_has_student_class_id', $ccsc->id)
+                ->first();
+
+            if (!$attendance) continue;
+
+            // Get hall and check hall price
+            $hall = $attendance->hall; // relationship
+            if ($hall && $hall->hall_price) {
+                $prices[] = $hall->hall_price;
+            }
+        }
+
+        // Return first price found or null if none
+        return $prices[0] ?? null;
     }
 }

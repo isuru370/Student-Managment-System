@@ -21,6 +21,11 @@ class PaymentsController extends Controller
         return $this->paymentService->fetchStudentPayments($student_id, $student_class_id);
     }
 
+    public function receiptPrint($payment_id)
+    {
+        return $this->paymentService->receiptPrint($payment_id);
+    }
+
     public function deletePayment($id)
     {
         return $this->paymentService->deletePayment($id);

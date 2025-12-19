@@ -7,14 +7,17 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClassAttendanceController;
 use App\Http\Controllers\ClassHallsController;
 use App\Http\Controllers\ClassRoomController;
+use App\Http\Controllers\EmailsController;
 use App\Http\Controllers\InstitutePaymentController;
 use App\Http\Controllers\PaymentReasonController;
 use App\Http\Controllers\PaymentsController;
+use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\SettingsCodeController;
 use App\Http\Controllers\StudentAttendancesController;
 use App\Http\Controllers\SystemUserController;
 use App\Http\Controllers\UserTypesController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\StudentIdCardController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TeacherPaymentsController;
 use Illuminate\Support\Facades\Route;
@@ -79,18 +82,41 @@ Route::middleware(['auth'])->group(function () {
         // PUT THIS ABOVE THE {id} ROUTE
         Route::get('/studentImages', [StudentController::class, 'studentImages'])->name('students.studentImages');
         Route::get('/images', [StudentController::class, 'allImages'])->name('students.images');
-        Route::get('/ganarateStudentId', [StudentController::class, 'ganarateStudentId'])->name('students.ganarateStudentId');
 
         // ✅ FIX: Remove the duplicate 'students' from the URL
         Route::get('/add_student_to_class/{class_id}', [StudentController::class, 'addStudentToClass'])->name('students.add_student_to_class');
         Route::get('/add_student_to_single_class/{student_id}', [StudentController::class, 'addStudentToSingleClass'])->name('students.add_student_to_single_class');
         Route::get('/student_analytic/{student_id}', [StudentController::class, 'studentAnalytic'])->name('students.student_analytic');
 
-
-        Route::get('/idcard/{custom_id}', [StudentController::class, 'previewCard'])->name('idcard.design1');
         Route::get('/{id}/edit', [StudentController::class, 'editPage'])->name('students.edit');
         Route::get('/{custom_id}', [StudentController::class, 'show'])->name('students.show');
     });
+
+    // ====================================================
+    // STUDENT ID CARD ROUTES (All ID card related routes)
+    // ====================================================
+    Route::prefix('student-id-card')->group(function () {
+        // ID card generation page (with search/sort parameters)
+        Route::get('/ganarateStudentId', [StudentIdCardController::class, 'ganarateStudentId'])
+            ->name('student-id-card.ganarateStudentId');
+
+        // Single student ID card preview
+        Route::get('/idcard/{custom_id}', [StudentIdCardController::class, 'previewCard'])
+            ->name('idcard.design1');
+
+        // Generate ID cards for selected students
+        Route::post('/generate-bulk', [StudentIdCardController::class, 'generateBulkCards'])
+            ->name('student-id-card.generate.bulk');
+
+        // Generate ID cards for all students
+        Route::get('/generate-all', [StudentIdCardController::class, 'generateAllCards'])
+            ->name('student-id-card.generate.all');
+
+        // Clear search filters
+        Route::get('/clear-filters', [StudentIdCardController::class, 'clearFilters'])
+            ->name('student-id-card.clear-filters');
+    });
+
 
     Route::prefix('class-rooms')->group(function () {
         Route::get('/', [ClassRoomController::class, 'index'])->name('class_rooms.index');
@@ -155,6 +181,17 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [PaymentReasonController::class, 'indexPage'])->name('index');
     });
 
+    Route::prefix('send-mail')->name('emails.')->group(function () {
+        Route::get('/{teacherId}/{month?}', [EmailsController::class, 'sendPaymentReport']);
+    });
+
+    // routes/web.php
+    Route::prefix('receipt')->name('receipt.')->group(function () {
+        Route::get('/{id}', [ReceiptController::class, 'viewReceipt'])->name('view');
+        Route::get('/{id}/download', [ReceiptController::class, 'downloadReceipt'])->name('download');
+        Route::post('/{id}/print', [ReceiptController::class, 'thermalPrint'])->name('thermal-print');
+    });
+
     Route::prefix('teacher-payment')->name('teacher_payment.')->group(function () {
         Route::get('/', [TeacherPaymentsController::class, 'indexPage'])->name('index');
         Route::get('/pay/{teacherId}', [TeacherPaymentsController::class, 'paymentPage'])->name('salary');
@@ -167,7 +204,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [InstitutePaymentController::class, 'indexPage'])->name('index');
         Route::get('/extra', [InstitutePaymentController::class, 'extraIncomePage'])->name('extra');
         Route::get('/expenses', [InstitutePaymentController::class, 'expensesPage'])->name('expenses');
-         Route::get('/ledger', [InstitutePaymentController::class, 'ledgerPage'])->name('ledger');
+        Route::get('/ledger', [InstitutePaymentController::class, 'ledgerPage'])->name('ledger');
     });
 
 

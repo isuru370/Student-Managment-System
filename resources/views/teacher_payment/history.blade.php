@@ -456,787 +456,913 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
     <script>
-        (function () {
-            'use strict';
+    (function () {
+        'use strict';
 
-            // CSRF Token
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        // CSRF Token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-            // Global variables
-            let teacherData = null;
-            let allPayments = [];
-            let allGrades = [];
-            const teacherId = window.location.pathname.split('/').pop() || '{{ $teacher_id ?? 18 }}';
-            let currentMonth = '';
-            let currentYear = '';
+        // Global variables
+        let teacherData = null;
+        let allPayments = [];
+        let allGrades = [];
+        const teacherId = window.location.pathname.split('/').pop() || '{{ $teacher_id ?? 18 }}';
+        let currentMonth = '';
+        let currentYear = '';
 
-            // DOM Elements
-            const teacherNameTitle = document.getElementById('teacherNameTitle');
-            const selectedMonthYear = document.getElementById('selectedMonthYear');
-            const summaryMonthYear = document.getElementById('summaryMonthYear');
-            const teacherIdElement = document.getElementById('teacherId');
-            const teacherNameElement = document.getElementById('teacherName');
-            const subjectNameElement = document.getElementById('subjectName');
-            const salaryStatusElement = document.getElementById('salaryStatus');
-            const totalCollectionsElement = document.getElementById('totalCollections');
-            const advancePaymentsElement = document.getElementById('advancePayments');
-            const teacherShareElement = document.getElementById('teacherShare');
-            const institutionShareElement = document.getElementById('institutionShare');
-            const netPayableElement = document.getElementById('netPayable');
-            const teacherPercentageBar = document.getElementById('teacherPercentageBar');
-            const institutionPercentageBar = document.getElementById('institutionPercentageBar');
-            const teacherPercentageText = document.getElementById('teacherPercentageText');
-            const institutionPercentageText = document.getElementById('institutionPercentageText');
-            const classesCards = document.getElementById('classesCards');
-            const paymentTableBody = document.getElementById('paymentTableBody');
-            const paymentTableHeader = document.getElementById('paymentTableHeader');
-            const paymentTableFooter = document.getElementById('paymentTableFooter');
-            const tableLoadingSpinner = document.getElementById('tableLoadingSpinner');
-            const tableEmptyState = document.getElementById('tableEmptyState');
-            const currentMonthBlock = document.getElementById('currentMonthBlock');
-            const tableContainer = document.getElementById('tableContainer');
-            const salaryPaymentsTableBody = document.getElementById('salaryPaymentsTableBody');
-            const salaryEmptyState = document.getElementById('salaryEmptyState');
-            const salaryTableContainer = document.getElementById('salaryTableContainer');
-            const monthSelect = document.getElementById('monthSelect');
-            const yearSelect = document.getElementById('yearSelect');
-            const exportTableExcelBtn = document.getElementById('exportTableExcelBtn');
-            const exportTablePdfBtn = document.getElementById('exportTablePdfBtn');
-            const payTeacherBtn = document.getElementById('payTeacherBtn');
-            const currentMonthWarning = document.getElementById('currentMonthWarning');
+        // DOM Elements
+        const teacherNameTitle = document.getElementById('teacherNameTitle');
+        const selectedMonthYear = document.getElementById('selectedMonthYear');
+        const summaryMonthYear = document.getElementById('summaryMonthYear');
+        const teacherIdElement = document.getElementById('teacherId');
+        const teacherNameElement = document.getElementById('teacherName');
+        const subjectNameElement = document.getElementById('subjectName');
+        const salaryStatusElement = document.getElementById('salaryStatus');
+        const totalCollectionsElement = document.getElementById('totalCollections');
+        const advancePaymentsElement = document.getElementById('advancePayments');
+        const teacherShareElement = document.getElementById('teacherShare');
+        const institutionShareElement = document.getElementById('institutionShare');
+        const netPayableElement = document.getElementById('netPayable');
+        const teacherPercentageBar = document.getElementById('teacherPercentageBar');
+        const institutionPercentageBar = document.getElementById('institutionPercentageBar');
+        const teacherPercentageText = document.getElementById('teacherPercentageText');
+        const institutionPercentageText = document.getElementById('institutionPercentageText');
+        const classesCards = document.getElementById('classesCards');
+        const paymentTableBody = document.getElementById('paymentTableBody');
+        const paymentTableHeader = document.getElementById('paymentTableHeader');
+        const paymentTableFooter = document.getElementById('paymentTableFooter');
+        const tableLoadingSpinner = document.getElementById('tableLoadingSpinner');
+        const tableEmptyState = document.getElementById('tableEmptyState');
+        const currentMonthBlock = document.getElementById('currentMonthBlock');
+        const tableContainer = document.getElementById('tableContainer');
+        const salaryPaymentsTableBody = document.getElementById('salaryPaymentsTableBody');
+        const salaryEmptyState = document.getElementById('salaryEmptyState');
+        const salaryTableContainer = document.getElementById('salaryTableContainer');
+        const monthSelect = document.getElementById('monthSelect');
+        const yearSelect = document.getElementById('yearSelect');
+        const exportTableExcelBtn = document.getElementById('exportTableExcelBtn');
+        const exportTablePdfBtn = document.getElementById('exportTablePdfBtn');
+        const payTeacherBtn = document.getElementById('payTeacherBtn');
+        const currentMonthWarning = document.getElementById('currentMonthWarning');
 
-            // Helper Functions
-            function formatCurrency(amount) {
-                if (isNaN(amount) || amount === null || amount === undefined) {
-                    amount = 0;
+        // 🔥 NEW: Helper function to convert string to number
+        function convertStringToNumber(value) {
+            if (value === null || value === undefined) return 0;
+            if (typeof value === 'number') return value;
+            if (typeof value === 'string') {
+                // Remove all non-numeric characters except decimal point and minus sign
+                const cleanValue = value.toString()
+                    .replace(/[^\d.-]/g, '')
+                    .replace(/,/g, '');
+                const numeric = parseFloat(cleanValue);
+                return isNaN(numeric) ? 0 : numeric;
+            }
+            return 0;
+        }
+
+        // 🔥 NEW: Convert API response string values to numbers
+        function convertApiResponseToNumbers(apiData) {
+            if (!apiData || typeof apiData !== 'object') return apiData;
+            
+            const converted = JSON.parse(JSON.stringify(apiData));
+            
+            // Convert top-level numeric fields
+            const numericFields = [
+                'total_payments_this_month',
+                'advance_payment_this_month',
+                'net_payable',
+                'teacher_percentage',
+                'institution_percentage',
+                'teacher_share',
+                'institution_share'
+            ];
+            
+            numericFields.forEach(field => {
+                if (converted[field] !== undefined) {
+                    converted[field] = convertStringToNumber(converted[field]);
                 }
-                return new Intl.NumberFormat('en-LK', {
-                    style: 'currency',
-                    currency: 'LKR',
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                }).format(amount);
+            });
+            
+            // Convert teacher_id
+            if (converted.teacher_id !== undefined) {
+                converted.teacher_id = convertStringToNumber(converted.teacher_id);
             }
-
-            function formatDate(dateString) {
-                if (!dateString) return '-';
-                const date = new Date(dateString);
-                return date.toLocaleDateString('en-GB', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
+            
+            // Convert salary_payments array
+            if (converted.salary_payments && Array.isArray(converted.salary_payments)) {
+                converted.salary_payments = converted.salary_payments.map(payment => ({
+                    ...payment,
+                    id: convertStringToNumber(payment.id),
+                    payment: convertStringToNumber(payment.payment),
+                    status: convertStringToNumber(payment.status),
+                    user_id: convertStringToNumber(payment.user_id),
+                    teacher_id: convertStringToNumber(payment.teacher_id)
+                }));
+            }
+            
+            // Convert classes array
+            if (converted.classes && Array.isArray(converted.classes)) {
+                converted.classes = converted.classes.map(cls => {
+                    const convertedClass = { ...cls };
+                    
+                    // Convert class_id
+                    convertedClass.class_id = convertStringToNumber(cls.class_id);
+                    
+                    // Convert total_students and students_paid
+                    convertedClass.total_students = convertStringToNumber(cls.total_students);
+                    convertedClass.students_paid = convertStringToNumber(cls.students_paid);
+                    
+                    // Convert payments object values
+                    if (convertedClass.payments && typeof convertedClass.payments === 'object') {
+                        const convertedPayments = {};
+                        Object.entries(convertedClass.payments).forEach(([date, amount]) => {
+                            convertedPayments[date] = convertStringToNumber(amount);
+                        });
+                        convertedClass.payments = convertedPayments;
+                    }
+                    
+                    return convertedClass;
                 });
             }
+            
+            return converted;
+        }
 
-            function formatDateTable(dateString) {
-                if (!dateString) return '-';
-                const date = new Date(dateString);
-                return date.toLocaleDateString('en-GB', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: '2-digit'
-                });
+        // 🔥 UPDATED: Format currency function - handles strings and numbers
+        function formatCurrency(amount) {
+            // Convert to number if it's a string
+            const numericAmount = convertStringToNumber(amount);
+            
+            return new Intl.NumberFormat('en-LK', {
+                style: 'currency',
+                currency: 'LKR',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(numericAmount);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+        }
+
+        function formatDateTable(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit'
+            });
+        }
+
+        function getMonthName(monthNumber) {
+            const months = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+            return months[parseInt(monthNumber) - 1] || 'Unknown';
+        }
+
+        function isCurrentMonth(month, year) {
+            const now = new Date();
+            const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
+            const currentYear = now.getFullYear().toString();
+            return month === currentMonth && year === currentYear;
+        }
+
+        function getPreviousMonthYear() {
+            const now = new Date();
+            let month, year;
+            
+            if (now.getMonth() === 0) {
+                month = '12';
+                year = (now.getFullYear() - 1).toString();
+            } else {
+                month = now.getMonth().toString().padStart(2, '0');
+                year = now.getFullYear().toString();
             }
+            
+            return { month, year };
+        }
 
-            function getMonthName(monthNumber) {
-                const months = [
-                    'January', 'February', 'March', 'April', 'May', 'June',
-                    'July', 'August', 'September', 'October', 'November', 'December'
-                ];
-                return months[parseInt(monthNumber) - 1] || 'Unknown';
-            }
-
-            function isCurrentMonth(month, year) {
-                const now = new Date();
-                const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
-                const currentYear = now.getFullYear().toString();
-                return month === currentMonth && year === currentYear;
-            }
-
-            function getPreviousMonthYear() {
-                const now = new Date();
-                let month, year;
-                
-                if (now.getMonth() === 0) {
-                    month = '12';
-                    year = (now.getFullYear() - 1).toString();
+        // UI Functions
+        function showLoading(show) {
+            if (tableLoadingSpinner) {
+                if (show) {
+                    tableLoadingSpinner.classList.remove('d-none');
                 } else {
-                    month = now.getMonth().toString().padStart(2, '0');
-                    year = now.getFullYear().toString();
+                    tableLoadingSpinner.classList.add('d-none');
+                }
+            }
+        }
+
+        function showTable(show) {
+            if (tableContainer) {
+                if (show) {
+                    tableContainer.classList.remove('d-none');
+                } else {
+                    tableContainer.classList.add('d-none');
+                }
+            }
+        }
+
+        function showCurrentMonthBlock(show) {
+            if (currentMonthBlock) {
+                if (show) {
+                    currentMonthBlock.classList.remove('d-none');
+                    currentMonthWarning.classList.remove('d-none');
+                } else {
+                    currentMonthBlock.classList.add('d-none');
+                    currentMonthWarning.classList.add('d-none');
+                }
+            }
+        }
+
+        function showEmptyState(show) {
+            if (tableEmptyState) {
+                if (show) {
+                    tableEmptyState.classList.remove('d-none');
+                } else {
+                    tableEmptyState.classList.add('d-none');
+                }
+            }
+        }
+
+        function showSalaryTable(show) {
+            if (salaryTableContainer) {
+                if (show) {
+                    salaryTableContainer.classList.remove('d-none');
+                } else {
+                    salaryTableContainer.classList.add('d-none');
+                }
+            }
+        }
+
+        function showSalaryEmptyState(show) {
+            if (salaryEmptyState) {
+                if (show) {
+                    salaryEmptyState.classList.remove('d-none');
+                } else {
+                    salaryEmptyState.classList.add('d-none');
+                }
+            }
+        }
+
+        function updateSelectedMonthYear(month, year) {
+            if (selectedMonthYear) {
+                selectedMonthYear.textContent = `${getMonthName(month)} ${year}`;
+            }
+            if (summaryMonthYear) {
+                summaryMonthYear.textContent = `${getMonthName(month)} ${year}`;
+            }
+            currentMonth = month;
+            currentYear = year;
+        }
+
+        // 🔥 UPDATED: Data Fetching with string to number conversion
+        async function fetchTeacherData(month, year) {
+            showLoading(true);
+            showTable(false);
+            showCurrentMonthBlock(false);
+            showEmptyState(false);
+            showSalaryTable(false);
+            showSalaryEmptyState(false);
+
+            // Check if trying to view current month
+            if (isCurrentMonth(month, year)) {
+                showLoading(false);
+                showCurrentMonthBlock(true);
+                
+                // Auto-select previous month
+                const prev = getPreviousMonthYear();
+                if (monthSelect) monthSelect.value = prev.month;
+                if (yearSelect) yearSelect.value = prev.year;
+                
+                // Update display
+                updateSelectedMonthYear(prev.month, prev.year);
+                
+                // Fetch previous month data
+                await fetchTeacherData(prev.month, prev.year);
+                return;
+            }
+
+            try {
+                const url = `/api/teacher-payments/monthly-income/${teacherId}/${year}-${month}`;
+                console.log('Fetching from:', url);
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
-                return { month, year };
-            }
-
-            // UI Functions
-            function showLoading(show) {
-                if (tableLoadingSpinner) {
-                    if (show) {
-                        tableLoadingSpinner.classList.remove('d-none');
-                    } else {
-                        tableLoadingSpinner.classList.add('d-none');
-                    }
-                }
-            }
-
-            function showTable(show) {
-                if (tableContainer) {
-                    if (show) {
-                        tableContainer.classList.remove('d-none');
-                    } else {
-                        tableContainer.classList.add('d-none');
-                    }
-                }
-            }
-
-            function showCurrentMonthBlock(show) {
-                if (currentMonthBlock) {
-                    if (show) {
-                        currentMonthBlock.classList.remove('d-none');
-                        currentMonthWarning.classList.remove('d-none');
-                    } else {
-                        currentMonthBlock.classList.add('d-none');
-                        currentMonthWarning.classList.add('d-none');
-                    }
-                }
-            }
-
-            function showEmptyState(show) {
-                if (tableEmptyState) {
-                    if (show) {
-                        tableEmptyState.classList.remove('d-none');
-                    } else {
-                        tableEmptyState.classList.add('d-none');
-                    }
-                }
-            }
-
-            function showSalaryTable(show) {
-                if (salaryTableContainer) {
-                    if (show) {
-                        salaryTableContainer.classList.remove('d-none');
-                    } else {
-                        salaryTableContainer.classList.add('d-none');
-                    }
-                }
-            }
-
-            function showSalaryEmptyState(show) {
-                if (salaryEmptyState) {
-                    if (show) {
-                        salaryEmptyState.classList.remove('d-none');
-                    } else {
-                        salaryEmptyState.classList.add('d-none');
-                    }
-                }
-            }
-
-            function updateSelectedMonthYear(month, year) {
-                if (selectedMonthYear) {
-                    selectedMonthYear.textContent = `${getMonthName(month)} ${year}`;
-                }
-                if (summaryMonthYear) {
-                    summaryMonthYear.textContent = `${getMonthName(month)} ${year}`;
-                }
-                currentMonth = month;
-                currentYear = year;
-            }
-
-            // Data Fetching
-            async function fetchTeacherData(month, year) {
-                showLoading(true);
-                showTable(false);
-                showCurrentMonthBlock(false);
-                showEmptyState(false);
-                showSalaryTable(false);
-                showSalaryEmptyState(false);
-
-                // Check if trying to view current month
-                if (isCurrentMonth(month, year)) {
-                    showLoading(false);
-                    showCurrentMonthBlock(true);
+                const data = await response.json();
+                console.log('Raw API Response:', data);
+                
+                if (data.status === 'success') {
+                    // 🔥 CONVERT STRING VALUES TO NUMBERS
+                    teacherData = convertApiResponseToNumbers(data);
+                    console.log('Converted Teacher Data:', teacherData);
                     
-                    // Auto-select previous month
-                    const prev = getPreviousMonthYear();
-                    if (monthSelect) monthSelect.value = prev.month;
-                    if (yearSelect) yearSelect.value = prev.year;
-                    
-                    // Update display
-                    updateSelectedMonthYear(prev.month, prev.year);
-                    
-                    // Fetch previous month data
-                    await fetchTeacherData(prev.month, prev.year);
-                    return;
+                    renderAllSections();
+                } else {
+                    throw new Error(data.message || 'Failed to load data');
                 }
+            } catch (error) {
+                console.error('Error fetching teacher data:', error);
+                showEmptyState(true);
+            } finally {
+                showLoading(false);
+            }
+        }
 
-                try {
-                    const url = `/api/teacher-payments/monthly-income/${teacherId}/${year}-${month}`;
-                    const response = await fetch(url);
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    
-                    if (data.status === 'success') {
-                        teacherData = data;
-                        renderAllSections();
-                    } else {
-                        throw new Error(data.message || 'Failed to load data');
-                    }
-                } catch (error) {
-                    console.error('Error fetching teacher data:', error);
-                    showEmptyState(true);
-                } finally {
-                    showLoading(false);
+        function renderAllSections() {
+            if (!teacherData) return;
+            
+            renderTeacherData();
+            renderClassesCards();
+            renderPaymentTable();
+            renderSalaryPayments();
+            showTable(true);
+        }
+
+        // 🔥 UPDATED: Render teacher data with safe numeric values
+        function renderTeacherData() {
+            if (!teacherData) return;
+
+            // Teacher Information
+            if (teacherNameTitle) {
+                teacherNameTitle.innerHTML = `<i class="fas fa-user-graduate me-1"></i> ${teacherData.teacher_name || 'Teacher'}'s Income`;
+            }
+            
+            if (teacherIdElement) {
+                teacherIdElement.textContent = teacherData.teacher_id || '-';
+            }
+            
+            if (teacherNameElement) {
+                teacherNameElement.textContent = teacherData.teacher_name || '-';
+            }
+            
+            if (subjectNameElement) {
+                subjectNameElement.textContent = teacherData.subject_name || '-';
+            }
+            
+            if (salaryStatusElement) {
+                const isPaid = teacherData.is_salary_paid || false;
+                salaryStatusElement.textContent = isPaid ? 'Salary Paid' : 'Salary Not Paid';
+                salaryStatusElement.className = `badge bg-${isPaid ? 'success' : 'warning'}`;
+            }
+
+            // Financial Summary - USING CONVERTED NUMERIC VALUES
+            if (totalCollectionsElement) {
+                totalCollectionsElement.textContent = formatCurrency(teacherData.total_payments_this_month || 0);
+            }
+            
+            if (advancePaymentsElement) {
+                advancePaymentsElement.textContent = formatCurrency(teacherData.advance_payment_this_month || 0);
+            }
+            
+            if (teacherShareElement) {
+                teacherShareElement.textContent = formatCurrency(teacherData.teacher_share || 0);
+            }
+            
+            if (institutionShareElement) {
+                institutionShareElement.textContent = formatCurrency(teacherData.institution_share || 0);
+            }
+            
+            if (netPayableElement) {
+                netPayableElement.textContent = formatCurrency(teacherData.net_payable || 0);
+            }
+
+            // Percentages - ALREADY CONVERTED TO NUMBERS
+            const teacherPercentage = convertStringToNumber(teacherData.teacher_percentage) || 0;
+            const institutionPercentage = convertStringToNumber(teacherData.institution_percentage) || 0;
+
+            if (teacherPercentageText) {
+                teacherPercentageText.textContent = `${teacherPercentage}% of total`;
+            }
+            
+            if (institutionPercentageText) {
+                institutionPercentageText.textContent = `${institutionPercentage}% of total`;
+            }
+
+            if (teacherPercentageBar) {
+                teacherPercentageBar.style.width = `${teacherPercentage}%`;
+                const teacherPercentageTextBar = document.getElementById('teacherPercentageTextBar');
+                if (teacherPercentageTextBar) {
+                    teacherPercentageTextBar.textContent = `Teacher: ${teacherPercentage}%`;
+                }
+            }
+            
+            if (institutionPercentageBar) {
+                institutionPercentageBar.style.width = `${institutionPercentage}%`;
+                const institutionPercentageTextBar = document.getElementById('institutionPercentageTextBar');
+                if (institutionPercentageTextBar) {
+                    institutionPercentageTextBar.textContent = `Institution: ${institutionPercentage}%`;
                 }
             }
 
-            function renderAllSections() {
-                if (!teacherData) return;
+            // Pay Button
+            if (payTeacherBtn) {
+                const netPayable = convertStringToNumber(teacherData.net_payable) || 0;
+                const isPaid = teacherData.is_salary_paid || false;
                 
-                renderTeacherData();
-                renderClassesCards();
-                renderPaymentTable();
-                renderSalaryPayments();
-                showTable(true);
-            }
-
-            function renderTeacherData() {
-                if (!teacherData) return;
-
-                // Teacher Information
-                if (teacherNameTitle) {
-                    teacherNameTitle.innerHTML = `<i class="fas fa-user-graduate me-1"></i> ${teacherData.teacher_name || 'Teacher'}'s Income`;
-                }
-                
-                if (teacherIdElement) {
-                    teacherIdElement.textContent = teacherData.teacher_id || '-';
-                }
-                
-                if (teacherNameElement) {
-                    teacherNameElement.textContent = teacherData.teacher_name || '-';
-                }
-                
-                if (subjectNameElement) {
-                    subjectNameElement.textContent = teacherData.subject_name || '-';
-                }
-                
-                if (salaryStatusElement) {
-                    const isPaid = teacherData.is_salary_paid || false;
-                    salaryStatusElement.textContent = isPaid ? 'Salary Paid' : 'Salary Not Paid';
-                    salaryStatusElement.className = `badge bg-${isPaid ? 'success' : 'warning'}`;
-                }
-
-                // Financial Summary
-                if (totalCollectionsElement) {
-                    totalCollectionsElement.textContent = formatCurrency(teacherData.total_payments_this_month || 0);
-                }
-                
-                if (advancePaymentsElement) {
-                    advancePaymentsElement.textContent = formatCurrency(teacherData.advance_payment_this_month || 0);
-                }
-                
-                if (teacherShareElement) {
-                    teacherShareElement.textContent = formatCurrency(teacherData.teacher_share || 0);
-                }
-                
-                if (institutionShareElement) {
-                    institutionShareElement.textContent = formatCurrency(teacherData.institution_share || 0);
-                }
-                
-                if (netPayableElement) {
-                    netPayableElement.textContent = formatCurrency(teacherData.net_payable || 0);
-                }
-
-                // Percentages
-                const teacherPercentage = teacherData.teacher_percentage || 0;
-                const institutionPercentage = teacherData.institution_percentage || 0;
-
-                if (teacherPercentageText) {
-                    teacherPercentageText.textContent = `${teacherPercentage}% of total`;
-                }
-                
-                if (institutionPercentageText) {
-                    institutionPercentageText.textContent = `${institutionPercentage}% of total`;
-                }
-
-                if (teacherPercentageBar) {
-                    teacherPercentageBar.style.width = `${teacherPercentage}%`;
-                    const teacherPercentageTextBar = document.getElementById('teacherPercentageTextBar');
-                    if (teacherPercentageTextBar) {
-                        teacherPercentageTextBar.textContent = `Teacher: ${teacherPercentage}%`;
-                    }
-                }
-                
-                if (institutionPercentageBar) {
-                    institutionPercentageBar.style.width = `${institutionPercentage}%`;
-                    const institutionPercentageTextBar = document.getElementById('institutionPercentageTextBar');
-                    if (institutionPercentageTextBar) {
-                        institutionPercentageTextBar.textContent = `Institution: ${institutionPercentage}%`;
-                    }
-                }
-
-                // Pay Button
-                if (payTeacherBtn) {
-                    const netPayable = teacherData.net_payable || 0;
-                    const isPaid = teacherData.is_salary_paid || false;
-                    
-                    if (netPayable > 0 && !isPaid) {
-                        payTeacherBtn.disabled = false;
-                        payTeacherBtn.title = `Pay ${formatCurrency(netPayable)}`;
-                    } else {
-                        payTeacherBtn.disabled = true;
-                        payTeacherBtn.title = isPaid ? 'Salary already paid' : 'No amount payable';
-                    }
+                if (netPayable > 0 && !isPaid) {
+                    payTeacherBtn.disabled = false;
+                    payTeacherBtn.title = `Pay ${formatCurrency(netPayable)}`;
+                } else {
+                    payTeacherBtn.disabled = true;
+                    payTeacherBtn.title = isPaid ? 'Salary already paid' : 'No amount payable';
                 }
             }
+        }
 
-            function renderClassesCards() {
-                if (!teacherData || !classesCards || !teacherData.classes) return;
+        // 🔥 UPDATED: Render classes cards with numeric values
+        function renderClassesCards() {
+            if (!teacherData || !classesCards || !teacherData.classes) return;
 
-                classesCards.innerHTML = '';
+            classesCards.innerHTML = '';
 
-                if (!teacherData.classes.length) {
-                    classesCards.innerHTML = `
-                        <div class="col-12 text-center">
-                            <div class="alert alert-light mb-0">
-                                <i class="fas fa-info-circle me-1"></i> No class data available
+            if (!teacherData.classes.length) {
+                classesCards.innerHTML = `
+                    <div class="col-12 text-center">
+                        <div class="alert alert-light mb-0">
+                            <i class="fas fa-info-circle me-1"></i> No class data available
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const teacherPercentage = convertStringToNumber(teacherData.teacher_percentage) || 0;
+
+            teacherData.classes.forEach(cls => {
+                // Calculate total paid from payments object (already converted to numbers)
+                let totalPaid = 0;
+                if (cls.payments && typeof cls.payments === 'object') {
+                    Object.values(cls.payments).forEach(val => {
+                        totalPaid += convertStringToNumber(val);
+                    });
+                }
+                
+                const totalStudents = convertStringToNumber(cls.total_students) || 0;
+                const studentsPaid = convertStringToNumber(cls.students_paid) || 0;
+                
+                const percentagePaid = totalStudents > 0 ? 
+                    Math.round((studentsPaid / totalStudents) * 100) : 0;
+                
+                // Calculate teacher share using numeric values
+                const teacherShare = totalPaid * teacherPercentage / 100;
+                
+                const card = document.createElement('div');
+                card.className = 'col-md-6 col-lg-4 mb-3';
+                card.innerHTML = `
+                    <div class="card class-card h-100">
+                        <div class="card-header bg-light py-2">
+                            <h6 class="mb-0 small">${cls.class_name || 'Unnamed Class'}</h6>
+                            <small class="text-muted">Grade: ${cls.grade_name || 'N/A'}</small>
+                        </div>
+                        <div class="card-body py-2">
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted small">Paid Students</span>
+                                    <span class="fw-bold small">${studentsPaid}/${totalStudents}</span>
+                                </div>
+                                <div class="student-progress">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" style="width: ${percentagePaid}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-1">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted small">Collection:</span>
+                                    <span class="fw-bold small">${formatCurrency(totalPaid)}</span>
+                                </div>
+                            </div>
+                            <div class="mb-1">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted small">Teacher's Share:</span>
+                                    <span class="fw-bold text-success small">${formatCurrency(teacherShare)}</span>
+                                </div>
                             </div>
                         </div>
-                    `;
-                    return;
-                }
+                    </div>
+                `;
+                
+                classesCards.appendChild(card);
+            });
+        }
 
-                const teacherPercentage = teacherData.teacher_percentage || 0;
-
-                teacherData.classes.forEach(cls => {
-                    const totalPaid = Object.values(cls.payments || {}).reduce((sum, val) => sum + val, 0);
-                    const percentagePaid = cls.total_students > 0 ? Math.round((cls.students_paid / cls.total_students) * 100) : 0;
-                    const teacherShare = totalPaid * teacherPercentage / 100;
-                    
-                    const card = document.createElement('div');
-                    card.className = 'col-md-6 col-lg-4 mb-3';
-                    card.innerHTML = `
-                        <div class="card class-card h-100">
-                            <div class="card-header bg-light py-2">
-                                <h6 class="mb-0 small">${cls.class_name || 'Unnamed Class'}</h6>
-                                <small class="text-muted">Grade: ${cls.grade_name || 'N/A'}</small>
-                            </div>
-                            <div class="card-body py-2">
-                                <div class="mb-2">
-                                    <div class="d-flex justify-content-between mb-1">
-                                        <span class="text-muted small">Paid Students</span>
-                                        <span class="fw-bold small">${cls.students_paid || 0}/${cls.total_students || 0}</span>
-                                    </div>
-                                    <div class="student-progress">
-                                        <div class="progress">
-                                            <div class="progress-bar bg-success" style="width: ${percentagePaid}%"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="mb-1">
-                                    <div class="d-flex justify-content-between">
-                                        <span class="text-muted small">Collection:</span>
-                                        <span class="fw-bold small">${formatCurrency(totalPaid)}</span>
-                                    </div>
-                                </div>
-                                <div class="mb-1">
-                                    <div class="d-flex justify-content-between">
-                                        <span class="text-muted small">Teacher's Share:</span>
-                                        <span class="fw-bold text-success small">${formatCurrency(teacherShare)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    classesCards.appendChild(card);
-                });
+        // 🔥 UPDATED: Render payment table with numeric values
+        function renderPaymentTable() {
+            if (!teacherData || !paymentTableBody || !teacherData.classes) {
+                showEmptyState(true);
+                return;
             }
 
-            function renderPaymentTable() {
-                if (!teacherData || !paymentTableBody || !teacherData.classes) {
-                    showEmptyState(true);
-                    return;
+            paymentTableBody.innerHTML = '';
+            allPayments = [];
+            allGrades = [];
+
+            // Collect unique dates and grades
+            const allDates = new Set();
+            const gradeSet = new Set();
+            
+            teacherData.classes.forEach(cls => {
+                const grade = cls.grade_name;
+                if (grade) {
+                    gradeSet.add(grade);
                 }
-
-                paymentTableBody.innerHTML = '';
-                allPayments = [];
-                allGrades = [];
-
-                // Collect unique dates and grades
-                const allDates = new Set();
-                const gradeSet = new Set();
                 
-                teacherData.classes.forEach(cls => {
-                    const grade = cls.grade_name;
-                    if (grade) {
-                        gradeSet.add(grade);
-                    }
-                    
-                    Object.keys(cls.payments || {}).forEach(date => {
+                if (cls.payments && typeof cls.payments === 'object') {
+                    Object.keys(cls.payments).forEach(date => {
                         allDates.add(date);
                     });
-                });
-
-                const sortedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
-                allGrades = Array.from(gradeSet).sort();
-
-                if (sortedDates.length === 0) {
-                    showEmptyState(true);
-                    showTable(false);
-                    return;
                 }
+            });
 
-                showEmptyState(false);
+            const sortedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
+            allGrades = Array.from(gradeSet).sort();
 
-                // Render header
-                renderTableHeader();
+            if (sortedDates.length === 0) {
+                showEmptyState(true);
+                showTable(false);
+                return;
+            }
 
-                // Calculate totals
-                const totals = {
-                    gradeTotals: {},
+            showEmptyState(false);
+
+            // Render header
+            renderTableHeader();
+
+            // Calculate totals
+            const totals = {
+                gradeTotals: {},
+                totalCollection: 0,
+                institutionShare: 0,
+                teacherShare: 0
+            };
+
+            allGrades.forEach(grade => {
+                totals.gradeTotals[grade] = 0;
+            });
+
+            const teacherPercentage = convertStringToNumber(teacherData.teacher_percentage) || 0;
+            const institutionPercentage = convertStringToNumber(teacherData.institution_percentage) || 0;
+
+            // Create rows
+            sortedDates.forEach(date => {
+                const rowData = {
+                    date: date,
+                    gradePayments: {},
                     totalCollection: 0,
                     institutionShare: 0,
                     teacherShare: 0
                 };
 
                 allGrades.forEach(grade => {
-                    totals.gradeTotals[grade] = 0;
+                    rowData.gradePayments[grade] = 0;
                 });
 
-                const teacherPercentage = teacherData.teacher_percentage || 0;
-                const institutionPercentage = teacherData.institution_percentage || 0;
-
-                // Create rows
-                sortedDates.forEach(date => {
-                    const rowData = {
-                        date: date,
-                        gradePayments: {},
-                        totalCollection: 0,
-                        institutionShare: 0,
-                        teacherShare: 0
-                    };
-
-                    allGrades.forEach(grade => {
-                        rowData.gradePayments[grade] = 0;
-                    });
-
-                    teacherData.classes.forEach(cls => {
-                        const grade = cls.grade_name;
-                        const payment = cls.payments[date] || 0;
-                        
-                        if (payment > 0 && grade && rowData.gradePayments[grade] !== undefined) {
-                            rowData.gradePayments[grade] += payment;
-                            totals.gradeTotals[grade] += payment;
-                        }
-                    });
-
-                    rowData.totalCollection = Object.values(rowData.gradePayments).reduce((sum, val) => sum + val, 0);
-                    rowData.institutionShare = rowData.totalCollection * institutionPercentage / 100;
-                    rowData.teacherShare = rowData.totalCollection * teacherPercentage / 100;
-
-                    totals.totalCollection += rowData.totalCollection;
-                    totals.institutionShare += rowData.institutionShare;
-                    totals.teacherShare += rowData.teacherShare;
-
-                    allPayments.push(rowData);
-
-                    const row = document.createElement('tr');
+                teacherData.classes.forEach(cls => {
+                    const grade = cls.grade_name;
+                    const payment = cls.payments && cls.payments[date] ? convertStringToNumber(cls.payments[date]) : 0;
                     
-                    let rowHTML = `<td class="fw-bold">${formatDateTable(date)}</td>`;
-                    
-                    allGrades.forEach(grade => {
-                        const amount = rowData.gradePayments[grade];
-                        rowHTML += `<td>${amount > 0 ? formatCurrency(amount) : '-'}</td>`;
-                    });
-                    
-                    rowHTML += `
-                        <td class="fw-bold bg-light text-primary">${formatCurrency(rowData.totalCollection)}</td>
-                        <td class="bg-light text-secondary">${formatCurrency(rowData.institutionShare)}</td>
-                        <td class="fw-bold bg-success text-white">${formatCurrency(rowData.teacherShare)}</td>
-                    `;
-                    
-                    row.innerHTML = rowHTML;
-                    paymentTableBody.appendChild(row);
-                });
-
-                renderTableFooter(totals);
-            }
-
-            function renderTableHeader() {
-                if (!paymentTableHeader) return;
-
-                paymentTableHeader.innerHTML = '';
-
-                const teacherPercentage = teacherData.teacher_percentage || 0;
-                const institutionPercentage = teacherData.institution_percentage || 0;
-
-                const firstRow = document.createElement('tr');
-                firstRow.innerHTML = `<th rowspan="2">Date (DD/MM/YY)</th>`;
-                
-                allGrades.forEach(grade => {
-                    firstRow.innerHTML += `<th>Grade ${grade}</th>`;
-                });
-                
-                firstRow.innerHTML += `<th rowspan="2" class="bg-light text-primary">Total Collection</th>`;
-                firstRow.innerHTML += `<th colspan="2" class="text-center" rowspan="2">Percentage Split</th>`;
-                
-                paymentTableHeader.appendChild(firstRow);
-
-                const secondRow = document.createElement('tr');
-                paymentTableHeader.appendChild(secondRow);
-
-                setTimeout(() => {
-                    const tableHeaders = document.querySelectorAll('#paymentTable thead tr:last-child th');
-                    if (tableHeaders.length > allGrades.length + 2) {
-                        tableHeaders[allGrades.length + 1].textContent = `${institutionPercentage}%`;
-                        tableHeaders[allGrades.length + 1].className = 'bg-light text-secondary';
-                        tableHeaders[allGrades.length + 2].textContent = `${teacherPercentage}%`;
-                        tableHeaders[allGrades.length + 2].className = 'bg-success text-white';
+                    if (payment > 0 && grade && rowData.gradePayments[grade] !== undefined) {
+                        rowData.gradePayments[grade] += payment;
+                        totals.gradeTotals[grade] += payment;
                     }
-                }, 10);
-            }
+                });
 
-            function renderTableFooter(totals) {
-                if (!paymentTableFooter) return;
+                rowData.totalCollection = Object.values(rowData.gradePayments).reduce((sum, val) => sum + val, 0);
+                rowData.institutionShare = rowData.totalCollection * institutionPercentage / 100;
+                rowData.teacherShare = rowData.totalCollection * teacherPercentage / 100;
 
-                paymentTableFooter.innerHTML = '';
+                totals.totalCollection += rowData.totalCollection;
+                totals.institutionShare += rowData.institutionShare;
+                totals.teacherShare += rowData.teacherShare;
 
-                const footerRow = document.createElement('tr');
-                footerRow.innerHTML = `<td class="fw-bold">Totals</td>`;
+                allPayments.push(rowData);
+
+                const row = document.createElement('tr');
+                
+                let rowHTML = `<td class="fw-bold">${formatDateTable(date)}</td>`;
                 
                 allGrades.forEach(grade => {
-                    footerRow.innerHTML += `<td class="fw-bold">${formatCurrency(totals.gradeTotals[grade] || 0)}</td>`;
+                    const amount = rowData.gradePayments[grade];
+                    rowHTML += `<td>${amount > 0 ? formatCurrency(amount) : '-'}</td>`;
                 });
                 
-                footerRow.innerHTML += `
-                    <td class="fw-bold bg-light text-primary">${formatCurrency(totals.totalCollection)}</td>
-                    <td class="fw-bold bg-light text-secondary">${formatCurrency(totals.institutionShare)}</td>
-                    <td class="fw-bold bg-success text-white">${formatCurrency(totals.teacherShare)}</td>
+                rowHTML += `
+                    <td class="fw-bold bg-light text-primary">${formatCurrency(rowData.totalCollection)}</td>
+                    <td class="bg-light text-secondary">${formatCurrency(rowData.institutionShare)}</td>
+                    <td class="fw-bold bg-success text-white">${formatCurrency(rowData.teacherShare)}</td>
                 `;
                 
-                paymentTableFooter.appendChild(footerRow);
+                row.innerHTML = rowHTML;
+                paymentTableBody.appendChild(row);
+            });
+
+            renderTableFooter(totals);
+        }
+
+        function renderTableHeader() {
+            if (!paymentTableHeader) return;
+
+            paymentTableHeader.innerHTML = '';
+
+            const teacherPercentage = convertStringToNumber(teacherData.teacher_percentage) || 0;
+            const institutionPercentage = convertStringToNumber(teacherData.institution_percentage) || 0;
+
+            const firstRow = document.createElement('tr');
+            firstRow.innerHTML = `<th rowspan="2">Date (DD/MM/YY)</th>`;
+            
+            allGrades.forEach(grade => {
+                firstRow.innerHTML += `<th>Grade ${grade}</th>`;
+            });
+            
+            firstRow.innerHTML += `<th rowspan="2" class="bg-light text-primary">Total Collection</th>`;
+            firstRow.innerHTML += `<th colspan="2" class="text-center" rowspan="2">Percentage Split</th>`;
+            
+            paymentTableHeader.appendChild(firstRow);
+
+            const secondRow = document.createElement('tr');
+            paymentTableHeader.appendChild(secondRow);
+
+            setTimeout(() => {
+                const tableHeaders = document.querySelectorAll('#paymentTable thead tr:last-child th');
+                if (tableHeaders.length > allGrades.length + 2) {
+                    tableHeaders[allGrades.length + 1].textContent = `${institutionPercentage}%`;
+                    tableHeaders[allGrades.length + 1].className = 'bg-light text-secondary';
+                    tableHeaders[allGrades.length + 2].textContent = `${teacherPercentage}%`;
+                    tableHeaders[allGrades.length + 2].className = 'bg-success text-white';
+                }
+            }, 10);
+        }
+
+        function renderTableFooter(totals) {
+            if (!paymentTableFooter) return;
+
+            paymentTableFooter.innerHTML = '';
+
+            const footerRow = document.createElement('tr');
+            footerRow.innerHTML = `<td class="fw-bold">Totals</td>`;
+            
+            allGrades.forEach(grade => {
+                footerRow.innerHTML += `<td class="fw-bold">${formatCurrency(totals.gradeTotals[grade] || 0)}</td>`;
+            });
+            
+            footerRow.innerHTML += `
+                <td class="fw-bold bg-light text-primary">${formatCurrency(totals.totalCollection)}</td>
+                <td class="fw-bold bg-light text-secondary">${formatCurrency(totals.institutionShare)}</td>
+                <td class="fw-bold bg-success text-white">${formatCurrency(totals.teacherShare)}</td>
+            `;
+            
+            paymentTableFooter.appendChild(footerRow);
+        }
+
+        // 🔥 UPDATED: Render salary payments with numeric values
+        function renderSalaryPayments() {
+            if (!teacherData || !salaryPaymentsTableBody) return;
+
+            salaryPaymentsTableBody.innerHTML = '';
+
+            if (!teacherData.salary_payments || teacherData.salary_payments.length === 0) {
+                showSalaryEmptyState(true);
+                showSalaryTable(false);
+                return;
             }
 
-            function renderSalaryPayments() {
-                if (!teacherData || !salaryPaymentsTableBody) return;
+            showSalaryEmptyState(false);
+            showSalaryTable(true);
 
-                salaryPaymentsTableBody.innerHTML = '';
+            teacherData.salary_payments.forEach(payment => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${formatDate(payment.date)}</td>
+                    <td class="fw-bold">${formatCurrency(payment.payment)}</td>
+                    <td><span class="badge bg-info">${payment.reason_code || 'N/A'}</span></td>
+                    <td>${payment.payment_for || 'N/A'}</td>
+                    <td>
+                        <span class="badge ${payment.status === 1 ? 'bg-success' : 'bg-warning'}">
+                            ${payment.status === 1 ? 'Paid' : 'Pending'}
+                        </span>
+                    </td>
+                `;
+                salaryPaymentsTableBody.appendChild(row);
+            });
+        }
 
-                if (!teacherData.salary_payments || teacherData.salary_payments.length === 0) {
-                    showSalaryEmptyState(true);
-                    showSalaryTable(false);
+        // Event Handlers
+        function setupMonthYearSelectors() {
+            if (!monthSelect || !yearSelect) return;
+
+            monthSelect.addEventListener('change', function() {
+                handleMonthYearChange();
+            });
+
+            yearSelect.addEventListener('change', function() {
+                handleMonthYearChange();
+            });
+        }
+
+        function handleMonthYearChange() {
+            const month = monthSelect.value;
+            const year = yearSelect.value;
+            
+            if (isCurrentMonth(month, year)) {
+                alert('Current month data is not available. Showing previous month instead.');
+                
+                const prev = getPreviousMonthYear();
+                monthSelect.value = prev.month;
+                yearSelect.value = prev.year;
+                
+                updateSelectedMonthYear(prev.month, prev.year);
+                fetchTeacherData(prev.month, prev.year);
+            } else {
+                updateSelectedMonthYear(month, year);
+                fetchTeacherData(month, year);
+            }
+        }
+
+        function setupPayTeacherButton() {
+            if (!payTeacherBtn) return;
+
+            payTeacherBtn.addEventListener('click', function () {
+                if (!teacherData) return;
+                
+                const netPayable = convertStringToNumber(teacherData.net_payable) || 0;
+                const isPaid = teacherData.is_salary_paid || false;
+                
+                if (netPayable <= 0 || isPaid) {
                     return;
                 }
 
-                showSalaryEmptyState(false);
-                showSalaryTable(true);
+                const amount = netPayable;
+                const teacherName = teacherData.teacher_name;
+                const teacherId = convertStringToNumber(teacherData.teacher_id);
+                const monthYear = `${getMonthName(currentMonth)} ${currentYear}`;
+                const formattedAmount = formatCurrency(amount);
 
-                teacherData.salary_payments.forEach(payment => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${formatDate(payment.date)}</td>
-                        <td class="fw-bold">${formatCurrency(payment.payment)}</td>
-                        <td><span class="badge bg-info">${payment.reason_code || 'N/A'}</span></td>
-                        <td>${payment.payment_for || 'N/A'}</td>
-                        <td>
-                            <span class="badge ${payment.status === 1 ? 'bg-success' : 'bg-warning'}">
-                                ${payment.status === 1 ? 'Paid' : 'Pending'}
-                            </span>
-                        </td>
-                    `;
-                    salaryPaymentsTableBody.appendChild(row);
-                });
-            }
-
-            // Event Handlers
-            function setupMonthYearSelectors() {
-                if (!monthSelect || !yearSelect) return;
-
-                monthSelect.addEventListener('change', function() {
-                    handleMonthYearChange();
-                });
-
-                yearSelect.addEventListener('change', function() {
-                    handleMonthYearChange();
-                });
-            }
-
-            function handleMonthYearChange() {
-                const month = monthSelect.value;
-                const year = yearSelect.value;
-                
-                if (isCurrentMonth(month, year)) {
-                    alert('Current month data is not available. Showing previous month instead.');
-                    
-                    const prev = getPreviousMonthYear();
-                    monthSelect.value = prev.month;
-                    yearSelect.value = prev.year;
-                    
-                    updateSelectedMonthYear(prev.month, prev.year);
-                    fetchTeacherData(prev.month, prev.year);
-                } else {
-                    updateSelectedMonthYear(month, year);
-                    fetchTeacherData(month, year);
-                }
-            }
-
-            // Setup Pay Teacher button with auto print after successful payment
-            function setupPayTeacherButton() {
-                if (!payTeacherBtn) return;
-
-                payTeacherBtn.addEventListener('click', function () {
-                    if (!teacherData || teacherData.net_payable <= 0 || teacherData.is_salary_paid) {
-                        return;
+                // Show custom confirmation
+                showPaymentConfirmation(teacherName, formattedAmount, monthYear, function (confirmed) {
+                    if (confirmed) {
+                        processPayment(teacherId, teacherName, amount, monthYear);
                     }
-
-                    const amount = teacherData.net_payable;
-                    const teacherName = teacherData.teacher_name;
-                    const teacherId = teacherData.teacher_id;
-                    const monthYear = `${getMonthName(currentMonth)} ${currentYear}`;
-                    const formattedAmount = formatCurrency(amount);
-
-                    // Show custom confirmation
-                    showPaymentConfirmation(teacherName, formattedAmount, monthYear, function (confirmed) {
-                        if (confirmed) {
-                            processPayment(teacherId, teacherName, amount, monthYear);
-                        }
-                    });
                 });
-            }
+            });
+        }
 
-            // Custom confirmation
-            function showPaymentConfirmation(teacherName, amount, monthYear, callback) {
-                const modal = document.createElement('div');
-                modal.id = 'paymentConfirmation';
-                modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9998;
-        `;
+        // Custom confirmation
+        function showPaymentConfirmation(teacherName, amount, monthYear, callback) {
+            const modal = document.createElement('div');
+            modal.id = 'paymentConfirmation';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.6);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9998;
+            `;
 
-                modal.innerHTML = `
-            <div style="
-                background: white;
-                padding: 20px;
-                border-radius: 8px;
-                max-width: 350px;
-                width: 90%;
-                box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            ">
-                <div style="text-align: center; margin-bottom: 15px;">
-                    <h5 style="margin: 0 0 15px 0; color: #333;">Confirm Payment</h5>
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #666;">Teacher:</span>
-                        <strong>${teacherName}</strong>
+            modal.innerHTML = `
+                <div style="
+                    background: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    max-width: 350px;
+                    width: 90%;
+                    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+                ">
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <h5 style="margin: 0 0 15px 0; color: #333;">Confirm Payment</h5>
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #666;">Amount:</span>
-                        <strong style="color: #28a745;">${amount}</strong>
+
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: #666;">Teacher:</span>
+                            <strong>${teacherName}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: #666;">Amount:</span>
+                            <strong style="color: #28a745;">${amount}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #666;">Period:</span>
+                            <strong>${monthYear}</strong>
+                        </div>
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: #666;">Period:</span>
-                        <strong>${monthYear}</strong>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button id="confirmBtn" style="
+                            background: #28a745;
+                            color: white;
+                            border: none;
+                            padding: 8px 20px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            flex: 1;
+                        ">
+                            Confirm
+                        </button>
+
+                        <button id="cancelBtn" style="
+                            background: #dc3545;
+                            color: white;
+                            border: none;
+                            padding: 8px 20px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            flex: 1;
+                        ">
+                            Cancel
+                        </button>
                     </div>
                 </div>
+            `;
 
-                <div style="display: flex; gap: 10px;">
-                    <button id="confirmBtn" style="
-                        background: #28a745;
-                        color: white;
-                        border: none;
-                        padding: 8px 20px;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 14px;
-                        flex: 1;
-                    ">
-                        Confirm
-                    </button>
+            document.body.appendChild(modal);
 
-                    <button id="cancelBtn" style="
-                        background: #dc3545;
-                        color: white;
-                        border: none;
-                        padding: 8px 20px;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 14px;
-                        flex: 1;
-                    ">
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        `;
+            document.getElementById('confirmBtn').addEventListener('click', function () {
+                modal.remove();
+                callback(true);
+            });
 
-                document.body.appendChild(modal);
+            document.getElementById('cancelBtn').addEventListener('click', function () {
+                modal.remove();
+                callback(false);
+            });
 
-                document.getElementById('confirmBtn').addEventListener('click', function () {
-                    modal.remove();
-                    callback(true);
-                });
-
-                document.getElementById('cancelBtn').addEventListener('click', function () {
+            modal.addEventListener('click', function (e) {
+                if (e.target === modal) {
                     modal.remove();
                     callback(false);
-                });
+                }
+            });
+        }
 
-                modal.addEventListener('click', function (e) {
-                    if (e.target === modal) {
-                        modal.remove();
-                        callback(false);
-                    }
-                });
-            }
+        // Process payment
+        function processPayment(teacherId, teacherName, amount, monthYear) {
+            payTeacherBtn.disabled = true;
+            payTeacherBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
 
-            // Process payment
-            function processPayment(teacherId, teacherName, amount, monthYear) {
-                payTeacherBtn.disabled = true;
-                payTeacherBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
+            showPaymentProcessing(teacherName, amount, monthYear);
 
-                showPaymentProcessing(teacherName, amount, monthYear);
-
-                fetch('/api/teacher-payments', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        teacher_id: teacherId,
-                        payment: amount,
-                        paymentFor: monthYear,
-                        reason_code: 'salary',
-                    })
+            fetch('/api/teacher-payments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    teacher_id: teacherId,
+                    payment: amount,
+                    paymentFor: monthYear,
+                    reason_code: 'salary',
                 })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
                         if (data.status === 'success') {
+                            // Payment successful
                             hidePaymentProcessing();
+
+                            // 1. Salary slip print කරන්න
+                            setTimeout(() => {
+                                openSalarySlip(teacherId, currentYear, currentMonth);
+                            }, 500);
+
+                            // 2. Report email එක send කරන්න
+                            sendPaymentReportToTeacher(teacherId, monthYear);
+
+                            // 3. Success message show කරන්න
                             showPaymentSuccess(data, teacherId, teacherName, amount, monthYear);
+
+                            // Refresh data after 2 seconds
                             setTimeout(() => {
                                 fetchTeacherData();
                             }, 2000);
+
                         } else {
                             throw new Error(data.message || 'Payment failed');
                         }
@@ -1247,6 +1373,51 @@
                         payTeacherBtn.disabled = false;
                         payTeacherBtn.innerHTML = '<i class="fas fa-money-check-alt me-1"></i> Pay Teacher';
                     });
+            }
+
+        // Report email එක send කරන function එක
+            function sendPaymentReportToTeacher(teacherId, monthYear) {
+                // Format month year for URL (e.g., "2025-02")
+                const formattedMonthYear = formatMonthYearForURL(monthYear);
+
+                // Send email API call
+                fetch(`/send-mail/${teacherId}/${formattedMonthYear}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log('Report email sent successfully:', data);
+                        } else {
+                            console.warn('Report email may not have been sent:', data);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error sending report email:', error);
+                        // Don't show error to user - email sending failure shouldn't affect payment
+                    });
+            }
+
+            // Month format convert කරන්න (e.g., "2025 Feb" → "2025-02")
+            function formatMonthYearForURL(monthYear) {
+                // Remove spaces and convert month name to number
+                const parts = monthYear.split(' ');
+                if (parts.length === 2) {
+                    const year = parts[0];
+                    const monthName = parts[1];
+                    const monthMap = {
+                        'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+                        'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+                        'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+                    };
+                    const monthNumber = monthMap[monthName] || '01';
+                    return `${year}-${monthNumber}`;
+                }
+                return monthYear;
             }
 
             // Show payment processing
@@ -1286,27 +1457,36 @@
                         <span style="color: #666;">Teacher:</span>
                         <strong>${teacherName}</strong>
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                         <span style="color: #666;">Amount:</span>
                         <strong>${formatCurrency(amount)}</strong>
                     </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #666;">Period:</span>
+                        <strong>${monthYear}</strong>
+                    </div>
                 </div>
 
-                <p style="color: #666; font-size: 13px; margin: 0;">
+                <div style="
+                    background: #e8f4fd;
+                    padding: 8px;
+                    border-radius: 4px;
+                    margin-top: 15px;
+                    border-left: 3px solid #007bff;
+                ">
+                    <p style="margin: 0; color: #0056b3; font-size: 12px;">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Payment slip will auto-print and report will be emailed
+                    </p>
+                </div>
+
+                <p style="color: #666; font-size: 13px; margin: 10px 0 0 0;">
                     Please wait...
                 </p>
             </div>
         `;
 
                 document.body.appendChild(overlay);
-            }
-
-            // Hide payment processing
-            function hidePaymentProcessing() {
-                const overlay = document.getElementById('paymentProcessing');
-                if (overlay) {
-                    overlay.remove();
-                }
             }
 
             // Show payment success
@@ -1337,7 +1517,7 @@
                 background: white;
                 padding: 20px;
                 border-radius: 8px;
-                max-width: 350px;
+                max-width: 380px;
                 width: 90%;
             ">
                 <div style="text-align: center; margin-bottom: 15px;">
@@ -1372,6 +1552,7 @@
                     </div>
                 </div>
 
+                <!-- Report sending status -->
                 <div style="
                     background: #d4edda;
                     padding: 8px;
@@ -1380,12 +1561,26 @@
                     border-left: 3px solid #28a745;
                 ">
                     <p style="margin: 0; color: #155724; font-size: 12px;">
-                        Printing in <span id="countdown" style="font-weight: bold;">5</span> seconds...
+                        <i class="fas fa-check-circle me-1"></i>
+                        Payment slip printed and report emailed to teacher
+                    </p>
+                </div>
+
+                <div style="
+                    background: #e8f4fd;
+                    padding: 8px;
+                    border-radius: 4px;
+                    margin-bottom: 15px;
+                    border-left: 3px solid #007bff;
+                ">
+                    <p style="margin: 0; color: #0056b3; font-size: 12px;">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Report has been sent to teacher's email address
                     </p>
                 </div>
 
                 <div style="display: flex; gap: 10px;">
-                    <button id="printBtn" style="
+                    <button id="printAgainBtn" style="
                         background: #007bff;
                         color: white;
                         border: none;
@@ -1395,7 +1590,20 @@
                         font-size: 14px;
                         flex: 1;
                     ">
-                        Print Now
+                        <i class="fas fa-print me-1"></i> Print Again
+                    </button>
+
+                    <button id="emailAgainBtn" style="
+                        background: #17a2b8;
+                        color: white;
+                        border: none;
+                        padding: 8px 15px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        flex: 1;
+                    ">
+                        <i class="fas fa-envelope me-1"></i> Resend Email
                     </button>
 
                     <button id="closeBtn" style="
@@ -1416,30 +1624,23 @@
 
                 document.body.appendChild(modal);
 
-                let countdown = 5;
-                const countdownElement = document.getElementById('countdown');
-                const countdownInterval = setInterval(() => {
-                    countdown--;
-                    countdownElement.textContent = countdown;
-
-                    if (countdown <= 0) {
-                        clearInterval(countdownInterval);
-                        openSalarySlip(teacherId, currentYear, currentMonth);
-                    }
-                }, 1000);
-
-                document.getElementById('printBtn').addEventListener('click', function () {
-                    clearInterval(countdownInterval);
+                // Event listeners
+                document.getElementById('printAgainBtn').addEventListener('click', function () {
                     openSalarySlip(teacherId, currentYear, currentMonth);
                 });
 
+                document.getElementById('emailAgainBtn').addEventListener('click', function () {
+                    sendPaymentReportToTeacher(teacherId, monthYear);
+                    showToast('Report email sent again', 'success');
+                });
+
                 document.getElementById('closeBtn').addEventListener('click', function () {
-                    clearInterval(countdownInterval);
                     modal.remove();
                     payTeacherBtn.disabled = false;
                     payTeacherBtn.innerHTML = '<i class="fas fa-money-check-alt me-1"></i> Pay Teacher';
                 });
 
+                // Auto close after 15 seconds
                 setTimeout(() => {
                     if (document.getElementById('paymentSuccess')) {
                         modal.remove();
@@ -1449,28 +1650,99 @@
                 }, 15000);
             }
 
-            // Open salary slip
+            // Open salary slip (Updated for auto print)
             function openSalarySlip(teacherId, year, month) {
-                const modal = document.getElementById('paymentSuccess');
-                if (modal) {
-                    modal.remove();
-                }
-
                 const formattedMonth = month.toString().padStart(2, '0');
                 const yearMonth = `${year}-${formattedMonth}`;
-                const salarySlipUrl = `/teacher-payment/salary-slip/${teacherId}/${yearMonth}?autoPrint=true&ref=${Date.now()}`;
+                const salarySlipUrl = `/teacher-payment/salary-slip/${teacherId}/${yearMonth}?autoPrint=true&timestamp=${Date.now()}`;
 
+                // Open in new window with print dialog
                 const printWindow = window.open(salarySlipUrl, '_blank', 'width=900,height=700,scrollbars=yes');
 
                 if (printWindow) {
                     printWindow.focus();
-                }
 
-                payTeacherBtn.disabled = false;
-                payTeacherBtn.innerHTML = '<i class="fas fa-money-check-alt me-1"></i> Pay Teacher';
+                    // Auto print after content loads
+                    printWindow.onload = function () {
+                        setTimeout(() => {
+                            printWindow.print();
+                        }, 1000);
+                    };
+                }
             }
 
-            // Show payment error
+            // Toast message show කිරීම
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                const bgColor = type === 'success' ? '#28a745' :
+                    type === 'error' ? '#dc3545' :
+                        type === 'warning' ? '#ffc107' : '#17a2b8';
+
+                toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${bgColor};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 999999;
+            animation: slideIn 0.3s ease-out;
+        `;
+
+                toast.innerHTML = `
+            <div style="display: flex; align-items: center;">
+                <i class="fas ${type === 'success' ? 'fa-check-circle' :
+                        type === 'error' ? 'fa-exclamation-circle' :
+                            'fa-info-circle'} me-2"></i>
+                <span>${message}</span>
+            </div>
+        `;
+
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.animation = 'slideOut 0.3s ease-out';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+
+            // Add CSS animations
+            const style = document.createElement('style');
+            style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+            document.head.appendChild(style);
+
+            // Existing functions remain the same...
+            function hidePaymentProcessing() {
+                const overlay = document.getElementById('paymentProcessing');
+                if (overlay) {
+                    overlay.remove();
+                }
+            }
+
             function showPaymentError(errorMessage, teacherName, amount) {
                 const modal = document.createElement('div');
                 modal.id = 'paymentError';
@@ -1547,189 +1819,286 @@
                     }
                 }, 10000);
             }
+        function openSalarySlip(teacherId, year, month) {
+            const modal = document.getElementById('paymentSuccess');
+            if (modal) {
+                modal.remove();
+            }
 
-            function setupExportButtons() {
-                // Excel Export
-                if (exportTableExcelBtn) {
-                    exportTableExcelBtn.addEventListener('click', function() {
-                        if (!teacherData || allPayments.length === 0) {
-                            alert('No data to export');
-                            return;
-                        }
+            const formattedMonth = month.toString().padStart(2, '0');
+            const yearMonth = `${year}-${formattedMonth}`;
+            const salarySlipUrl = `/teacher-payment/salary-slip/${teacherId}/${yearMonth}?autoPrint=true&ref=${Date.now()}`;
 
-                        try {
-                            const teacherPercentage = teacherData.teacher_percentage || 0;
-                            const institutionPercentage = teacherData.institution_percentage || 0;
+            const printWindow = window.open(salarySlipUrl, '_blank', 'width=900,height=700,scrollbars=yes');
 
-                            const exportData = allPayments.map(payment => {
-                                const rowData = {
-                                    'Date': formatDateTable(payment.date)
-                                };
-                                
-                                allGrades.forEach(grade => {
-                                    rowData[`Grade ${grade}`] = payment.gradePayments[grade] || 0;
-                                });
-                                
-                                rowData['Total Collection'] = payment.totalCollection || 0;
-                                rowData[`Institution Share (${institutionPercentage}%)`] = payment.institutionShare || 0;
-                                rowData[`Teacher Share (${teacherPercentage}%)`] = payment.teacherShare || 0;
-                                
-                                return rowData;
-                            });
+            if (printWindow) {
+                printWindow.focus();
+            }
 
-                            const totalsRow = {
-                                'Date': 'TOTALS'
+            payTeacherBtn.disabled = false;
+            payTeacherBtn.innerHTML = '<i class="fas fa-money-check-alt me-1"></i> Pay Teacher';
+        }
+
+        function showPaymentError(errorMessage, teacherName, amount) {
+            const modal = document.createElement('div');
+            modal.id = 'paymentError';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 99999;
+            `;
+
+            modal.innerHTML = `
+                <div style="
+                    background: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    max-width: 350px;
+                    width: 90%;
+                ">
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <div style="font-size: 30px; color: #dc3545; margin-bottom: 10px;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h5 style="margin: 0; color: #dc3545;">Payment Failed</h5>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <p style="color: #721c24; font-size: 14px; margin: 0 0 10px 0;">
+                            ${errorMessage}
+                        </p>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #666;">Teacher:</span>
+                            <strong>${teacherName}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                            <span style="color: #666;">Amount:</span>
+                            <strong>${formatCurrency(amount)}</strong>
+                        </div>
+                    </div>
+
+                    <button id="errorCloseBtn" style="
+                        background: #dc3545;
+                        color: white;
+                        border: none;
+                        padding: 8px 20px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        width: 100%;
+                    ">
+                        Try Again
+                    </button>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            document.getElementById('errorCloseBtn').addEventListener('click', function () {
+                modal.remove();
+                payTeacherBtn.disabled = false;
+                payTeacherBtn.innerHTML = '<i class="fas fa-money-check-alt me-1"></i> Pay Teacher';
+            });
+
+            setTimeout(() => {
+                if (document.getElementById('paymentError')) {
+                    modal.remove();
+                    payTeacherBtn.disabled = false;
+                    payTeacherBtn.innerHTML = '<i class="fas fa-money-check-alt me-1"></i> Pay Teacher';
+                }
+            }, 10000);
+        }
+
+        // 🔥 UPDATED: Export functions with numeric values
+        function setupExportButtons() {
+            // Excel Export
+            if (exportTableExcelBtn) {
+                exportTableExcelBtn.addEventListener('click', function() {
+                    if (!teacherData || allPayments.length === 0) {
+                        alert('No data to export');
+                        return;
+                    }
+
+                    try {
+                        const teacherPercentage = convertStringToNumber(teacherData.teacher_percentage) || 0;
+                        const institutionPercentage = convertStringToNumber(teacherData.institution_percentage) || 0;
+
+                        const exportData = allPayments.map(payment => {
+                            const rowData = {
+                                'Date': formatDateTable(payment.date)
                             };
                             
                             allGrades.forEach(grade => {
-                                totalsRow[`Grade ${grade}`] = allPayments.reduce((sum, p) => sum + (p.gradePayments[grade] || 0), 0);
+                                rowData[`Grade ${grade}`] = payment.gradePayments[grade] || 0;
                             });
                             
-                            totalsRow['Total Collection'] = allPayments.reduce((sum, p) => sum + p.totalCollection, 0);
-                            totalsRow[`Institution Share (${institutionPercentage}%)`] = allPayments.reduce((sum, p) => sum + p.institutionShare, 0);
-                            totalsRow[`Teacher Share (${teacherPercentage}%)`] = allPayments.reduce((sum, p) => sum + p.teacherShare, 0);
+                            rowData['Total Collection'] = payment.totalCollection || 0;
+                            rowData[`Institution Share (${institutionPercentage}%)`] = payment.institutionShare || 0;
+                            rowData[`Teacher Share (${teacherPercentage}%)`] = payment.teacherShare || 0;
                             
-                            exportData.push(totalsRow);
+                            return rowData;
+                        });
 
-                            const ws = XLSX.utils.json_to_sheet(exportData);
-                            const wb = XLSX.utils.book_new();
-                            XLSX.utils.book_append_sheet(wb, ws, 'Teacher Payments');
+                        const totalsRow = {
+                            'Date': 'TOTALS'
+                        };
+                        
+                        allGrades.forEach(grade => {
+                            totalsRow[`Grade ${grade}`] = allPayments.reduce((sum, p) => sum + (p.gradePayments[grade] || 0), 0);
+                        });
+                        
+                        totalsRow['Total Collection'] = allPayments.reduce((sum, p) => sum + p.totalCollection, 0);
+                        totalsRow[`Institution Share (${institutionPercentage}%)`] = allPayments.reduce((sum, p) => sum + p.institutionShare, 0);
+                        totalsRow[`Teacher Share (${teacherPercentage}%)`] = allPayments.reduce((sum, p) => sum + p.teacherShare, 0);
+                        
+                        exportData.push(totalsRow);
 
-                            const filename = `${teacherData.teacher_name}_${getMonthName(currentMonth)}_${currentYear}_Payments.xlsx`;
-                            XLSX.writeFile(wb, filename);
-                        } catch (error) {
-                            console.error('Error exporting to Excel:', error);
-                            alert('Failed to export Excel file. Please try again.');
-                        }
-                    });
-                }
+                        const ws = XLSX.utils.json_to_sheet(exportData);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, 'Teacher Payments');
 
-                // PDF Export
-                if (exportTablePdfBtn) {
-                    exportTablePdfBtn.addEventListener('click', function() {
-                        if (!teacherData || allPayments.length === 0) {
-                            alert('No data to export');
-                            return;
-                        }
+                        const filename = `${teacherData.teacher_name}_${getMonthName(currentMonth)}_${currentYear}_Payments.xlsx`;
+                        XLSX.writeFile(wb, filename);
+                    } catch (error) {
+                        console.error('Error exporting to Excel:', error);
+                        alert('Failed to export Excel file. Please try again.');
+                    }
+                });
+            }
 
-                        try {
-                            const { jsPDF } = window.jspdf;
-                            const doc = new jsPDF('landscape');
+            // PDF Export
+            if (exportTablePdfBtn) {
+                exportTablePdfBtn.addEventListener('click', function() {
+                    if (!teacherData || allPayments.length === 0) {
+                        alert('No data to export');
+                        return;
+                    }
 
-                            const teacherPercentage = teacherData.teacher_percentage || 0;
-                            const institutionPercentage = teacherData.institution_percentage || 0;
+                    try {
+                        const { jsPDF } = window.jspdf;
+                        const doc = new jsPDF('landscape');
 
-                            // Title
-                            doc.setFontSize(14);
-                            doc.text(`${teacherData.teacher_name} - Payment Report`, 14, 10);
-                            doc.setFontSize(10);
-                            doc.text(`Period: ${getMonthName(currentMonth)} ${currentYear}`, 14, 16);
-                            doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 22);
+                        const teacherPercentage = convertStringToNumber(teacherData.teacher_percentage) || 0;
+                        const institutionPercentage = convertStringToNumber(teacherData.institution_percentage) || 0;
 
-                            // Summary
-                            doc.setFontSize(11);
-                            doc.text('Summary', 14, 30);
-                            doc.setFontSize(9);
-                            doc.text(`Total Collections: ${formatCurrency(teacherData.total_payments_this_month || 0)}`, 14, 36);
-                            doc.text(`Teacher's Share (${teacherPercentage}%): ${formatCurrency(teacherData.teacher_share || 0)}`, 14, 41);
-                            doc.text(`Advance Payments: ${formatCurrency(teacherData.advance_payment_this_month || 0)}`, 14, 46);
-                            doc.text(`Net Payable: ${formatCurrency(teacherData.net_payable || 0)}`, 14, 51);
+                        // Title
+                        doc.setFontSize(14);
+                        doc.text(`${teacherData.teacher_name} - Payment Report`, 14, 10);
+                        doc.setFontSize(10);
+                        doc.text(`Period: ${getMonthName(currentMonth)} ${currentYear}`, 14, 16);
+                        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 22);
 
-                            // Table headers
-                            const headers = ['Date'];
+                        // Summary
+                        doc.setFontSize(11);
+                        doc.text('Summary', 14, 30);
+                        doc.setFontSize(9);
+                        doc.text(`Total Collections: ${formatCurrency(teacherData.total_payments_this_month || 0)}`, 14, 36);
+                        doc.text(`Teacher's Share (${teacherPercentage}%): ${formatCurrency(teacherData.teacher_share || 0)}`, 14, 41);
+                        doc.text(`Advance Payments: ${formatCurrency(teacherData.advance_payment_this_month || 0)}`, 14, 46);
+                        doc.text(`Net Payable: ${formatCurrency(teacherData.net_payable || 0)}`, 14, 51);
+
+                        // Table headers
+                        const headers = ['Date'];
+                        allGrades.forEach(grade => {
+                            headers.push(`Grade ${grade}`);
+                        });
+                        headers.push('Total', `Inst (${institutionPercentage}%)`, `Teach (${teacherPercentage}%)`);
+
+                        // Table data
+                        const tableData = allPayments.map(payment => {
+                            const row = [formatDateTable(payment.date)];
+                            
                             allGrades.forEach(grade => {
-                                headers.push(`Grade ${grade}`);
+                                row.push(formatCurrency(payment.gradePayments[grade] || 0));
                             });
-                            headers.push('Total', `Inst (${institutionPercentage}%)`, `Teach (${teacherPercentage}%)`);
+                            
+                            row.push(
+                                formatCurrency(payment.totalCollection),
+                                formatCurrency(payment.institutionShare),
+                                formatCurrency(payment.teacherShare)
+                            );
+                            
+                            return row;
+                        });
 
-                            // Table data
-                            const tableData = allPayments.map(payment => {
-                                const row = [formatDateTable(payment.date)];
-                                
-                                allGrades.forEach(grade => {
-                                    row.push(formatCurrency(payment.gradePayments[grade] || 0));
-                                });
-                                
-                                row.push(
-                                    formatCurrency(payment.totalCollection),
-                                    formatCurrency(payment.institutionShare),
-                                    formatCurrency(payment.teacherShare)
-                                );
-                                
-                                return row;
-                            });
+                        // Add table
+                        doc.autoTable({
+                            head: [headers],
+                            body: tableData,
+                            startY: 55,
+                            styles: { fontSize: 7 },
+                            headStyles: { fillColor: [41, 128, 185] },
+                            columnStyles: {
+                                0: { fontStyle: 'bold', cellWidth: 25 },
+                                [allGrades.length + 1]: { fontStyle: 'bold', textColor: [13, 110, 253] },
+                                [allGrades.length + 2]: { textColor: [108, 117, 125] },
+                                [allGrades.length + 3]: { fontStyle: 'bold', fillColor: [39, 174, 96], textColor: [255, 255, 255] }
+                            }
+                        });
 
-                            // Add table
-                            doc.autoTable({
-                                head: [headers],
-                                body: tableData,
-                                startY: 55,
-                                styles: { fontSize: 7 },
-                                headStyles: { fillColor: [41, 128, 185] },
-                                columnStyles: {
-                                    0: { fontStyle: 'bold', cellWidth: 25 },
-                                    [allGrades.length + 1]: { fontStyle: 'bold', textColor: [13, 110, 253] },
-                                    [allGrades.length + 2]: { textColor: [108, 117, 125] },
-                                    [allGrades.length + 3]: { fontStyle: 'bold', fillColor: [39, 174, 96], textColor: [255, 255, 255] }
-                                }
-                            });
-
-                            const filename = `${teacherData.teacher_name}_${getMonthName(currentMonth)}_${currentYear}_Payments.pdf`;
-                            doc.save(filename);
-                        } catch (error) {
-                            console.error('Error exporting to PDF:', error);
-                            alert('Failed to export PDF file. Please try again.');
-                        }
-                    });
-                }
+                        const filename = `${teacherData.teacher_name}_${getMonthName(currentMonth)}_${currentYear}_Payments.pdf`;
+                        doc.save(filename);
+                    } catch (error) {
+                        console.error('Error exporting to PDF:', error);
+                        alert('Failed to export PDF file. Please try again.');
+                    }
+                });
             }
+        }
 
-            // Initialize
-            function init() {
-                console.log('Initializing Teacher Income History...');
+        // Initialize
+        function init() {
+            console.log('Initializing Teacher Income History...');
 
-                // Set initial month/year to previous month
-                const prev = getPreviousMonthYear();
-                currentMonth = prev.month;
-                currentYear = prev.year;
-                
-                if (monthSelect && monthSelect.value !== prev.month) {
-                    monthSelect.value = prev.month;
-                }
-                if (yearSelect && yearSelect.value !== prev.year) {
-                    yearSelect.value = prev.year;
-                }
-                
-                updateSelectedMonthYear(prev.month, prev.year);
-
-                // Setup event listeners
-                setupMonthYearSelectors();
-                setupPayTeacherButton();
-                setupExportButtons();
-
-                // Load initial data
-                fetchTeacherData(prev.month, prev.year);
-
-                console.log('Teacher Income History initialized successfully');
+            // Set initial month/year to previous month
+            const prev = getPreviousMonthYear();
+            currentMonth = prev.month;
+            currentYear = prev.year;
+            
+            if (monthSelect && monthSelect.value !== prev.month) {
+                monthSelect.value = prev.month;
             }
-
-            // Start when DOM is ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', init);
-            } else {
-                init();
+            if (yearSelect && yearSelect.value !== prev.year) {
+                yearSelect.value = prev.year;
             }
+            
+            updateSelectedMonthYear(prev.month, prev.year);
 
-            // Error handling
-            window.addEventListener('error', function(event) {
-                console.error('Global error:', event.error);
-            });
+            // Setup event listeners
+            setupMonthYearSelectors();
+            setupPayTeacherButton();
+            setupExportButtons();
 
-            window.addEventListener('unhandledrejection', function(event) {
-                console.error('Unhandled promise rejection:', event.reason);
-                alert('An unexpected error occurred. Please refresh the page.');
-            });
+            // Load initial data
+            fetchTeacherData(prev.month, prev.year);
 
-        })();
-    </script>
+            console.log('Teacher Income History initialized successfully');
+        }
+
+        // Start when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+        // Error handling
+        window.addEventListener('error', function(event) {
+            console.error('Global error:', event.error);
+        });
+
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+            alert('An unexpected error occurred. Please refresh the page.');
+        });
+
+    })();
+</script>
 @endpush

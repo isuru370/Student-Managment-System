@@ -82,7 +82,8 @@
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label">&nbsp;</label>
-                                            <button class="btn btn-success w-100" id="processBulkPaymentsBtn" onclick="processBulkPayments()" disabled>
+                                            <button class="btn btn-success w-100" id="processBulkPaymentsBtn"
+                                                onclick="processBulkPayments()" disabled>
                                                 <i class="fas fa-money-bill me-2"></i>
                                                 Process Payments
                                             </button>
@@ -91,13 +92,16 @@
                                     <div class="row mt-2">
                                         <div class="col-12">
                                             <div class="d-flex gap-2">
-                                                <button class="btn btn-outline-primary btn-sm" onclick="selectAllOnCurrentPage()">
+                                                <button class="btn btn-outline-primary btn-sm"
+                                                    onclick="selectAllOnCurrentPage()">
                                                     <i class="fas fa-check-square me-1"></i>Select Page
                                                 </button>
-                                                <button class="btn btn-outline-primary btn-sm" onclick="selectAllStudents()">
+                                                <button class="btn btn-outline-primary btn-sm"
+                                                    onclick="selectAllStudents()">
                                                     <i class="fas fa-check-double me-1"></i>Select All
                                                 </button>
-                                                <button class="btn btn-outline-secondary btn-sm" onclick="deselectAllStudents()">
+                                                <button class="btn btn-outline-secondary btn-sm"
+                                                    onclick="deselectAllStudents()">
                                                     <i class="fas fa-times-circle me-1"></i>Deselect All
                                                 </button>
                                             </div>
@@ -125,7 +129,8 @@
                             </div>
                             <div class="d-flex align-items-center">
                                 <span class="me-2 text-muted">Show:</span>
-                                <select class="form-select form-select-sm" id="pageSize" style="width: auto;" onchange="changePageSize()">
+                                <select class="form-select form-select-sm" id="pageSize" style="width: auto;"
+                                    onchange="changePageSize()">
                                     <option value="10">10</option>
                                     <option value="25" selected>25</option>
                                     <option value="50">50</option>
@@ -133,7 +138,7 @@
                                 </select>
                             </div>
                         </div>
-                        
+
                         <div class="table-responsive">
                             <table class="table table-bordered table-hover table-striped">
                                 <thead class="table-dark">
@@ -184,7 +189,8 @@
                         <i class="fas fa-receipt me-2"></i>
                         Student Admission Payments
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row mb-3">
@@ -195,14 +201,14 @@
                             <strong>Name:</strong> <span id="modalStudentName" class="fw-bold"></span>
                         </div>
                     </div>
-                    
+
                     <div id="admissionsLoading" class="text-center py-3">
                         <div class="spinner-border spinner-border-sm" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
                         <p class="mt-2">Loading admission payments...</p>
                     </div>
-                    
+
                     <div id="admissionsContent" style="display: none;">
                         <h6>Admission Payment History</h6>
                         <div class="table-responsive">
@@ -237,22 +243,28 @@
         .student-row {
             cursor: pointer;
         }
+
         .student-row:hover {
             background-color: #f8f9fa;
         }
+
         .payment-badge {
             font-size: 0.8rem;
         }
+
         .pagination .page-link {
             color: #0d6efd;
         }
+
         .pagination .page-item.active .page-link {
             background-color: #0d6efd;
             border-color: #0d6efd;
         }
+
         .admission-paid {
             background-color: #d1edff;
         }
+
         .admission-not-paid {
             background-color: #fff3cd;
         }
@@ -266,31 +278,31 @@
         let selectedStudents = [];
         let admissionTypes = [];
         let currentModalStudentId = null;
-        
+
         // Pagination variables
         let currentPage = 1;
         let pageSize = 25;
         let totalPages = 1;
 
         // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             loadAllStudents();
             loadAdmissionTypes();
         });
 
-        // ================= LOAD ALL STUDENTS =================
         async function loadAllStudents() {
             try {
                 showLoadingState();
-                
+
                 const response = await fetch('/api/students/active');
                 if (!response.ok) throw new Error('Failed to fetch students');
 
                 const result = await response.json();
-                
+
                 if (result.status === 'success' && result.data) {
-                    allStudents = result.data.data || result.data;
-                    applyFilters(); // Apply any existing filters
+                    // 🔥 CONVERT STRING VALUES TO NUMERIC
+                    allStudents = convertStudentDataToNumeric(result.data.data || result.data);
+                    applyFilters();
                 } else {
                     throw new Error(result.message || 'No students found');
                 }
@@ -300,13 +312,51 @@
             }
         }
 
-        // ================= APPLY FILTERS =================
+        // 🔥 NEW FUNCTION: Convert student data string values to numeric
+        function convertStudentDataToNumeric(students) {
+            if (!Array.isArray(students)) return [];
+
+            return students.map(student => {
+                const converted = { ...student };
+
+                // Convert admission status to integer
+                if (converted.admission !== undefined) {
+                    if (typeof converted.admission === 'string') {
+                        converted.admission = converted.admission === '1' ? 1 : 0;
+                    } else if (typeof converted.admission === 'number') {
+                        converted.admission = converted.admission === 1 ? 1 : 0;
+                    } else {
+                        converted.admission = 0;
+                    }
+                } else {
+                    converted.admission = 0;
+                }
+
+                // Convert other numeric fields if they exist
+                if (converted.id !== undefined) {
+                    converted.id = parseInt(converted.id) || 0;
+                }
+
+                if (converted.custom_id && typeof converted.custom_id === 'string') {
+                    // Keep custom_id as string but ensure it's not numeric
+                }
+
+                if (converted.grade && typeof converted.grade === 'object') {
+                    if (converted.grade.id !== undefined) {
+                        converted.grade.id = parseInt(converted.grade.id) || 0;
+                    }
+                }
+
+                return converted;
+            });
+        }
+
         function applyFilters() {
             const filterDate = document.getElementById('filterDate').value;
             const admissionStatus = document.getElementById('admissionStatusFilter').value;
-            
+
             let filtered = [...allStudents];
-            
+
             // Apply date filter
             if (filterDate) {
                 filtered = filtered.filter(student => {
@@ -314,22 +364,41 @@
                     return studentDate === filterDate;
                 });
             }
-            
-            // Apply admission status filter
+
+            // 🔥 FIXED: Admission status filter with numeric comparison
             if (admissionStatus === 'paid') {
-                filtered = filtered.filter(student => student.admission === 1);
+                filtered = filtered.filter(student => {
+                    const admissionStatus = convertToNumber(student.admission);
+                    return admissionStatus === 1;
+                });
             } else if (admissionStatus === 'not_paid') {
-                filtered = filtered.filter(student => student.admission === 0);
+                filtered = filtered.filter(student => {
+                    const admissionStatus = convertToNumber(student.admission);
+                    return admissionStatus === 0;
+                });
             }
-            
+
             filteredStudents = filtered;
             currentPage = 1;
             displayStudents();
             showContentState();
-            
+
             if (filteredStudents.length === 0) {
                 showNoStudentsMessage();
             }
+        }
+
+        // 🔥 NEW HELPER: Convert any value to number (safe)
+        function convertToNumber(value) {
+            if (value === null || value === undefined) return 0;
+            if (typeof value === 'number') return value;
+            if (typeof value === 'string') {
+                const cleanValue = value.toString().trim();
+                if (cleanValue === '1' || cleanValue === 'true' || cleanValue === 'yes') return 1;
+                if (cleanValue === '0' || cleanValue === 'false' || cleanValue === 'no') return 0;
+                return parseInt(cleanValue) || 0;
+            }
+            return 0;
         }
 
         // ================= CLEAR FILTERS =================
@@ -342,40 +411,47 @@
             showContentState();
         }
 
-        // ================= LOAD ADMISSION TYPES =================
         async function loadAdmissionTypes() {
             try {
                 const response = await fetch('/api/admissions/dropdown');
                 if (!response.ok) throw new Error('Failed to fetch admission types');
 
                 const result = await response.json();
-                
+
+                let typesArray = [];
+
                 if (Array.isArray(result)) {
-                    admissionTypes = result;
-                    populateAdmissionTypesDropdown();
+                    typesArray = result;
                 } else if (result.data && Array.isArray(result.data)) {
-                    admissionTypes = result.data;
-                    populateAdmissionTypesDropdown();
+                    typesArray = result.data;
                 }
+
+                // 🔥 CONVERT ADMISSION TYPE AMOUNTS TO NUMERIC
+                admissionTypes = typesArray.map(type => ({
+                    ...type,
+                    id: convertToNumber(type.id),
+                    amount: convertToNumber(type.amount)
+                }));
+
+                populateAdmissionTypesDropdown();
             } catch (error) {
                 console.error('Error loading admission types:', error);
                 showAlert('Failed to load admission types', 'danger');
             }
         }
 
-        // ================= POPULATE ADMISSION TYPES DROPDOWN =================
         function populateAdmissionTypesDropdown() {
             const dropdown = document.getElementById('admissionType');
             let options = '<option value="">Select Admission Type</option>';
-            
+
             admissionTypes.forEach(type => {
+                // 🔥 Use numeric amount
                 options += `<option value="${type.id}" data-amount="${type.amount}">${type.name} - Rs. ${type.amount}</option>`;
             });
-            
+
             dropdown.innerHTML = options;
-            
-            // Add event listener for amount update
-            dropdown.addEventListener('change', function() {
+
+            dropdown.addEventListener('change', function () {
                 const selectedOption = this.options[this.selectedIndex];
                 const amount = selectedOption.getAttribute('data-amount');
                 document.getElementById('paymentAmount').value = amount ? 'Rs. ' + amount : '';
@@ -383,21 +459,45 @@
             });
         }
 
-        // ================= DISPLAY STUDENTS =================
+        // ================= POPULATE ADMISSION TYPES DROPDOWN =================
+        function populateAdmissionTypesDropdown() {
+            const dropdown = document.getElementById('admissionType');
+            let options = '<option value="">Select Admission Type</option>';
+
+            admissionTypes.forEach(type => {
+                options += `<option value="${type.id}" data-amount="${type.amount}">${type.name} - Rs. ${type.amount}</option>`;
+            });
+
+            dropdown.innerHTML = options;
+
+            // Add event listener for amount update
+            dropdown.addEventListener('change', function () {
+                const selectedOption = this.options[this.selectedIndex];
+                const amount = selectedOption.getAttribute('data-amount');
+                document.getElementById('paymentAmount').value = amount ? 'Rs. ' + amount : '';
+                updateProcessButton();
+            });
+        }
+
         function displayStudents() {
             const tableBody = document.getElementById('studentsTableBody');
             const tableInfo = document.getElementById('tableInfo');
             const admissionStats = document.getElementById('admissionStats');
-            
+
             if (filteredStudents.length === 0) {
                 showNoStudentsMessage();
                 return;
             }
 
-            // Calculate admission statistics
-            const paidCount = filteredStudents.filter(student => student.admission === 1).length;
-            const notPaidCount = filteredStudents.filter(student => student.admission === 0).length;
-            
+            // 🔥 FIXED: Calculate admission statistics with numeric values
+            const paidCount = filteredStudents.filter(student => {
+                return convertToNumber(student.admission) === 1;
+            }).length;
+
+            const notPaidCount = filteredStudents.filter(student => {
+                return convertToNumber(student.admission) === 0;
+            }).length;
+
             // Update table info and stats
             const startIndex = (currentPage - 1) * pageSize;
             const endIndex = Math.min(startIndex + pageSize, filteredStudents.length);
@@ -409,37 +509,41 @@
             const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
 
             let html = '';
-            
+
             paginatedStudents.forEach(student => {
                 const isSelected = selectedStudents.includes(student.id);
                 const createdDate = new Date(student.created_at).toLocaleDateString();
-                const admissionStatus = student.admission === 1 ? 'Paid' : 'Not Paid';
-                const statusBadge = student.admission === 1 ? 
+
+                // 🔥 FIXED: Convert admission status to number for display
+                const admissionStatus = convertToNumber(student.admission);
+                const statusText = admissionStatus === 1 ? 'Paid' : 'Not Paid';
+                const statusBadge = admissionStatus === 1 ?
                     '<span class="badge bg-success payment-badge"><i class="fas fa-check me-1"></i>Paid</span>' :
                     '<span class="badge bg-danger payment-badge"><i class="fas fa-times me-1"></i>Not Paid</span>';
-                const rowClass = student.admission === 1 ? 'admission-paid' : 'admission-not-paid';
-                
+
+                const rowClass = admissionStatus === 1 ? 'admission-paid' : 'admission-not-paid';
+
                 html += `
-                    <tr class="student-row ${rowClass}">
-                        <td>
-                            <input type="checkbox" ${isSelected ? 'checked' : ''} 
-                                   onchange="toggleStudentSelection(${student.id}, this)">
-                        </td>
-                        <td>${student.custom_id}</td>
-                        <td>${student.fname} ${student.lname}</td>
-                        <td>${student.grade ? student.grade.grade_name : 'N/A'}</td>
-                        <td>${student.mobile || 'N/A'}</td>
-                        <td>${createdDate}</td>
-                        <td>${statusBadge}</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-info" onclick="viewStudentAdmissions(${student.id}, '${student.custom_id}', '${student.fname} ${student.lname}')">
-                                <i class="fas fa-eye me-1"></i>View Admissions
-                            </button>
-                        </td>
-                    </tr>
-                `;
+                            <tr class="student-row ${rowClass}">
+                                <td>
+                                    <input type="checkbox" ${isSelected ? 'checked' : ''} 
+                                           onchange="toggleStudentSelection(${student.id}, this)">
+                                </td>
+                                <td>${student.custom_id}</td>
+                                <td>${student.fname} ${student.lname}</td>
+                                <td>${student.grade ? student.grade.grade_name : 'N/A'}</td>
+                                <td>${student.mobile || 'N/A'}</td>
+                                <td>${createdDate}</td>
+                                <td>${statusBadge}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewStudentAdmissions(${student.id}, '${student.custom_id}', '${student.fname} ${student.lname}')">
+                                        <i class="fas fa-eye me-1"></i>View Admissions
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
             });
-            
+
             tableBody.innerHTML = html;
             generatePagination();
             updateBulkActions();
@@ -448,45 +552,45 @@
         // ================= PAGINATION FUNCTIONS =================
         function generatePagination() {
             const paginationContainer = document.getElementById('paginationContainer');
-            
+
             if (totalPages <= 1) {
                 paginationContainer.innerHTML = '';
                 return;
             }
 
             let paginationHtml = '';
-            
+
             // Previous button
             paginationHtml += `
-                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1})" aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                </li>
-            `;
-            
+                                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                                            <a class="page-link" href="#" onclick="changePage(${currentPage - 1})" aria-label="Previous">
+                                                <span aria-hidden="true">&laquo;</span>
+                                            </a>
+                                        </li>
+                                    `;
+
             // Page numbers
             for (let i = 1; i <= totalPages; i++) {
                 if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
                     paginationHtml += `
-                        <li class="page-item ${i === currentPage ? 'active' : ''}">
-                            <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
-                        </li>
-                    `;
+                                                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                                                    <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                                                </li>
+                                            `;
                 } else if (i === currentPage - 3 || i === currentPage + 3) {
                     paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
                 }
             }
-            
+
             // Next button
             paginationHtml += `
-                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1})" aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                </li>
-            `;
-            
+                                        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                                            <a class="page-link" href="#" onclick="changePage(${currentPage + 1})" aria-label="Next">
+                                                <span aria-hidden="true">&raquo;</span>
+                                            </a>
+                                        </li>
+                                    `;
+
             paginationContainer.innerHTML = paginationHtml;
         }
 
@@ -502,44 +606,42 @@
             displayStudents();
         }
 
-        // ================= VIEW STUDENT ADMISSIONS =================
         async function viewStudentAdmissions(studentId, customId, studentName) {
             currentModalStudentId = studentId;
-            
-            // Update modal header
+
             document.getElementById('modalStudentId').textContent = customId;
             document.getElementById('modalStudentName').textContent = studentName;
-            
-            // Show loading state
+
             document.getElementById('admissionsLoading').style.display = 'block';
             document.getElementById('admissionsContent').style.display = 'none';
             document.getElementById('noAdmissionsMessage').style.display = 'none';
-            
+
             try {
                 const response = await fetch(`/api/payment-admissions/student?student_id=${studentId}`);
                 if (!response.ok) throw new Error('Failed to fetch admissions');
-                
+
                 const result = await response.json();
-                
-                // Hide loading
+
                 document.getElementById('admissionsLoading').style.display = 'none';
                 document.getElementById('admissionsContent').style.display = 'block';
-                
+
                 if (result.status && result.data && result.data.length > 0) {
                     const admissionsBody = document.getElementById('admissionsTableBody');
                     let admissionsHtml = '';
-                    
+
                     result.data.forEach(payment => {
                         const paymentDate = new Date(payment.created_at).toLocaleDateString();
+                        // 🔥 CONVERT PAYMENT AMOUNT TO NUMBER
+                        const amount = convertToNumber(payment.amount);
                         admissionsHtml += `
-                            <tr>
-                                <td>${payment.admission_name}</td>
-                                <td>Rs. ${payment.amount}</td>
-                                <td>${paymentDate}</td>
-                            </tr>
-                        `;
+                        <tr>
+                            <td>${payment.admission_name}</td>
+                            <td>Rs. ${amount}</td>
+                            <td>${paymentDate}</td>
+                        </tr>
+                    `;
                     });
-                    
+
                     admissionsBody.innerHTML = admissionsHtml;
                     document.getElementById('noAdmissionsMessage').style.display = 'none';
                 } else {
@@ -553,8 +655,7 @@
                 document.getElementById('noAdmissionsMessage').style.display = 'block';
                 document.getElementById('noAdmissionsMessage').innerHTML = '<p class="text-danger">Failed to load admission payments</p>';
             }
-            
-            // Show modal
+
             const modal = new bootstrap.Modal(document.getElementById('viewAdmissionsModal'));
             modal.show();
         }
@@ -564,7 +665,7 @@
             const startIndex = (currentPage - 1) * pageSize;
             const endIndex = Math.min(startIndex + pageSize, filteredStudents.length);
             const currentPageStudents = filteredStudents.slice(startIndex, endIndex);
-            
+
             if (checkbox.checked) {
                 currentPageStudents.forEach(student => {
                     if (!selectedStudents.includes(student.id)) {
@@ -594,7 +695,7 @@
             const startIndex = (currentPage - 1) * pageSize;
             const endIndex = Math.min(startIndex + pageSize, filteredStudents.length);
             const currentPageStudents = filteredStudents.slice(startIndex, endIndex);
-            
+
             currentPageStudents.forEach(student => {
                 if (!selectedStudents.includes(student.id)) {
                     selectedStudents.push(student.id);
@@ -616,29 +717,28 @@
         function updateBulkActions() {
             const bulkSection = document.getElementById('bulkActionsSection');
             const selectedCount = document.getElementById('selectedCount');
-            
+
             if (selectedStudents.length > 0) {
                 bulkSection.style.display = 'block';
                 selectedCount.textContent = `${selectedStudents.length} students selected`;
             } else {
                 bulkSection.style.display = 'none';
             }
-            
+
             updateProcessButton();
         }
 
         function updateProcessButton() {
             const button = document.getElementById('processBulkPaymentsBtn');
             const admissionType = document.getElementById('admissionType').value;
-            
+
             button.disabled = !(selectedStudents.length > 0 && admissionType);
         }
 
-        // ================= PROCESS BULK PAYMENTS =================
         async function processBulkPayments() {
             const admissionTypeId = document.getElementById('admissionType').value;
             const admissionType = admissionTypes.find(type => type.id == admissionTypeId);
-            
+
             if (!admissionType) {
                 showAlert('Please select a valid admission type', 'warning');
                 return;
@@ -649,11 +749,14 @@
                 return;
             }
 
+            // 🔥 FIXED: Ensure amount is numeric
+            const amount = convertToNumber(admissionType.amount);
+
             // Prepare payment data
             const payments = selectedStudents.map(studentId => ({
                 student_id: studentId,
                 admission_id: parseInt(admissionTypeId),
-                amount: admissionType.amount
+                amount: amount // 🔥 Now numeric instead of string
             }));
 
             const paymentData = {
@@ -680,12 +783,12 @@
 
                 if (response.ok) {
                     showAlert(`Successfully processed ${selectedStudents.length} admission payments!`, 'success');
-                    
+
                     // Reset selections and reload data
                     selectedStudents = [];
                     document.getElementById('admissionType').value = '';
                     document.getElementById('paymentAmount').value = '';
-                    await loadAllStudents(); // Reload to get updated admission status
+                    await loadAllStudents();
                 } else {
                     throw new Error(result.message || 'Payment processing failed');
                 }
@@ -726,13 +829,13 @@
             document.getElementById('studentsTableSection').style.display = 'none';
             document.getElementById('noStudentsMessage').style.display = 'block';
             document.getElementById('noStudentsMessage').innerHTML = `
-                <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                <h4 class="text-danger">Error Loading Students</h4>
-                <p class="text-muted">${message}</p>
-                <button class="btn btn-primary mt-3" onclick="loadAllStudents()">
-                    <i class="fas fa-redo me-2"></i>Try Again
-                </button>
-            `;
+                                        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                                        <h4 class="text-danger">Error Loading Students</h4>
+                                        <p class="text-muted">${message}</p>
+                                        <button class="btn btn-primary mt-3" onclick="loadAllStudents()">
+                                            <i class="fas fa-redo me-2"></i>Try Again
+                                        </button>
+                                    `;
         }
 
         function showAlert(message, type) {
@@ -742,9 +845,9 @@
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
             alertDiv.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
+                                        ${message}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    `;
 
             document.querySelector('.card-body').insertBefore(alertDiv, document.querySelector('.card-body').firstChild);
 

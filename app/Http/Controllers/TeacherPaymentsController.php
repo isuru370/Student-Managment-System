@@ -31,9 +31,14 @@ class TeacherPaymentsController extends Controller
     {
         return $this->teacherPaymentsService->getTeacherClassWiseStudentPaymentStatus($teacherId, $yearMonth);
     }
-        public function fetchSalarySlipDataTest($teacherId, $yearMonth)
+    public function fetchSalarySlipDataTest($teacherId, $yearMonth)
     {
         return $this->teacherPaymentsService->fetchSalarySlipDataTest($teacherId, $yearMonth);
+    }
+
+    public function studentPaymentMonthCheck($teacherId, $yearMonth)
+    {
+        return $this->teacherPaymentsService->studentPaymentMonthCheck($teacherId, $yearMonth);
     }
     public function showSalarySlip($teacherId, $yearMonth)
     {

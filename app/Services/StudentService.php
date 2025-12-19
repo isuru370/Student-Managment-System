@@ -133,56 +133,52 @@ class StudentService
     }
 
     public function filterByCreatedDate(Request $request)
-{
-    try {
+    {
+        try {
 
-        if ($request->has('date')) {
-            $request->validate([
-                'date' => 'required|date',
-            ]);
+            if ($request->has('date')) {
+                $request->validate([
+                    'date' => 'required|date',
+                ]);
 
-            $students = Student::with('grade:id,grade_name')
-                ->whereDate('created_at', $request->date)
-                ->get();
+                $students = Student::with('grade:id,grade_name')
+                    ->whereDate('created_at', $request->date)
+                    ->get();
+            } elseif ($request->has('from') && $request->has('to')) {
+                $request->validate([
+                    'from' => 'required|date',
+                    'to'   => 'required|date|after_or_equal:from',
+                ]);
 
-        } elseif ($request->has('from') && $request->has('to')) {
-            $request->validate([
-                'from' => 'required|date',
-                'to'   => 'required|date|after_or_equal:from',
-            ]);
+                $students = Student::with('grade:id,grade_name')
+                    ->whereBetween('created_at', [$request->from, $request->to])
+                    ->get();
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Please provide either a "date" or a "from" and "to" date range.'
+                ], 400);
+            }
 
-            $students = Student::with('grade:id,grade_name')
-                ->whereBetween('created_at', [$request->from, $request->to])
-                ->get();
-
-        } else {
+            return response()->json([
+                'status' => 'success',
+                'count' => $students->count(),
+                'data' => $students
+            ], 200);
+        } catch (ValidationException $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Please provide either a "date" or a "from" and "to" date range.'
-            ], 400);
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to fetch filtered students',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        return response()->json([
-            'status' => 'success',
-            'count' => $students->count(),
-            'data' => $students
-        ], 200);
-
-    } catch (ValidationException $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Validation failed',
-            'errors' => $e->errors(),
-        ], 422);
-
-    } catch (Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Failed to fetch filtered students',
-            'error' => $e->getMessage(),
-        ], 500);
     }
-}
 
 
 
@@ -784,9 +780,9 @@ class StudentService
                         'present_count'   => $studentAttendance['present_count'],
                         'absent_count'    => $studentAttendance['absent_count'],
                         'attendance_rate' =>
-                            $classAttendance['count'] > 0
-                                ? round(($studentAttendance['present_count'] / $classAttendance['count']) * 100, 2)
-                                : 0
+                        $classAttendance['count'] > 0
+                            ? round(($studentAttendance['present_count'] / $classAttendance['count']) * 100, 2)
+                            : 0
                     ]
                 ];
             });

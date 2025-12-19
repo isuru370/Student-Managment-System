@@ -279,6 +279,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('payments')->group(function () {
         Route::post('/', [PaymentsController::class, 'storePayment']);
         Route::get('/by-date/{date}', [PaymentsController::class, 'getPaymentsByDate']);
+        Route::get('/receipt/{payment_id}', [PaymentsController::class, 'receiptPrint']);
         Route::get('/teacher', [PaymentsController::class, 'getTeacherPayments']);
         Route::get('/{student_id}/{student_class_id}', [PaymentsController::class, 'fetchStudentPayments']);
         Route::put('/{id}', [PaymentsController::class, 'updatePayment']);
@@ -289,6 +290,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/monthly-income', [TeacherPaymentsController::class, 'fetchTeacherPaymentsCurrentMonth']);
         Route::get('/monthly-income/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'fetchTeacherClassPayments']);
         Route::get('/class-wise/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'getTeacherClassWiseStudentPaymentStatus']);
+                Route::get('/student-pay/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'studentPaymentMonthCheck']);
         Route::get('/salary-slip/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'fetchSalarySlipDataTest']);
         Route::get('/monthly-income/{yearMonth}', [TeacherPaymentsController::class, 'getMonthlyPayments']);
         Route::post('/', [TeacherPaymentsController::class, 'storeTeacherPayments']);

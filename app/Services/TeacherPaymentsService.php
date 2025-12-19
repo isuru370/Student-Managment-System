@@ -4,12 +4,14 @@ namespace App\Services;
 
 use App\Models\ClassRoom;
 use App\Models\Payments;
+use App\Models\Student;
 use App\Models\StudentStudentStudentClass;
 use App\Models\Teacher;
 use App\Models\TeacherPayment;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
+//use Illuminate\Support\Facades\Log;
 
 class TeacherPaymentsService
 {
@@ -418,6 +420,7 @@ class TeacherPaymentsService
                 $classStudents = StudentStudentStudentClass::with(['student' => function ($q) {
                     $q->select('id', 'custom_id', 'fname', 'lname', 'img_url', 'whatsapp_mobile', 'guardian_mobile');
                 }])
+                    ->where('status', 1)
                     ->where('student_classes_id', $cls->id)
                     ->get();
 
@@ -871,5 +874,508 @@ class TeacherPaymentsService
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    // send email repost
+
+
+    public function studentPaymentMonth($teacherId, $yearMonth)
+    {
+        try {
+            if (!$teacherId) {
+                return [
+                    "status" => "error",
+                    "message" => "Teacher ID is required"
+                ];
+            }
+
+            // Use the SAME date format as working function
+            if (!preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
+                // Try to convert if needed
+                try {
+                    $yearMonth = Carbon::parse($yearMonth)->format('Y-m');
+                } catch (Exception $e) {
+                    return [
+                        "status" => "error",
+                        "message" => "Year-Month format must be YYYY-MM"
+                    ];
+                }
+            }
+
+            // Use EXACTLY the same date range logic as working function
+            $startOfMonth = Carbon::createFromFormat('Y-m', $yearMonth)->startOfMonth();
+            $endOfMonth   = Carbon::createFromFormat('Y-m', $yearMonth)->endOfMonth();
+
+            // Format for display
+            $paymentForFormat = $startOfMonth->format('F Y');
+            $startDate = $startOfMonth->format('Y-m-d 00:00:00');
+            $endDate = $endOfMonth->format('Y-m-d 23:59:59');
+
+            // Get teacher details
+            $teacher = Teacher::select('id', 'custom_id', 'fname', 'lname', 'email', 'precentage')
+                ->find($teacherId);
+
+            if (!$teacher) {
+                return [
+                    "status" => "error",
+                    "message" => "Teacher not found"
+                ];
+            }
+
+            // Load teacher classes - SAME as working function
+            $classes = ClassRoom::with(['subject', 'grade'])
+                ->where('teacher_id', $teacherId)
+                ->get();
+
+            if ($classes->isEmpty()) {
+                return [
+                    'success' => true,
+                    'teacher_id' => $teacherId,
+                    'year_month' => $yearMonth,
+                    'total_classes' => 0,
+                    'total_students' => 0,
+                    'total_paid_students' => 0,
+                    'total_unpaid_students' => 0,
+                    'payment_rate' => 0,
+                    'total_collection' => 0,
+                    'teacher_percentage' => $teacher->precentage ?? 0,
+                    'total_teacher_amount' => 0,
+                    'classes' => [],
+                    'data' => [] // Blade file expects 'data' key
+                ];
+            }
+
+            $result = [];
+            $classDataArray = []; // This will be used for 'data' key in Blade
+            $totalClassAmount = 0;
+            $totalStudents = 0;
+            $totalPaidStudents = 0;
+            $totalUnpaidStudents = 0;
+
+            foreach ($classes as $cls) {
+                // Get students in this class
+                $classStudents = StudentStudentStudentClass::with(['student'])
+                    ->where('status', 1)
+                    ->where('student_classes_id', $cls->id)
+                    ->get();
+
+                $classData = [
+                    'class_id' => $cls->id,
+                    'class_name' => $cls->class_name,
+                    'subject_name' => $cls->subject->subject_name ?? 'N/A',
+                    'grade_name' => $cls->grade->grade_name ?? 'N/A',
+                    'students' => [],
+                    'class_total_amount' => 0, // Blade expects 'class_total_amount'
+                    'paid_students_count' => 0,
+                    'unpaid_students_count' => 0,
+                    'total_students' => count($classStudents)
+                ];
+
+                $paidStudents = [];
+                $unpaidStudents = [];
+                $classStudentCount = 0;
+                $classTotalPaid = 0;
+
+                foreach ($classStudents as $studentClass) {
+                    $classStudentCount++;
+                    $student = $studentClass->student;
+
+                    if (!$student) {
+                        continue;
+                    }
+
+                    $studentId = $student->id ?? null;
+                    $studentName = ($student->fname ?? '') . ' ' . ($student->lname ?? '');
+                    $customId = $student->custom_id ?? 'N/A';
+
+                    // Check payment for this month
+                    $payment = Payments::where('student_student_student_classes_id', $studentClass->id)
+                        ->where('status', 1)
+                        ->whereBetween('payment_date', [$startOfMonth, $endOfMonth])
+                        ->select('amount', 'payment_date')
+                        ->first();
+
+                    $isPaid = ($payment && $payment->amount > 0);
+                    $amount = $isPaid ? ($payment->amount ?? 0) : 0;
+
+                    // For Blade file - student data structure
+                    $studentDataForBlade = [
+                        'student_id' => $studentId,
+                        'student_name' => $studentName,
+                        'student_custom_id' => $customId,
+                        'payment_status' => $studentClass->is_free_card == 1 ? 'free' : ($isPaid ? 'paid' : 'unpaid'),
+                        'payment_date' => $payment ? $payment->payment_date : null,
+                        'payment_amount' => $amount,
+                        'is_free_card' => $studentClass->is_free_card ?? 0
+                    ];
+
+                    $classData['students'][] = $studentDataForBlade;
+
+                    // For service response - separate arrays
+                    $studentDataForService = [
+                        'id' => $studentId,
+                        'custom_id' => $customId,
+                        'name' => $studentName,
+                        'is_free_card' => $studentClass->is_free_card ?? 0,
+                    ];
+
+                    if ($isPaid) {
+                        $studentDataForService['amount_paid'] = $amount;
+                        $studentDataForService['payment_date'] = $payment->payment_date;
+                        $studentDataForService['paid_status'] = 'paid';
+                        $paidStudents[] = $studentDataForService;
+                        $totalPaidStudents++;
+                        $classTotalPaid += $amount;
+                        $classData['paid_students_count']++;
+                    } else {
+                        $studentDataForService['amount_paid'] = 0;
+                        $studentDataForService['payment_date'] = null;
+                        $studentDataForService['paid_status'] = $studentClass->is_free_card == 1 ? 'free_card' : 'unpaid';
+                        $unpaidStudents[] = $studentDataForService;
+                        $totalUnpaidStudents++;
+                        $classData['unpaid_students_count']++;
+                    }
+
+                    $totalStudents++;
+                }
+
+                $classData['class_total_amount'] = $classTotalPaid;
+                $classDataArray[] = $classData;
+
+                // Get total collection for this class
+                $totalCollection = Payments::whereHas('studentStudentClass', function ($q) use ($cls) {
+                    $q->where('student_classes_id', $cls->id);
+                })
+                    ->where('status', 1)
+                    ->where('amount', '>', 0)
+                    ->whereBetween('payment_date', [$startOfMonth, $endOfMonth])
+                    ->sum('amount');
+
+                $result[] = [
+                    'class_id' => $cls->id,
+                    'class_name' => $cls->class_name,
+                    'grade_name' => $cls->grade->grade_name ?? 'N/A',
+                    'subject_name' => $cls->subject->subject_name ?? 'N/A',
+                    'total_students' => $classStudentCount,
+                    'paid_students_count' => count($paidStudents),
+                    'unpaid_students_count' => count($unpaidStudents),
+                    'total_collection' => $totalCollection,
+                    'paid_students' => $paidStudents,
+                    'unpaid_students' => $unpaidStudents
+                ];
+
+                $totalClassAmount += $totalCollection;
+            }
+
+            // Calculate payment rate
+            $paymentRate = $totalStudents > 0 ? round(($totalPaidStudents / $totalStudents) * 100, 2) : 0;
+
+            // Calculate teacher's amount
+            $teacherPercentage = $teacher->precentage ?? 0;
+            $totalTeacherAmount = $totalClassAmount * ($teacherPercentage / 100);
+            $institutionPercentage = 100 - $teacherPercentage;
+            $institutionShare = $totalClassAmount - $totalTeacherAmount;
+
+            return [
+                'success' => true,
+                'status' => 'success',
+
+                // Teacher information
+                'teacher_id' => $teacherId,
+                'teacher_custom_id' => $teacher->custom_id,
+                'teacher_name' => trim($teacher->fname . ' ' . $teacher->lname),
+                'teacher_email' => $teacher->email,
+                'teacher_percentage' => $teacherPercentage,
+
+                // Report information
+                'year_month' => $yearMonth,
+                'payment_for_format' => $paymentForFormat,
+                'date_range' => [
+                    'start' => $startDate,
+                    'end' => $endDate
+                ],
+
+                // Summary statistics
+                'total_classes' => count($classes),
+                'total_students' => $totalStudents,
+                'total_paid_students' => $totalPaidStudents,
+                'total_unpaid_students' => $totalUnpaidStudents,
+                'payment_rate' => $paymentRate,
+
+                // Financial summary
+                'total_class_amount' => $totalClassAmount,
+                'total_teacher_amount' => $totalTeacherAmount,
+                'total_collection' => $totalClassAmount,
+                'total_payments_this_month' => $totalClassAmount,
+                'advance_payment_this_month' => 0,
+                'net_payable' => $totalTeacherAmount,
+                'is_salary_paid' => false,
+                'salary_payments' => [],
+
+                // Teacher and institution share
+                'teacher_share' => $totalTeacherAmount,
+                'institution_share' => $institutionShare,
+                'institution_percentage' => $institutionPercentage,
+
+                // Detailed data - TWO versions
+                'classes' => $result, // For service/API response
+                'data' => $classDataArray, // For Blade file (has 'students' array and 'class_total_amount')
+
+                // For PDF generation
+                'report_generated_at' => now()->format('Y-m-d H:i:s'),
+                'report_id' => 'PAY-' . date('Ymd') . '-' . $teacherId
+            ];
+        } catch (Exception $e) {
+            return [
+                'status' => 'error',
+                'success' => false,
+                'message' => 'An error occurred: ' . $e->getMessage(),
+                'error' => env('APP_DEBUG') ? $e->getMessage() : null
+            ];
+        }
+    }
+
+
+    public function studentPaymentMonthCheck($teacherId, $yearMonth)
+    {
+        //     try {
+        //         if (!$teacherId) {
+        //             return response()->json([
+        //                 "status" => "error",
+        //                 "message" => "Teacher ID is required"
+        //             ], 400);
+        //         }
+
+        //         // Use the SAME date format as working function
+        //         if (!preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
+        //             // Try to convert if needed
+        //             try {
+        //                 $yearMonth = Carbon::parse($yearMonth)->format('Y-m');
+        //             } catch (Exception $e) {
+        //                 return response()->json([
+        //                     "status" => "error",
+        //                     "message" => "Year-Month format must be YYYY-MM"
+        //                 ], 400);
+        //             }
+        //         }
+
+        //         // Use EXACTLY the same date range logic as working function
+        //         $startOfMonth = Carbon::createFromFormat('Y-m', $yearMonth)->startOfMonth();
+        //         $endOfMonth   = Carbon::createFromFormat('Y-m', $yearMonth)->endOfMonth();
+        //         // Get teacher details
+        //         $teacher = Teacher::select('id', 'custom_id', 'fname', 'lname', 'email', 'precentage')
+        //             ->find($teacherId);
+
+        //         if (!$teacher) {
+        //             return response()->json([
+        //                 "status" => "error",
+        //                 "message" => "Teacher not found"
+        //             ], 404);
+        //         }
+
+        //         // Load teacher classes - SAME as working function
+        //         $classes = ClassRoom::with(['subject', 'teacher', 'grade'])
+        //             ->where('teacher_id', $teacherId)
+        //             ->select('id', 'class_name', 'subject_id', 'teacher_id', 'grade_id')
+        //             ->get();
+
+
+        //         if ($classes->isEmpty()) {
+        //             return response()->json([
+        //                 'status' => 'success',
+        //                 'teacher_id' => $teacherId,
+        //                 'year_month' => $yearMonth,
+        //                 'total_classes' => 0,
+        //                 'total_students' => 0,
+        //                 'total_paid_students' => 0,
+        //                 'total_unpaid_students' => 0,
+        //                 'payment_rate' => 0,
+        //                 'total_collection' => 0,
+        //                 'teacher_percentage' => $teacher->precentage ?? 0,
+        //                 'total_teacher_amount' => 0,
+        //                 'classes' => []
+        //             ]);
+        //         }
+
+        //         $teacherName = $classes->first()->teacher->fname ?? 'Unknown Teacher';
+        //         $subjectName = $classes->first()->subject->subject_name ?? 'Unknown Subject';
+
+        //         $result = [];
+        //         $totalClassAmount = 0;
+        //         $totalStudents = 0;
+        //         $totalPaidStudents = 0;
+        //         $totalUnpaidStudents = 0;
+
+        //         foreach ($classes as $cls) {
+        //             // EXACTLY the same query as working function
+        //             $classStudents = StudentStudentStudentClass::with(['student' => function ($q) {
+        //                 $q->select('id', 'custom_id', 'fname', 'lname', 'img_url', 'whatsapp_mobile', 'guardian_mobile');
+        //             }])
+        //                 ->where('status', 1)
+        //                 ->where('student_classes_id', $cls->id)
+        //                 ->get();
+
+
+        //             $paidStudents = [];
+        //             $unpaidStudents = [];
+
+        //             foreach ($classStudents as $studentClass) {
+        //                 $student = $studentClass->student;
+        //                 $studentId = $student->id ?? null;
+        //                 $studentName = ($student->fname ?? '') . ' ' . ($student->lname ?? '');
+        //                 $customId = $student->custom_id ?? 'N/A';
+
+        //                 // EXACTLY the same payment check as working function
+        //                 $payment = Payments::where('student_student_student_classes_id', $studentClass->id)
+        //                     ->where('status', 1)
+        //                     ->whereBetween('payment_date', [$startOfMonth, $endOfMonth])
+        //                     ->select('amount', 'payment_date')
+        //                     ->first();
+
+        //                 $studentData = [
+        //                     'id' => $studentId,
+        //                     'custom_id' => $customId,
+        //                     'name' => $studentName,
+        //                     'is_free_card' => $studentClass->is_free_card ?? 0,
+        //                 ];
+
+        //                 if ($payment && $payment->amount > 0) {
+        //                     // Student has paid (amount > 0)
+        //                     $studentData['amount_paid'] = $payment->amount;
+        //                     $studentData['payment_date'] = $payment->payment_date;
+        //                     $studentData['paid_status'] = 'paid';
+        //                     $paidStudents[] = $studentData;
+        //                 } else {
+        //                     // Student has not paid or amount is 0 or negative
+        //                     $studentData['amount_paid'] = 0;
+        //                     $studentData['payment_date'] = null;
+
+        //                     if ($studentClass->is_free_card == 1) {
+        //                         $studentData['paid_status'] = 'free_card';
+        //                     } else {
+        //                         $studentData['paid_status'] = 'unpaid';
+        //                     }
+
+        //                     $unpaidStudents[] = $studentData;
+        //                 }
+        //             }
+
+        //             $totalClassStudents = count($classStudents);
+        //             $paidCount = count($paidStudents);
+        //             $unpaidCount = count($unpaidStudents);
+
+        //             // Get total collection for this class (only amount > 0) - SAME as working function
+        //             $totalCollection = Payments::whereHas('studentStudentClass', function ($q) use ($cls) {
+        //                 $q->where('student_classes_id', $cls->id);
+        //             })
+        //                 ->where('status', 1)
+        //                 ->where('amount', '>', 0) // Only positive amounts
+        //                 ->whereBetween('payment_date', [$startOfMonth, $endOfMonth])
+        //                 ->sum('amount');
+
+        //             // Get payment summary by date (only amount > 0)
+        //             $paymentsSummary = Payments::whereHas('studentStudentClass', function ($q) use ($cls) {
+        //                 $q->where('student_classes_id', $cls->id);
+        //             })
+        //                 ->where('status', 1)
+        //                 ->where('amount', '>', 0) // Only positive amounts
+        //                 ->whereBetween('payment_date', [$startOfMonth, $endOfMonth])
+        //                 ->selectRaw("DATE(payment_date) as pay_date, SUM(amount) as total_amount")
+        //                 ->groupBy('pay_date')
+        //                 ->get()
+        //                 ->pluck('total_amount', 'pay_date');
+
+        //             $result[] = [
+        //                 'class_id' => $cls->id,
+        //                 'class_name' => $cls->class_name,
+        //                 'grade_name' => $cls->grade->grade_name ?? 'N/A',
+        //                 'subject_name' => $cls->subject->subject_name ?? 'N/A',
+        //                 'total_students' => $totalClassStudents,
+        //                 'paid_students_count' => $paidCount,
+        //                 'unpaid_students_count' => $unpaidCount,
+        //                 'total_collection' => $totalCollection,
+        //                 'class_total_paid' => $totalCollection,
+        //                 'paid_students' => $paidStudents,
+        //                 'unpaid_students' => $unpaidStudents,
+        //                 'payments_summary' => $paymentsSummary
+        //             ];
+
+        //             // Update totals
+        //             $totalStudents += $totalClassStudents;
+        //             $totalPaidStudents += $paidCount;
+        //             $totalUnpaidStudents += $unpaidCount;
+        //             $totalClassAmount += $totalCollection;
+        //         }
+
+        //         // Calculate payment rate
+        //         $paymentRate = $totalStudents > 0 ? round(($totalPaidStudents / $totalStudents) * 100, 2) : 0;
+
+        //         // Calculate teacher's amount
+        //         $teacherPercentage = $teacher->precentage ?? 0;
+        //         $totalTeacherAmount = $totalClassAmount * ($teacherPercentage / 100);
+
+        //         return response()->json([
+        //             'status' => 'success',
+        //             'success' => true,
+
+        //             // Teacher information
+        //             'teacher_id' => $teacherId,
+        //             'teacher_custom_id' => $teacher->custom_id ?? '',
+        //             'teacher_name' => trim($teacher->fname . ' ' . $teacher->lname),
+        //             'teacher_email' => $teacher->email,
+        //             'teacher_percentage' => $teacherPercentage,
+        //             'subject_name' => $subjectName,
+
+        //             // Report information
+        //             'year_month' => $yearMonth,
+        //             'date_range' => [
+        //                 'start' => $startOfMonth->format('Y-m-d 00:00:00'),
+        //                 'end' => $endOfMonth->format('Y-m-d 23:59:59')
+        //             ],
+
+        //             // Summary statistics
+        //             'total_classes' => $classes->count(),
+        //             'total_students' => $totalStudents,
+        //             'total_paid_students' => $totalPaidStudents,
+        //             'total_unpaid_students' => $totalUnpaidStudents,
+        //             'payment_rate' => $paymentRate,
+
+        //             // Financial summary
+        //             'total_class_amount' => $totalClassAmount,
+        //             'total_teacher_amount' => $totalTeacherAmount,
+        //             'total_collection' => $totalClassAmount,
+        //             'net_payable' => $totalTeacherAmount,
+        //             'teacher_share' => $totalTeacherAmount,
+        //             'institution_share' => $totalClassAmount - $totalTeacherAmount,
+        //             'institution_percentage' => 100 - $teacherPercentage,
+        //             'advance_payment_this_month' => 0,
+        //             'is_salary_paid' => false,
+        //             'salary_payments' => [],
+
+        //             // For debugging
+        //             'debug_info' => [
+        //                 'expected_total' => 119300,
+        //                 'actual_total' => $totalClassAmount,
+        //                 'difference' => $totalClassAmount - 119300,
+        //                 'payment_rate_percentage' => $paymentRate
+        //             ],
+
+        //             // Detailed data
+        //             'classes' => $result,
+        //             'data' => $result,
+
+        //             // Additional metadata
+        //             'report_generated_at' => now()->format('Y-m-d H:i:s'),
+        //             'report_id' => 'PAY-' . date('Ymd') . '-' . $teacherId
+        //         ]);
+        //     } catch (Exception $e) {
+
+        //         return response()->json([
+        //             'status' => 'error',
+        //             'success' => false,
+        //             'message' => 'An error occurred: ' . $e->getMessage(),
+        //             'error' => env('APP_DEBUG') ? $e->getMessage() : null
+        //         ], 500);
+        //     }
     }
 }

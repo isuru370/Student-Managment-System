@@ -515,9 +515,9 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('students.ganarateStudentId') ? 'active' : '' }}"
-                                    href="{{ route('students.ganarateStudentId') }}">
-                                    <i class="fa fa-id-card"></i> Ganarate Student ID
+                                <a class="nav-link {{ request()->routeIs('student-id-card.*') ? 'active' : '' }}"
+                                    href="{{ route('student-id-card.ganarateStudentId') }}">
+                                    <i class="fa fa-id-card"></i> Generate Student ID
                                 </a>
                             </li>
                         </ul>
@@ -697,7 +697,7 @@
                                     </ul>
                                 </div>
                             </li>
-                            
+
 
                         </ul>
                     </div>

@@ -460,16 +460,32 @@
             const payTeacherBtn = document.getElementById('payTeacherBtn');
 
             // Format currency to LKR
+            // Format currency to LKR - string හෝ number දෙකටම ක්‍රියා කරයි
             function formatCurrency(amount) {
-                if (isNaN(amount) || amount === null || amount === undefined) {
-                    amount = 0;
+                // Convert string to number if needed
+                let numericAmount = amount;
+
+                if (typeof amount === 'string') {
+                    // Remove commas, spaces, and currency symbols
+                    numericAmount = amount.toString()
+                        .replace(/[^\d.-]/g, '')
+                        .replace(/,/g, '');
                 }
+
+                // Convert to number
+                numericAmount = parseFloat(numericAmount);
+
+                // Check if valid number
+                if (isNaN(numericAmount) || numericAmount === null || numericAmount === undefined) {
+                    numericAmount = 0;
+                }
+
                 return new Intl.NumberFormat('en-LK', {
                     style: 'currency',
                     currency: 'LKR',
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
-                }).format(amount);
+                }).format(numericAmount);
             }
 
             // Format date
@@ -537,14 +553,12 @@
                 }
             }
 
-            // Fetch teacher data - ALWAYS for current month/year
+            // fetchTeacherData function එකේ නිවැරදි කිරීම
             async function fetchTeacherData() {
                 showTableLoading(true);
 
                 try {
                     const url = `/api/teacher-payments/monthly-income/${teacherId}/${currentYear}-${currentMonth}`;
-                    console.log('Fetching data from:', url);
-
                     const response = await fetch(url);
 
                     if (!response.ok) {
@@ -552,10 +566,10 @@
                     }
 
                     const data = await response.json();
-                    console.log('API Response:', data);
 
                     if (data.status === 'success') {
-                        teacherData = data;
+                        // 🔥 STRING VALUES TO NUMERIC CONVERSION
+                        teacherData = convertStringValuesToNumeric(data);
                         renderTeacherData();
                         renderClassesCards();
                         renderPaymentTable();
@@ -572,6 +586,72 @@
                 }
             }
 
+            // 🔥 NEW FUNCTION: String values to numeric conversion
+            function convertStringValuesToNumeric(data) {
+                // Create a deep copy to avoid modifying original
+                const converted = JSON.parse(JSON.stringify(data));
+
+                // Define numeric fields that should be converted
+                const numericFields = [
+                    'total_payments_this_month',
+                    'advance_payment_this_month',
+                    'net_payable',
+                    'teacher_percentage',
+                    'institution_percentage',
+                    'teacher_share',
+                    'institution_share'
+                ];
+
+                // Convert top-level numeric fields
+                numericFields.forEach(field => {
+                    if (converted[field] !== undefined && converted[field] !== null) {
+                        // Handle both string and number inputs
+                        const value = converted[field];
+                        if (typeof value === 'string') {
+                            // Remove commas and convert to number
+                            const cleanValue = value.replace(/,/g, '');
+                            converted[field] = isNaN(parseFloat(cleanValue)) ? 0 : parseFloat(cleanValue);
+                        } else if (typeof value === 'number') {
+                            converted[field] = value; // Already numeric
+                        }
+                    }
+                });
+
+                // Convert salary payments array
+                if (converted.salary_payments && Array.isArray(converted.salary_payments)) {
+                    converted.salary_payments = converted.salary_payments.map(payment => ({
+                        ...payment,
+                        payment: typeof payment.payment === 'string' ? parseFloat(payment.payment) : payment.payment,
+                        status: typeof payment.status === 'string' ? parseInt(payment.status) : payment.status
+                    }));
+                }
+
+                // Convert classes array
+                if (converted.classes && Array.isArray(converted.classes)) {
+                    converted.classes = converted.classes.map(cls => {
+                        // Convert class-level numeric fields
+                        const convertedClass = {
+                            ...cls,
+                            total_students: typeof cls.total_students === 'string' ? parseInt(cls.total_students) : cls.total_students,
+                            students_paid: typeof cls.students_paid === 'string' ? parseInt(cls.students_paid) : cls.students_paid
+                        };
+
+                        // Convert payments object values
+                        if (convertedClass.payments && typeof convertedClass.payments === 'object') {
+                            const convertedPayments = {};
+                            Object.entries(convertedClass.payments).forEach(([date, amount]) => {
+                                convertedPayments[date] = typeof amount === 'string' ? parseFloat(amount) : amount;
+                            });
+                            convertedClass.payments = convertedPayments;
+                        }
+
+                        return convertedClass;
+                    });
+                }
+
+                return converted;
+            }
+
             // Update selected month year display - ALWAYS current month/year
             function updateSelectedMonthYear() {
                 if (selectedMonthYear) {
@@ -582,57 +662,72 @@
                 }
             }
 
-            // Render teacher data
             function renderTeacherData() {
                 if (!teacherData) return;
 
+                // 🔥 ENSURE NUMERIC VALUES BEFORE DISPLAY
+                const safeData = {
+                    teacher_id: parseInt(teacherData.teacher_id) || 0,
+                    teacher_name: teacherData.teacher_name || '-',
+                    subject_name: teacherData.subject_name || '-',
+                    is_salary_paid: Boolean(teacherData.is_salary_paid),
+
+                    // Ensure numeric values
+                    total_payments_this_month: parseFloat(teacherData.total_payments_this_month) || 0,
+                    advance_payment_this_month: parseFloat(teacherData.advance_payment_this_month) || 0,
+                    net_payable: parseFloat(teacherData.net_payable) || 0,
+                    teacher_percentage: parseInt(teacherData.teacher_percentage) || 0,
+                    institution_percentage: parseInt(teacherData.institution_percentage) || 0,
+                    teacher_share: parseFloat(teacherData.teacher_share) || 0,
+                    institution_share: parseFloat(teacherData.institution_share) || 0
+                };
+
                 // Update teacher information
                 if (teacherNameTitle) {
-                    teacherNameTitle.innerHTML = `<i class="fas fa-user-graduate me-1"></i> ${teacherData.teacher_name}'s Income`;
+                    teacherNameTitle.innerHTML = `<i class="fas fa-user-graduate me-1"></i> ${safeData.teacher_name}'s Income`;
                 }
 
                 if (teacherIdElement) {
-                    teacherIdElement.textContent = teacherData.teacher_id || '-';
+                    teacherIdElement.textContent = safeData.teacher_id || '-';
                 }
 
                 if (teacherNameElement) {
-                    teacherNameElement.textContent = teacherData.teacher_name || '-';
+                    teacherNameElement.textContent = safeData.teacher_name || '-';
                 }
 
                 if (subjectNameElement) {
-                    subjectNameElement.textContent = teacherData.subject_name || '-';
+                    subjectNameElement.textContent = safeData.subject_name || '-';
                 }
 
                 if (salaryStatusElement) {
-                    const isPaid = teacherData.is_salary_paid || false;
-                    salaryStatusElement.textContent = isPaid ? 'Salary Paid' : 'Salary Not Paid';
-                    salaryStatusElement.className = `badge bg-${isPaid ? 'success' : 'warning'}`;
+                    salaryStatusElement.textContent = safeData.is_salary_paid ? 'Salary Paid' : 'Salary Not Paid';
+                    salaryStatusElement.className = `badge bg-${safeData.is_salary_paid ? 'success' : 'warning'}`;
                 }
 
-                // Update financial summary
+                // Update financial summary - USE SAFE NUMERIC DATA
                 if (totalCollectionsElement) {
-                    totalCollectionsElement.textContent = formatCurrency(teacherData.total_payments_this_month || 0);
+                    totalCollectionsElement.textContent = formatCurrency(safeData.total_payments_this_month);
                 }
 
                 if (advancePaymentsElement) {
-                    advancePaymentsElement.textContent = formatCurrency(teacherData.advance_payment_this_month || 0);
+                    advancePaymentsElement.textContent = formatCurrency(safeData.advance_payment_this_month);
                 }
 
                 if (teacherShareElement) {
-                    teacherShareElement.textContent = formatCurrency(teacherData.teacher_share || 0);
+                    teacherShareElement.textContent = formatCurrency(safeData.teacher_share);
                 }
 
                 if (institutionShareElement) {
-                    institutionShareElement.textContent = formatCurrency(teacherData.institution_share || 0);
+                    institutionShareElement.textContent = formatCurrency(safeData.institution_share);
                 }
 
                 if (netPayableElement) {
-                    netPayableElement.textContent = formatCurrency(teacherData.net_payable || 0);
+                    netPayableElement.textContent = formatCurrency(safeData.net_payable);
                 }
 
-                // Get percentages from API response
-                const teacherPercentage = teacherData.teacher_percentage || 0;
-                const institutionPercentage = teacherData.institution_percentage || 0;
+                // Get percentages from SAFE data
+                const teacherPercentage = safeData.teacher_percentage;
+                const institutionPercentage = safeData.institution_percentage;
 
                 // Update percentage texts
                 if (teacherPercentageText) {
@@ -662,66 +757,81 @@
 
                 // Update Pay Teacher button
                 if (payTeacherBtn) {
-                    const netPayable = teacherData.net_payable || 0;
-                    if (netPayable > 0 && !teacherData.is_salary_paid) {
+                    if (safeData.net_payable > 0 && !safeData.is_salary_paid) {
                         payTeacherBtn.disabled = false;
-                        payTeacherBtn.title = `Pay ${formatCurrency(netPayable)}`;
+                        payTeacherBtn.title = `Pay ${formatCurrency(safeData.net_payable)}`;
                     } else {
                         payTeacherBtn.disabled = true;
-                        payTeacherBtn.title = teacherData.is_salary_paid ? 'Salary already paid' : 'No amount payable';
+                        payTeacherBtn.title = safeData.is_salary_paid ? 'Salary already paid' : 'No amount payable';
                     }
                 }
             }
 
-            // Render classes cards
             function renderClassesCards() {
                 if (!teacherData || !classesCards || !teacherData.classes) return;
 
                 classesCards.innerHTML = '';
 
-                // Get percentages from API
-                const teacherPercentage = teacherData.teacher_percentage || 0;
+                // Get percentages from SAFE data
+                const teacherPercentage = parseInt(teacherData.teacher_percentage) || 0;
 
                 teacherData.classes.forEach(cls => {
-                    const totalPaid = Object.values(cls.payments || {}).reduce((sum, val) => sum + val, 0);
-                    const percentagePaid = cls.total_students > 0 ? Math.round((cls.students_paid / cls.total_students) * 100) : 0;
+                    // Ensure numeric values for class data
+                    const safeClass = {
+                        class_name: cls.class_name || 'Unnamed Class',
+                        grade_name: cls.grade_name || 'N/A',
+                        total_students: parseInt(cls.total_students) || 0,
+                        students_paid: parseInt(cls.students_paid) || 0,
+                        payments: cls.payments || {}
+                    };
+
+                    // Calculate total paid from payments object
+                    let totalPaid = 0;
+                    Object.values(safeClass.payments).forEach(val => {
+                        totalPaid += typeof val === 'string' ? parseFloat(val) : val;
+                    });
+
+                    const percentagePaid = safeClass.total_students > 0 ?
+                        Math.round((safeClass.students_paid / safeClass.total_students) * 100) : 0;
+
+                    // Calculate teacher share using numeric values
                     const teacherShare = totalPaid * teacherPercentage / 100;
 
                     const card = document.createElement('div');
                     card.className = 'col-md-6 col-lg-3 mb-2';
                     card.innerHTML = `
-                                        <div class="card class-card h-100">
-                                            <div class="card-header bg-light py-2">
-                                                <h6 class="mb-0 small">${cls.class_name || 'Unnamed Class'}</h6>
-                                                <small class="text-muted">Grade: ${cls.grade_name || 'N/A'}</small>
-                                            </div>
-                                            <div class="card-body py-2">
-                                                <div class="mb-2">
-                                                    <div class="d-flex justify-content-between mb-1">
-                                                        <span class="text-muted small">Paid</span>
-                                                        <span class="fw-bold small">${cls.students_paid || 0}/${cls.total_students || 0}</span>
-                                                    </div>
-                                                    <div class="student-progress">
-                                                        <div class="progress">
-                                                            <div class="progress-bar bg-success" style="width: ${percentagePaid}%"></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="mb-1">
-                                                    <div class="d-flex justify-content-between">
-                                                        <span class="text-muted small">Collection:</span>
-                                                        <span class="fw-bold small">${formatCurrency(totalPaid)}</span>
-                                                    </div>
-                                                </div>
-                                                <div class="mb-1">
-                                                    <div class="d-flex justify-content-between">
-                                                        <span class="text-muted small">Teacher's:</span>
-                                                        <span class="fw-bold text-success small">${formatCurrency(teacherShare)}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
+                        <div class="card class-card h-100">
+                            <div class="card-header bg-light py-2">
+                                <h6 class="mb-0 small">${safeClass.class_name}</h6>
+                                <small class="text-muted">Grade: ${safeClass.grade_name}</small>
+                            </div>
+                            <div class="card-body py-2">
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-muted small">Paid</span>
+                                        <span class="fw-bold small">${safeClass.students_paid}/${safeClass.total_students}</span>
+                                    </div>
+                                    <div class="student-progress">
+                                        <div class="progress">
+                                            <div class="progress-bar bg-success" style="width: ${percentagePaid}%"></div>
                                         </div>
-                                    `;
+                                    </div>
+                                </div>
+                                <div class="mb-1">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted small">Collection:</span>
+                                        <span class="fw-bold small">${formatCurrency(totalPaid)}</span>
+                                    </div>
+                                </div>
+                                <div class="mb-1">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted small">Teacher's:</span>
+                                        <span class="fw-bold text-success small">${formatCurrency(teacherShare)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
 
                     classesCards.appendChild(card);
                 });
@@ -837,10 +947,10 @@
 
                     // Total and percentage cells
                     rowHTML += `
-                                        <td class="fw-bold bg-light text-primary">${formatCurrency(rowData.totalCollection)}</td>
-                                        <td class="bg-light text-secondary">${formatCurrency(rowData.institutionShare)}</td>
-                                        <td class="fw-bold bg-success text-white">${formatCurrency(rowData.teacherShare)}</td>
-                                    `;
+                                                                <td class="fw-bold bg-light text-primary">${formatCurrency(rowData.totalCollection)}</td>
+                                                                <td class="bg-light text-secondary">${formatCurrency(rowData.institutionShare)}</td>
+                                                                <td class="fw-bold bg-success text-white">${formatCurrency(rowData.teacherShare)}</td>
+                                                            `;
 
                     row.innerHTML = rowHTML;
                     paymentTableBody.appendChild(row);
@@ -917,10 +1027,10 @@
 
                 // Overall totals
                 footerRow.innerHTML += `
-                                    <td class="fw-bold bg-light text-primary">${formatCurrency(totals.totalCollection)}</td>
-                                    <td class="fw-bold bg-light text-secondary">${formatCurrency(totals.institutionShare)}</td>
-                                    <td class="fw-bold bg-success text-white">${formatCurrency(totals.teacherShare)}</td>
-                                `;
+                                                            <td class="fw-bold bg-light text-primary">${formatCurrency(totals.totalCollection)}</td>
+                                                            <td class="fw-bold bg-light text-secondary">${formatCurrency(totals.institutionShare)}</td>
+                                                            <td class="fw-bold bg-success text-white">${formatCurrency(totals.teacherShare)}</td>
+                                                        `;
 
                 paymentTableFooter.appendChild(footerRow);
             }
@@ -941,16 +1051,16 @@
                 teacherData.salary_payments.forEach(payment => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                                        <td>${formatDate(payment.date)}</td>
-                                        <td class="fw-bold">${formatCurrency(payment.payment)}</td>
-                                        <td><span class="badge bg-info">${payment.reason_code || 'N/A'}</span></td>
-                                        <td>${payment.payment_for || 'N/A'}</td>
-                                        <td>
-                                            <span class="badge ${payment.status === 1 ? 'bg-success' : 'bg-warning'}">
-                                                ${payment.status === 1 ? 'Paid' : 'Pending'}
-                                            </span>
-                                        </td>
-                                    `;
+                                                                <td>${formatDate(payment.date)}</td>
+                                                                <td class="fw-bold">${formatCurrency(payment.payment)}</td>
+                                                                <td><span class="badge bg-info">${payment.reason_code || 'N/A'}</span></td>
+                                                                <td>${payment.payment_for || 'N/A'}</td>
+                                                                <td>
+                                                                    <span class="badge ${payment.status === 1 ? 'bg-success' : 'bg-warning'}">
+                                                                        ${payment.status === 1 ? 'Paid' : 'Pending'}
+                                                                    </span>
+                                                                </td>
+                                                            `;
 
                     salaryPaymentsTableBody.appendChild(row);
                 });
@@ -985,75 +1095,75 @@
                 const modal = document.createElement('div');
                 modal.id = 'paymentConfirmation';
                 modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.6);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 9998;
-            `;
+                                        position: fixed;
+                                        top: 0;
+                                        left: 0;
+                                        width: 100%;
+                                        height: 100%;
+                                        background: rgba(0, 0, 0, 0.6);
+                                        display: flex;
+                                        justify-content: center;
+                                        align-items: center;
+                                        z-index: 9998;
+                                    `;
 
                 modal.innerHTML = `
-                <div style="
-                    background: white;
-                    padding: 20px;
-                    border-radius: 8px;
-                    max-width: 350px;
-                    width: 90%;
-                    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-                ">
-                    <div style="text-align: center; margin-bottom: 15px;">
-                        <h5 style="margin: 0 0 15px 0; color: #333;">Confirm Payment</h5>
-                    </div>
+                                        <div style="
+                                            background: white;
+                                            padding: 20px;
+                                            border-radius: 8px;
+                                            max-width: 350px;
+                                            width: 90%;
+                                            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+                                        ">
+                                            <div style="text-align: center; margin-bottom: 15px;">
+                                                <h5 style="margin: 0 0 15px 0; color: #333;">Confirm Payment</h5>
+                                            </div>
 
-                    <div style="margin-bottom: 15px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                            <span style="color: #666;">Teacher:</span>
-                            <strong>${teacherName}</strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                            <span style="color: #666;">Amount:</span>
-                            <strong style="color: #28a745;">${amount}</strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #666;">Period:</span>
-                            <strong>${monthYear}</strong>
-                        </div>
-                    </div>
+                                            <div style="margin-bottom: 15px;">
+                                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                                    <span style="color: #666;">Teacher:</span>
+                                                    <strong>${teacherName}</strong>
+                                                </div>
+                                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                                    <span style="color: #666;">Amount:</span>
+                                                    <strong style="color: #28a745;">${amount}</strong>
+                                                </div>
+                                                <div style="display: flex; justify-content: space-between;">
+                                                    <span style="color: #666;">Period:</span>
+                                                    <strong>${monthYear}</strong>
+                                                </div>
+                                            </div>
 
-                    <div style="display: flex; gap: 10px;">
-                        <button id="confirmBtn" style="
-                            background: #28a745;
-                            color: white;
-                            border: none;
-                            padding: 8px 20px;
-                            border-radius: 4px;
-                            cursor: pointer;
-                            font-size: 14px;
-                            flex: 1;
-                        ">
-                            Confirm
-                        </button>
+                                            <div style="display: flex; gap: 10px;">
+                                                <button id="confirmBtn" style="
+                                                    background: #28a745;
+                                                    color: white;
+                                                    border: none;
+                                                    padding: 8px 20px;
+                                                    border-radius: 4px;
+                                                    cursor: pointer;
+                                                    font-size: 14px;
+                                                    flex: 1;
+                                                ">
+                                                    Confirm
+                                                </button>
 
-                        <button id="cancelBtn" style="
-                            background: #dc3545;
-                            color: white;
-                            border: none;
-                            padding: 8px 20px;
-                            border-radius: 4px;
-                            cursor: pointer;
-                            font-size: 14px;
-                            flex: 1;
-                        ">
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            `;
+                                                <button id="cancelBtn" style="
+                                                    background: #dc3545;
+                                                    color: white;
+                                                    border: none;
+                                                    padding: 8px 20px;
+                                                    border-radius: 4px;
+                                                    cursor: pointer;
+                                                    font-size: 14px;
+                                                    flex: 1;
+                                                ">
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `;
 
                 document.body.appendChild(modal);
 
@@ -1082,6 +1192,14 @@
 
                 showPaymentProcessing(teacherName, amount, monthYear);
 
+                // Payment data object
+                const paymentData = {
+                    teacher_id: teacherId,
+                    payment: amount,
+                    reason_code: 'salary',
+                    month_year: monthYear
+                };
+
                 fetch('/api/teacher-payments', {
                     method: 'POST',
                     headers: {
@@ -1089,11 +1207,7 @@
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        teacher_id: teacherId,
-                        payment: amount,
-                        reason_code: 'salary',
-                    })
+                    body: JSON.stringify(paymentData)
                 })
                     .then(response => {
                         if (!response.ok) {
@@ -1103,11 +1217,25 @@
                     })
                     .then(data => {
                         if (data.status === 'success') {
+                            // Payment successful
                             hidePaymentProcessing();
+
+                            // 1. Salary slip print කරන්න
+                            setTimeout(() => {
+                                openSalarySlip(teacherId, currentYear, currentMonth);
+                            }, 500);
+
+                            // 2. Report email එක send කරන්න
+                            sendPaymentReportToTeacher(teacherId, monthYear);
+
+                            // 3. Success message show කරන්න
                             showPaymentSuccess(data, teacherId, teacherName, amount, monthYear);
+
+                            // Refresh data after 2 seconds
                             setTimeout(() => {
                                 fetchTeacherData();
                             }, 2000);
+
                         } else {
                             throw new Error(data.message || 'Payment failed');
                         }
@@ -1120,64 +1248,118 @@
                     });
             }
 
+            // Report email එක send කරන function එක
+            function sendPaymentReportToTeacher(teacherId, monthYear) {
+                // Format month year for URL (e.g., "2025-02")
+                const formattedMonthYear = formatMonthYearForURL(monthYear);
+
+                // Send email API call
+                fetch(`/send-mail/${teacherId}/${formattedMonthYear}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log('Report email sent successfully:', data);
+                        } else {
+                            console.warn('Report email may not have been sent:', data);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error sending report email:', error);
+                        // Don't show error to user - email sending failure shouldn't affect payment
+                    });
+            }
+
+            // Month format convert කරන්න (e.g., "2025 Feb" → "2025-02")
+            function formatMonthYearForURL(monthYear) {
+                // Remove spaces and convert month name to number
+                const parts = monthYear.split(' ');
+                if (parts.length === 2) {
+                    const year = parts[0];
+                    const monthName = parts[1];
+                    const monthMap = {
+                        'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+                        'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+                        'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+                    };
+                    const monthNumber = monthMap[monthName] || '01';
+                    return `${year}-${monthNumber}`;
+                }
+                return monthYear;
+            }
+
             // Show payment processing
             function showPaymentProcessing(teacherName, amount, monthYear) {
                 const overlay = document.createElement('div');
                 overlay.id = 'paymentProcessing';
                 overlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.7);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 9999;
-            `;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        `;
 
                 overlay.innerHTML = `
+            <div style="
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                max-width: 300px;
+                width: 90%;
+                text-align: center;
+            ">
+                <div style="font-size: 30px; color: #007bff; margin-bottom: 10px;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+
+                <h5 style="margin-bottom: 15px; color: #333;">Processing Payment</h5>
+
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="color: #666;">Teacher:</span>
+                        <strong>${teacherName}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="color: #666;">Amount:</span>
+                        <strong>${formatCurrency(amount)}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #666;">Period:</span>
+                        <strong>${monthYear}</strong>
+                    </div>
+                </div>
+
                 <div style="
-                    background: white;
-                    padding: 20px;
-                    border-radius: 8px;
-                    max-width: 300px;
-                    width: 90%;
-                    text-align: center;
+                    background: #e8f4fd;
+                    padding: 8px;
+                    border-radius: 4px;
+                    margin-top: 15px;
+                    border-left: 3px solid #007bff;
                 ">
-                    <div style="font-size: 30px; color: #007bff; margin-bottom: 10px;">
-                        <i class="fas fa-spinner fa-spin"></i>
-                    </div>
-
-                    <h5 style="margin-bottom: 15px; color: #333;">Processing Payment</h5>
-
-                    <div style="margin-bottom: 15px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                            <span style="color: #666;">Teacher:</span>
-                            <strong>${teacherName}</strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #666;">Amount:</span>
-                            <strong>${formatCurrency(amount)}</strong>
-                        </div>
-                    </div>
-
-                    <p style="color: #666; font-size: 13px; margin: 0;">
-                        Please wait...
+                    <p style="margin: 0; color: #0056b3; font-size: 12px;">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Payment slip will auto-print and report will be emailed
                     </p>
                 </div>
-            `;
+
+                <p style="color: #666; font-size: 13px; margin: 10px 0 0 0;">
+                    Please wait...
+                </p>
+            </div>
+        `;
 
                 document.body.appendChild(overlay);
-            }
-
-            // Hide payment processing
-            function hidePaymentProcessing() {
-                const overlay = document.getElementById('paymentProcessing');
-                if (overlay) {
-                    overlay.remove();
-                }
             }
 
             // Show payment success
@@ -1185,17 +1367,17 @@
                 const modal = document.createElement('div');
                 modal.id = 'paymentSuccess';
                 modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.7);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 99999;
-            `;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+        `;
 
                 const formattedAmount = formatCurrency(amount);
                 const paymentDate = new Date().toLocaleTimeString('en-LK', {
@@ -1204,113 +1386,134 @@
                 });
 
                 modal.innerHTML = `
-                <div style="
-                    background: white;
-                    padding: 20px;
-                    border-radius: 8px;
-                    max-width: 350px;
-                    width: 90%;
-                ">
-                    <div style="text-align: center; margin-bottom: 15px;">
-                        <div style="
-                            width: 50px;
-                            height: 50px;
-                            background: #28a745;
-                            border-radius: 50%;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            margin: 0 auto 10px;
-                        ">
-                            <i class="fas fa-check" style="font-size: 20px; color: white;"></i>
-                        </div>
-                        <h5 style="margin: 0 0 5px 0; color: #28a745;">Payment Successful</h5>
-                        <p style="color: #666; font-size: 13px; margin: 0;">${teacherName}</p>
-                    </div>
-
-                    <div style="margin-bottom: 15px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                            <span style="color: #666;">Amount:</span>
-                            <strong style="color: #28a745;">${formattedAmount}</strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                            <span style="color: #666;">Period:</span>
-                            <strong>${monthYear}</strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #666;">Time:</span>
-                            <strong>${paymentDate}</strong>
-                        </div>
-                    </div>
-
+            <div style="
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                max-width: 380px;
+                width: 90%;
+            ">
+                <div style="text-align: center; margin-bottom: 15px;">
                     <div style="
-                        background: #d4edda;
-                        padding: 8px;
-                        border-radius: 4px;
-                        margin-bottom: 15px;
-                        border-left: 3px solid #28a745;
+                        width: 50px;
+                        height: 50px;
+                        background: #28a745;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin: 0 auto 10px;
                     ">
-                        <p style="margin: 0; color: #155724; font-size: 12px;">
-                            Printing in <span id="countdown" style="font-weight: bold;">5</span> seconds...
-                        </p>
+                        <i class="fas fa-check" style="font-size: 20px; color: white;"></i>
                     </div>
+                    <h5 style="margin: 0 0 5px 0; color: #28a745;">Payment Successful</h5>
+                    <p style="color: #666; font-size: 13px; margin: 0;">${teacherName}</p>
+                </div>
 
-                    <div style="display: flex; gap: 10px;">
-                        <button id="printBtn" style="
-                            background: #007bff;
-                            color: white;
-                            border: none;
-                            padding: 8px 15px;
-                            border-radius: 4px;
-                            cursor: pointer;
-                            font-size: 14px;
-                            flex: 1;
-                        ">
-                            Print Now
-                        </button>
-
-                        <button id="closeBtn" style="
-                            background: #6c757d;
-                            color: white;
-                            border: none;
-                            padding: 8px 15px;
-                            border-radius: 4px;
-                            cursor: pointer;
-                            font-size: 14px;
-                            flex: 1;
-                        ">
-                            Close
-                        </button>
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #666;">Amount:</span>
+                        <strong style="color: #28a745;">${formattedAmount}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #666;">Period:</span>
+                        <strong>${monthYear}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #666;">Time:</span>
+                        <strong>${paymentDate}</strong>
                     </div>
                 </div>
-            `;
+
+                <!-- Report sending status -->
+                <div style="
+                    background: #d4edda;
+                    padding: 8px;
+                    border-radius: 4px;
+                    margin-bottom: 15px;
+                    border-left: 3px solid #28a745;
+                ">
+                    <p style="margin: 0; color: #155724; font-size: 12px;">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Payment slip printed and report emailed to teacher
+                    </p>
+                </div>
+
+                <div style="
+                    background: #e8f4fd;
+                    padding: 8px;
+                    border-radius: 4px;
+                    margin-bottom: 15px;
+                    border-left: 3px solid #007bff;
+                ">
+                    <p style="margin: 0; color: #0056b3; font-size: 12px;">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Report has been sent to teacher's email address
+                    </p>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button id="printAgainBtn" style="
+                        background: #007bff;
+                        color: white;
+                        border: none;
+                        padding: 8px 15px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        flex: 1;
+                    ">
+                        <i class="fas fa-print me-1"></i> Print Again
+                    </button>
+
+                    <button id="emailAgainBtn" style="
+                        background: #17a2b8;
+                        color: white;
+                        border: none;
+                        padding: 8px 15px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        flex: 1;
+                    ">
+                        <i class="fas fa-envelope me-1"></i> Resend Email
+                    </button>
+
+                    <button id="closeBtn" style="
+                        background: #6c757d;
+                        color: white;
+                        border: none;
+                        padding: 8px 15px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        flex: 1;
+                    ">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
 
                 document.body.appendChild(modal);
 
-                let countdown = 5;
-                const countdownElement = document.getElementById('countdown');
-                const countdownInterval = setInterval(() => {
-                    countdown--;
-                    countdownElement.textContent = countdown;
-
-                    if (countdown <= 0) {
-                        clearInterval(countdownInterval);
-                        openSalarySlip(teacherId, currentYear, currentMonth);
-                    }
-                }, 1000);
-
-                document.getElementById('printBtn').addEventListener('click', function () {
-                    clearInterval(countdownInterval);
+                // Event listeners
+                document.getElementById('printAgainBtn').addEventListener('click', function () {
                     openSalarySlip(teacherId, currentYear, currentMonth);
                 });
 
+                document.getElementById('emailAgainBtn').addEventListener('click', function () {
+                    sendPaymentReportToTeacher(teacherId, monthYear);
+                    showToast('Report email sent again', 'success');
+                });
+
                 document.getElementById('closeBtn').addEventListener('click', function () {
-                    clearInterval(countdownInterval);
                     modal.remove();
                     payTeacherBtn.disabled = false;
                     payTeacherBtn.innerHTML = '<i class="fas fa-money-check-alt me-1"></i> Pay Teacher';
                 });
 
+                // Auto close after 15 seconds
                 setTimeout(() => {
                     if (document.getElementById('paymentSuccess')) {
                         modal.remove();
@@ -1320,87 +1523,158 @@
                 }, 15000);
             }
 
-            // Open salary slip
+            // Open salary slip (Updated for auto print)
             function openSalarySlip(teacherId, year, month) {
-                const modal = document.getElementById('paymentSuccess');
-                if (modal) {
-                    modal.remove();
-                }
-
                 const formattedMonth = month.toString().padStart(2, '0');
                 const yearMonth = `${year}-${formattedMonth}`;
-                const salarySlipUrl = `/teacher-payment/salary-slip/${teacherId}/${yearMonth}?autoPrint=true&ref=${Date.now()}`;
+                const salarySlipUrl = `/teacher-payment/salary-slip/${teacherId}/${yearMonth}?autoPrint=true&timestamp=${Date.now()}`;
 
+                // Open in new window with print dialog
                 const printWindow = window.open(salarySlipUrl, '_blank', 'width=900,height=700,scrollbars=yes');
 
                 if (printWindow) {
                     printWindow.focus();
-                }
 
-                payTeacherBtn.disabled = false;
-                payTeacherBtn.innerHTML = '<i class="fas fa-money-check-alt me-1"></i> Pay Teacher';
+                    // Auto print after content loads
+                    printWindow.onload = function () {
+                        setTimeout(() => {
+                            printWindow.print();
+                        }, 1000);
+                    };
+                }
             }
 
-            // Show payment error
+            // Toast message show කිරීම
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                const bgColor = type === 'success' ? '#28a745' :
+                    type === 'error' ? '#dc3545' :
+                        type === 'warning' ? '#ffc107' : '#17a2b8';
+
+                toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${bgColor};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 999999;
+            animation: slideIn 0.3s ease-out;
+        `;
+
+                toast.innerHTML = `
+            <div style="display: flex; align-items: center;">
+                <i class="fas ${type === 'success' ? 'fa-check-circle' :
+                        type === 'error' ? 'fa-exclamation-circle' :
+                            'fa-info-circle'} me-2"></i>
+                <span>${message}</span>
+            </div>
+        `;
+
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.animation = 'slideOut 0.3s ease-out';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+
+            // Add CSS animations
+            const style = document.createElement('style');
+            style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+            document.head.appendChild(style);
+
+            // Existing functions remain the same...
+            function hidePaymentProcessing() {
+                const overlay = document.getElementById('paymentProcessing');
+                if (overlay) {
+                    overlay.remove();
+                }
+            }
+
             function showPaymentError(errorMessage, teacherName, amount) {
                 const modal = document.createElement('div');
                 modal.id = 'paymentError';
                 modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.7);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 99999;
-            `;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+        `;
 
                 modal.innerHTML = `
-                <div style="
-                    background: white;
-                    padding: 20px;
-                    border-radius: 8px;
-                    max-width: 350px;
-                    width: 90%;
-                ">
-                    <div style="text-align: center; margin-bottom: 15px;">
-                        <div style="font-size: 30px; color: #dc3545; margin-bottom: 10px;">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <h5 style="margin: 0; color: #dc3545;">Payment Failed</h5>
+            <div style="
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                max-width: 350px;
+                width: 90%;
+            ">
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <div style="font-size: 30px; color: #dc3545; margin-bottom: 10px;">
+                        <i class="fas fa-exclamation-triangle"></i>
                     </div>
-
-                    <div style="margin-bottom: 15px;">
-                        <p style="color: #721c24; font-size: 14px; margin: 0 0 10px 0;">
-                            ${errorMessage}
-                        </p>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #666;">Teacher:</span>
-                            <strong>${teacherName}</strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 5px;">
-                            <span style="color: #666;">Amount:</span>
-                            <strong>${formatCurrency(amount)}</strong>
-                        </div>
-                    </div>
-
-                    <button id="errorCloseBtn" style="
-                        background: #dc3545;
-                        color: white;
-                        border: none;
-                        padding: 8px 20px;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 14px;
-                        width: 100%;
-                    ">
-                        Try Again
-                    </button>
+                    <h5 style="margin: 0; color: #dc3545;">Payment Failed</h5>
                 </div>
-            `;
+
+                <div style="margin-bottom: 15px;">
+                    <p style="color: #721c24; font-size: 14px; margin: 0 0 10px 0;">
+                        ${errorMessage}
+                    </p>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #666;">Teacher:</span>
+                        <strong>${teacherName}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                        <span style="color: #666;">Amount:</span>
+                        <strong>${formatCurrency(amount)}</strong>
+                    </div>
+                </div>
+
+                <button id="errorCloseBtn" style="
+                    background: #dc3545;
+                    color: white;
+                    border: none;
+                    padding: 8px 20px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    width: 100%;
+                ">
+                    Try Again
+                </button>
+            </div>
+        `;
 
                 document.body.appendChild(modal);
 
