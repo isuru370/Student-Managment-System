@@ -16,7 +16,8 @@ class CreateInstitutePaymentTable extends Migration
             $table->string('reason');
             $table->string('reason_code');
             $table->boolean('status');
-            $table->unsignedBigInteger('user_id');
+            $table->foreignId('user_id')
+                ->constrained('users');
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users');

@@ -17,8 +17,20 @@ class ClassCategoryHasStudentClass extends Model
         'class_category_id',
     ];
 
+    protected $casts = [
+        'id'                 => 'integer',
 
+        // Money
+        'fees'               => 'float',
 
+        // Foreign keys
+        'student_classes_id' => 'integer',
+        'class_category_id'  => 'integer',
+
+        // Timestamps
+        'created_at'         => 'datetime',
+        'updated_at'         => 'datetime',
+    ];
 
     // Relationship: belongs to StudentClass
     public function studentClass()

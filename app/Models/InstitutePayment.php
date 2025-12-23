@@ -20,6 +20,14 @@ class InstitutePayment extends Model
         'user_id'
     ];
 
+    // Type casting for JSON responses
+    protected $casts = [
+        'payment' => 'double',
+        'status'  => 'boolean',
+        'user_id' => 'integer',
+        'date'    => 'datetime',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');

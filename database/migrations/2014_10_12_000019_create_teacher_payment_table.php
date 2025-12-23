@@ -15,10 +15,15 @@ class CreateTeacherPaymentTable extends Migration
             $table->dateTime('date');
             $table->string('reason');
             $table->string('reason_code');
+            $table->foreign('reason_code')
+                ->references('reason_code')
+                ->on('payment_reason');
             $table->string('payment_for');
             $table->boolean('status');
-            $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('teacher_id');
+            $table->foreignId('user_id')
+                ->constrained('users');
+            $table->foreignId('teacher_id')
+                ->constrained('teachers');
             $table->timestamps();
         });
     }

@@ -4,14 +4,12 @@ namespace App\Services;
 
 use App\Models\ClassRoom;
 use App\Models\Payments;
-use App\Models\Student;
 use App\Models\StudentStudentStudentClass;
 use App\Models\Teacher;
 use App\Models\TeacherPayment;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
-//use Illuminate\Support\Facades\Log;
 
 class TeacherPaymentsService
 {

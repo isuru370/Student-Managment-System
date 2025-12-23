@@ -27,6 +27,14 @@ class SystemUser extends Model
         'is_active'
     ];
 
+    // Type casting for JSON responses
+    protected $casts = [
+        'user_id'    => 'integer',
+        'is_active'  => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
     // SystemUser belongs to User
     public function user()
     {

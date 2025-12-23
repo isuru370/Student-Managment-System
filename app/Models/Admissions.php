@@ -15,4 +15,11 @@ class Admissions extends Model
         'name',
         'amount',
     ];
+
+    protected $casts = [
+        'id'         => 'integer',
+        'amount'     => 'float',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 }

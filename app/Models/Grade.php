@@ -11,5 +11,12 @@ class Grade extends Model
 
     protected $table = 'grades';
 
-    protected $fillable = ['grade_name'];
+    protected $fillable = [
+        'grade_name',
+    ];
+
+    // Type casting for JSON responses
+    protected $casts = [
+        'id' => 'integer',
+    ];
 }

@@ -20,6 +20,15 @@ class User extends Authenticatable
 
     protected $hidden = ['password', 'remember_token'];
 
+    // Type casting for JSON responses
+    protected $casts = [
+        'user_type'   => 'integer',
+        'is_active'   => 'boolean',
+        'email_verified_at' => 'datetime',
+        'created_at'  => 'datetime',
+        'updated_at'  => 'datetime',
+    ];
+
     public function systemUser()
     {
         return $this->hasOne(SystemUser::class, 'user_id');

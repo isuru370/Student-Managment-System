@@ -11,9 +11,17 @@ class CreateStudentStudentStudentClassesTable extends Migration
     {
         Schema::create('student_student_student_classes', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->unsignedBigInteger('student_id');
-            $table->unsignedBigInteger('student_classes_id');
-            $table->unsignedBigInteger('class_category_has_student_class_id');
+
+            // Changed to foreignId with constraints
+            $table->foreignId('student_id')
+                ->constrained('students');
+
+            $table->foreignId('student_classes_id')
+                ->constrained('student_classes');
+
+            $table->foreignId('class_category_has_student_class_id')
+                ->constrained('class_category_has_student_classes');
+
             $table->boolean('status');
             $table->boolean('is_free_card')->default(false);
             $table->timestamps();

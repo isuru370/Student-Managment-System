@@ -69,6 +69,7 @@
                                             <th>Teacher</th>
                                             <th>Subject</th>
                                             <th>Grade</th>
+                                            
                                             <th width="100" class="text-center">Actions</th>
                                         </tr>
                                     </thead>
@@ -135,7 +136,7 @@
                                         <tr>
                                             <th width="60">#</th>
                                             <th>Category Name</th>
-                                            <th>Created At</th>
+                                            <th>Created Date</th>
                                             <th width="120" class="text-center">Actions</th>
                                         </tr>
                                     </thead>
@@ -359,6 +360,35 @@
             background-color: #e9ecef;
             border-color: #dee2e6;
         }
+        
+        /* Sri Lankan Date Format */
+        .sl-date {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        /* Status Badge */
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .status-active {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            border: 1px solid #badbcc;
+        }
+        
+        .status-inactive {
+            background-color: #f8d7da;
+            color: #842029;
+            border: 1px solid #f5c2c7;
+        }
+        
+        .status-ongoing {
+            background-color: #cff4fc;
+            color: #055160;
+            border: 1px solid #b6effb;
+        }
     </style>
 @endpush
 
@@ -404,7 +434,56 @@
             });
         });
 
-        // Active Classes Functions
+        // ================= SRI LANKAN DATE FORMAT FUNCTIONS =================
+        // Format date to Sri Lankan format (DD-MM-YYYY)
+        function formatDateToSriLankan(dateString) {
+            if (!dateString) return 'N/A';
+            
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return dateString;
+                
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const year = date.getFullYear();
+                
+                return `${day}-${month}-${year}`;
+            } catch (error) {
+                console.error('Error formatting date:', error, dateString);
+                return dateString;
+            }
+        }
+
+        // Format time to Sri Lankan 12-hour format
+        function formatTimeToSriLankan(dateString) {
+            if (!dateString) return '';
+            
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return '';
+                
+                let hours = date.getHours();
+                let minutes = date.getMinutes().toString().padStart(2, '0');
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12; // Convert 0 to 12
+                
+                return `${hours}:${minutes} ${ampm}`;
+            } catch (error) {
+                console.error('Error formatting time:', error);
+                return '';
+            }
+        }
+
+        // Format date and time to Sri Lankan format
+        function formatDateTimeToSriLankan(dateString) {
+            const datePart = formatDateToSriLankan(dateString);
+            const timePart = formatTimeToSriLankan(dateString);
+            
+            return timePart ? `${datePart} ${timePart}` : datePart;
+        }
+
+        // ================= ACTIVE CLASSES FUNCTIONS =================
         function loadActiveClasses() {
             showClassesLoading();
 
@@ -417,16 +496,20 @@
                 })
                 .then(data => {
                     // Handle different response formats
+                    let classesArray = [];
+                    
                     if (data.status === 'success' && data.data) {
-                        allActiveClasses = data.data;
+                        classesArray = data.data;
                     } else if (Array.isArray(data)) {
-                        allActiveClasses = data;
+                        classesArray = data;
                     } else if (data.classes) {
-                        allActiveClasses = data.classes;
+                        classesArray = data.classes;
                     } else {
                         throw new Error('Invalid response format from active classes API');
                     }
 
+                    // Process the classes data
+                    allActiveClasses = processClassData(classesArray);
                     renderActiveClassesTable(allActiveClasses);
                     hideClassesLoading();
                 })
@@ -439,6 +522,35 @@
                     const emptyState = document.getElementById('classesEmpty');
                     if (emptyState) emptyState.classList.remove('d-none');
                 });
+        }
+
+        // Process class data with proper boolean handling
+        function processClassData(classes) {
+            return classes.map(classRoom => ({
+                ...classRoom,
+                // Ensure proper boolean values
+                is_active: getBooleanValue(classRoom.is_active),
+                is_ongoing: getBooleanValue(classRoom.is_ongoing),
+                // Ensure proper date formatting
+                created_at: classRoom.created_at || new Date().toISOString(),
+                updated_at: classRoom.updated_at || new Date().toISOString(),
+                // Ensure teacher object exists
+                teacher: classRoom.teacher || { fname: 'N/A', lname: '', custom_id: '' },
+                subject: classRoom.subject || { subject_name: 'N/A' },
+                grade: classRoom.grade || { grade_name: 'N/A' }
+            }));
+        }
+
+        // Helper function to convert values to boolean
+        function getBooleanValue(value) {
+            if (typeof value === 'boolean') return value;
+            if (typeof value === 'number') return value === 1;
+            if (typeof value === 'string') {
+                if (value.toLowerCase() === 'true') return true;
+                if (value.toLowerCase() === 'false') return false;
+                return value === '1';
+            }
+            return false;
         }
 
         function renderActiveClassesTable(classes) {
@@ -470,7 +582,19 @@
                 const actualIndex = startIndex + index;
 
                 // Check if class is ongoing to show Add Student button
-                const showAddStudentButton = classRoom.is_ongoing === 1;
+                const showAddStudentButton = classRoom.is_ongoing === true;
+
+                // Format dates to Sri Lankan format
+                const createdDate = formatDateToSriLankan(classRoom.created_at);
+
+                // Status badges
+                const isActiveBadge = classRoom.is_active ? 
+                    '<span class="badge status-active status-badge">Active</span>' : 
+                    '<span class="badge status-inactive status-badge">Inactive</span>';
+                
+                const isOngoingBadge = classRoom.is_ongoing ? 
+                    '<span class="badge status-ongoing status-badge ms-1">Ongoing</span>' : 
+                    '';
 
                 const row = `
                     <tr>
@@ -481,23 +605,24 @@
                         <td>
                             <div class="d-flex align-items-center">
                                 <div>
-                                    <h6 class="mb-0">${classRoom.teacher ? classRoom.teacher.fname + ' ' + classRoom.teacher.lname : 'No Teacher'}</h6>
-                                    <small class="text-muted">${classRoom.teacher ? classRoom.teacher.custom_id : ''}</small>
+                                    <h6 class="mb-0">${classRoom.teacher.fname} ${classRoom.teacher.lname}</h6>
+                                    <small class="text-muted">${classRoom.teacher.custom_id || ''}</small>
                                 </div>
                             </div>
                         </td>
                         <td>
                             <span class="badge bg-light text-dark border">
                                 <i class="fas fa-book me-1 text-primary"></i>
-                                ${classRoom.subject ? classRoom.subject.subject_name : 'N/A'}
+                                ${classRoom.subject.subject_name}
                             </span>
                         </td>
                         <td>
                             <span class="badge bg-primary bg-gradient">
                                 <i class="fas fa-graduation-cap me-1"></i>
-                                ${classRoom.grade ? classRoom.grade.grade_name : 'N/A'}
+                                ${classRoom.grade.grade_name}
                             </span>
                         </td>
+                        
                         <td class="text-center">
                             <div class="btn-group btn-group-sm">
                                 <button class="btn btn-outline-primary" title="View Class Details" 
@@ -527,45 +652,45 @@
             const endRecord = Math.min(classesCurrentPage * recordsPerPage, totalRecords);
 
             paginationDiv.innerHTML = `
-                                    <div class="row align-items-center">
-                                        <div class="col-md-6">
-                                            <div class="d-flex align-items-center">
-                                                <span class="text-muted me-2">Show:</span>
-                                                <select class="form-select form-select-sm" style="width: auto;" onchange="changeClassesRecordsPerPage(this.value)">
-                                                    <option value="10" ${recordsPerPage === 10 ? 'selected' : ''}>10</option>
-                                                    <option value="25" ${recordsPerPage === 25 ? 'selected' : ''}>25</option>
-                                                    <option value="50" ${recordsPerPage === 50 ? 'selected' : ''}>50</option>
-                                                    <option value="100" ${recordsPerPage === 100 ? 'selected' : ''}>100</option>
-                                                </select>
-                                                <span class="text-muted ms-2">records per page</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6 text-end">
-                                            <div class="d-flex align-items-center justify-content-end">
-                                                <span class="text-muted me-3">
-                                                    Showing ${startRecord} to ${endRecord} of ${totalRecords} records
-                                                </span>
-                                                <nav>
-                                                    <ul class="pagination pagination-sm mb-0">
-                                                        <li class="page-item ${classesCurrentPage === 1 ? 'disabled' : ''}">
-                                                            <a class="page-link" href="#" onclick="changeClassesPage(${classesCurrentPage - 1})">
-                                                                <i class="fas fa-chevron-left"></i>
-                                                            </a>
-                                                        </li>
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <span class="text-muted me-2">Show:</span>
+                            <select class="form-select form-select-sm" style="width: auto;" onchange="changeClassesRecordsPerPage(this.value)">
+                                <option value="10" ${recordsPerPage === 10 ? 'selected' : ''}>10</option>
+                                <option value="25" ${recordsPerPage === 25 ? 'selected' : ''}>25</option>
+                                <option value="50" ${recordsPerPage === 50 ? 'selected' : ''}>50</option>
+                                <option value="100" ${recordsPerPage === 100 ? 'selected' : ''}>100</option>
+                            </select>
+                            <span class="text-muted ms-2">records per page</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="d-flex align-items-center justify-content-end">
+                            <span class="text-muted me-3">
+                                Showing ${startRecord} to ${endRecord} of ${totalRecords} records
+                            </span>
+                            <nav>
+                                <ul class="pagination pagination-sm mb-0">
+                                    <li class="page-item ${classesCurrentPage === 1 ? 'disabled' : ''}">
+                                        <a class="page-link" href="#" onclick="changeClassesPage(${classesCurrentPage - 1})">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </li>
 
-                                                        ${generateClassesPageNumbers(totalPages)}
+                                    ${generateClassesPageNumbers(totalPages)}
 
-                                                        <li class="page-item ${classesCurrentPage === totalPages ? 'disabled' : ''}">
-                                                            <a class="page-link" href="#" onclick="changeClassesPage(${classesCurrentPage + 1})">
-                                                                <i class="fas fa-chevron-right"></i>
-                                                            </a>
-                                                        </li>
-                                                    </ul>
-                                                </nav>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `;
+                                    <li class="page-item ${classesCurrentPage === totalPages ? 'disabled' : ''}">
+                                        <a class="page-link" href="#" onclick="changeClassesPage(${classesCurrentPage + 1})">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         function generateClassesPageNumbers(totalPages) {
@@ -580,10 +705,10 @@
 
             for (let i = startPage; i <= endPage; i++) {
                 pageNumbers += `
-                                    <li class="page-item ${classesCurrentPage === i ? 'active' : ''}">
-                                        <a class="page-link" href="#" onclick="changeClassesPage(${i})">${i}</a>
-                                    </li>
-                                `;
+                    <li class="page-item ${classesCurrentPage === i ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changeClassesPage(${i})">${i}</a>
+                    </li>
+                `;
             }
 
             return pageNumbers;
@@ -627,12 +752,13 @@
         function viewClassSchedule(classId) {
             window.location.href = `/class-rooms/add_class_category/${classId}`;
         }
+
         function addStudentToClass(classId) {
-            // ✅ Use the correct route with parameter
+            // Use the correct route with parameter
             window.location.href = `/students/add_student_to_class/${classId}`;
         }
 
-        // Categories Functions
+        // ================= CATEGORIES FUNCTIONS =================
         function loadCategories() {
             showCategoriesLoading();
 
@@ -645,15 +771,23 @@
                 })
                 .then(data => {
                     // Handle different response formats
+                    let categoriesArray = [];
+                    
                     if (data.status === 'success' && data.data) {
-                        allCategories = data.data;
+                        categoriesArray = data.data;
                     } else if (Array.isArray(data)) {
-                        allCategories = data;
+                        categoriesArray = data;
                     } else if (data.categories) {
-                        allCategories = data.categories;
+                        categoriesArray = data.categories;
                     } else {
                         throw new Error('Invalid response format from categories API');
                     }
+
+                    // Process categories with proper date handling
+                    allCategories = categoriesArray.map(category => ({
+                        ...category,
+                        created_at: category.created_at || new Date().toISOString()
+                    }));
 
                     renderCategoriesTable(allCategories);
                     hideCategoriesLoading();
@@ -693,24 +827,26 @@
             const endIndex = startIndex + recordsPerPage;
             const paginatedCategories = categories.slice(startIndex, endIndex);
 
-            // Render table rows
+            // Render table rows with Sri Lankan date format
             paginatedCategories.forEach((category, index) => {
                 const actualIndex = startIndex + index;
+                const createdDate = formatDateToSriLankan(category.created_at);
+                
                 const row = `
-                                <tr>
-                                    <td class="fw-bold text-muted">${actualIndex + 1}</td>
-                                    <td>${category.category_name}</td>
-                                    <td>${new Date(category.created_at).toLocaleDateString()}</td>
-                                    <td class="text-center">
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-warning" title="Edit" 
-                                                    onclick="showEditCategoryModal(${category.id}, '${escapeHtml(category.category_name)}')">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
+                    <tr>
+                        <td class="fw-bold text-muted">${actualIndex + 1}</td>
+                        <td>${category.category_name}</td>
+                        <td class="sl-date">${createdDate}</td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-warning" title="Edit" 
+                                        onclick="showEditCategoryModal(${category.id}, '${escapeHtml(category.category_name)}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
                 tbody.innerHTML += row;
             });
 
@@ -724,45 +860,45 @@
             const endRecord = Math.min(categoriesCurrentPage * recordsPerPage, totalRecords);
 
             paginationDiv.innerHTML = `
-                        <div class="row align-items-center">
-                            <div class="col-md-6">
-                                <div class="d-flex align-items-center">
-                                    <span class="text-muted me-2">Show:</span>
-                                    <select class="form-select form-select-sm" style="width: auto;" onchange="changeCategoriesRecordsPerPage(this.value)">
-                                        <option value="10" ${recordsPerPage === 10 ? 'selected' : ''}>10</option>
-                                        <option value="25" ${recordsPerPage === 25 ? 'selected' : ''}>25</option>
-                                        <option value="50" ${recordsPerPage === 50 ? 'selected' : ''}>50</option>
-                                        <option value="100" ${recordsPerPage === 100 ? 'selected' : ''}>100</option>
-                                    </select>
-                                    <span class="text-muted ms-2">records per page</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <div class="d-flex align-items-center justify-content-end">
-                                    <span class="text-muted me-3">
-                                        Showing ${startRecord} to ${endRecord} of ${totalRecords} records
-                                    </span>
-                                    <nav>
-                                        <ul class="pagination pagination-sm mb-0">
-                                            <li class="page-item ${categoriesCurrentPage === 1 ? 'disabled' : ''}">
-                                                <a class="page-link" href="#" onclick="changeCategoriesPage(${categoriesCurrentPage - 1})">
-                                                    <i class="fas fa-chevron-left"></i>
-                                                </a>
-                                            </li>
-
-                                            ${generateCategoriesPageNumbers(totalPages)}
-
-                                            <li class="page-item ${categoriesCurrentPage === totalPages ? 'disabled' : ''}">
-                                                <a class="page-link" href="#" onclick="changeCategoriesPage(${categoriesCurrentPage + 1})">
-                                                    <i class="fas fa-chevron-right"></i>
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </nav>
-                                </div>
-                            </div>
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <span class="text-muted me-2">Show:</span>
+                            <select class="form-select form-select-sm" style="width: auto;" onchange="changeCategoriesRecordsPerPage(this.value)">
+                                <option value="10" ${recordsPerPage === 10 ? 'selected' : ''}>10</option>
+                                <option value="25" ${recordsPerPage === 25 ? 'selected' : ''}>25</option>
+                                <option value="50" ${recordsPerPage === 50 ? 'selected' : ''}>50</option>
+                                <option value="100" ${recordsPerPage === 100 ? 'selected' : ''}>100</option>
+                            </select>
+                            <span class="text-muted ms-2">records per page</span>
                         </div>
-                    `;
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="d-flex align-items-center justify-content-end">
+                            <span class="text-muted me-3">
+                                Showing ${startRecord} to ${endRecord} of ${totalRecords} records
+                            </span>
+                            <nav>
+                                <ul class="pagination pagination-sm mb-0">
+                                    <li class="page-item ${categoriesCurrentPage === 1 ? 'disabled' : ''}">
+                                        <a class="page-link" href="#" onclick="changeCategoriesPage(${categoriesCurrentPage - 1})">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </li>
+
+                                    ${generateCategoriesPageNumbers(totalPages)}
+
+                                    <li class="page-item ${categoriesCurrentPage === totalPages ? 'disabled' : ''}">
+                                        <a class="page-link" href="#" onclick="changeCategoriesPage(${categoriesCurrentPage + 1})">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         function generateCategoriesPageNumbers(totalPages) {
@@ -777,10 +913,10 @@
 
             for (let i = startPage; i <= endPage; i++) {
                 pageNumbers += `
-                            <li class="page-item ${categoriesCurrentPage === i ? 'active' : ''}">
-                                <a class="page-link" href="#" onclick="changeCategoriesPage(${i})">${i}</a>
-                            </li>
-                        `;
+                    <li class="page-item ${categoriesCurrentPage === i ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changeCategoriesPage(${i})">${i}</a>
+                    </li>
+                `;
             }
 
             return pageNumbers;
@@ -797,7 +933,6 @@
             categoriesCurrentPage = 1;
             renderCategoriesTable(allCategories);
         }
-
 
         function showCategoriesLoading() {
             document.getElementById('categoriesLoading').classList.remove('d-none');
@@ -930,7 +1065,7 @@
                 });
         }
 
-        // Helper Functions
+        // ================= HELPER FUNCTIONS =================
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {
@@ -957,9 +1092,9 @@
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
             alertDiv.innerHTML = `
-                                                                    ${message}
-                                                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                                                `;
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
 
             const container = document.querySelector('.container') || document.querySelector('.card-body');
             if (container) {

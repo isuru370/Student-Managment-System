@@ -17,13 +17,22 @@ class AdmissionPayments extends Model
         'admission_id',
     ];
 
+    protected $casts = [
+        'id'            => 'integer',
+        'student_id'    => 'integer',
+        'admission_id'  => 'integer',
+        'amount'        => 'float',
+        'created_at'    => 'datetime',
+        'updated_at'    => 'datetime',
+    ];
+
     public function student()
     {
-        return $this->belongsTo(Student::class,'student_id');
+        return $this->belongsTo(Student::class, 'student_id');
     }
 
     public function admission()
     {
-        return $this->belongsTo(Admissions::class,'admission_id');
+        return $this->belongsTo(Admissions::class, 'admission_id');
     }
 }

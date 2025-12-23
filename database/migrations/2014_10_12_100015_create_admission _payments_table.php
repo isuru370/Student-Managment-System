@@ -10,10 +10,10 @@ class CreateAdmissionPaymentsTable extends Migration
     public function up()
     {
         Schema::create('admission_payments', function (Blueprint $table) {
-            $table->bigIncrements('id');
-            $table->bigInteger('student_id');
-            $table->double('amount');
-            $table->bigInteger('admission_id');
+            $table->id();
+            $table->foreignId('student_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('admission_id')->constrained()->cascadeOnDelete();
+            $table->decimal('amount', 10, 2);
             $table->timestamps();
         });
     }

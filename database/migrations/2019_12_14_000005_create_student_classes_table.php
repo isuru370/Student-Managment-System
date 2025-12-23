@@ -14,9 +14,12 @@ class CreateStudentClassesTable extends Migration
             $table->string('class_name');
             $table->boolean('is_active');
             $table->boolean('is_ongoing');
-            $table->unsignedBigInteger('teacher_id');
-            $table->unsignedBigInteger('subject_id');
-            $table->unsignedBigInteger('grade_id');
+            $table->foreignId('teacher_id')
+                ->constrained('teachers');
+            $table->foreignId('subject_id')
+                ->constrained('subjects');
+            $table->foreignId('grade_id')
+                ->constrained('grades');
             $table->timestamps();
         });
     }

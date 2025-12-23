@@ -11,6 +11,14 @@ class Subject extends Model
 
     protected $table = 'subjects';
 
-    protected $fillable = ['subject_name'];
+    protected $fillable = [
+        'subject_name',
+    ];
 
+    // Type casting for JSON responses
+    protected $casts = [
+        'id'         => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 }

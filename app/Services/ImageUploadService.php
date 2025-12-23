@@ -3,13 +3,13 @@
 namespace App\Services;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class ImageUploadService
 {
     /**
-     * Upload image and return full URL
+     * Upload image to public/uploads
+     * Save FULL URL to DB
      */
     public function upload(Request $request)
     {
@@ -20,38 +20,38 @@ class ImageUploadService
 
             $image = $request->file('image');
 
-            $imageName = time() . '_' . preg_replace('/[^A-Za-z0-9\-\_\.]/', '_', $image->getClientOriginalName());
+            $imageName = time() . '_' . preg_replace(
+                '/[^A-Za-z0-9\-\_\.]/',
+                '_',
+                $image->getClientOriginalName()
+            );
 
-            $uploadPath = public_path('uploads');
+            // ✅ වෙනස්කම්: public_path() වෙනුවට base_path() භාවිතා කරන්න
+            $uploadPath = base_path('uploads'); // මෙය project root එකේ uploads ෆෝල්ඩරයට යොමු කරයි
+
             if (!file_exists($uploadPath)) {
                 mkdir($uploadPath, 0755, true);
             }
 
             $image->move($uploadPath, $imageName);
 
-            // 1. DB save path (without domain)
-            $dbPath = '/uploads/' . $imageName;
-
-            // 2. Full URL for API response
-            $imageURL = config('constants.image_url') . $imageName;
+            // ✅ වෙනස්කම්: 'public/' නොමැතිව URL එක ජනනය කරන්න
+            $imageURL = config('services.image.base_url') . $imageName;
+            // හෝ
+            // $imageURL = config('app.url') . '/uploads/' . $imageName;
 
             return response()->json([
                 'status' => 'success',
                 'image_url' => $imageURL,
-                'db_path' => $dbPath,
                 'message' => 'Image uploaded successfully'
             ]);
         } catch (ValidationException $ve) {
-
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
                 'errors' => $ve->errors()
             ], 422);
         } catch (\Exception $e) {
-
-            Log::error('Image upload failed: ' . $e->getMessage());
-
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to upload image',
@@ -59,32 +59,37 @@ class ImageUploadService
             ], 500);
         }
     }
-
-
+    /**
+     * Upload image to public/uploads/images
+     */
     public function publickUpload(Request $request)
     {
         try {
-            // Validate the incoming request
             $request->validate([
-                'image' => 'required|image|mimes:jpg,jpeg,png|max:2048', // max 2MB
+                'image' => 'required|image|mimes:jpg,jpeg,png|max:2048',
             ]);
 
             $image = $request->file('image');
-            // Remove spaces + special characters
-            $imageName = time() . '_' . preg_replace('/[^A-Za-z0-9\-\_\.]/', '_', $image->getClientOriginalName());
 
+            $imageName = time() . '_' . preg_replace(
+                '/[^A-Za-z0-9\-\_\.]/',
+                '_',
+                $image->getClientOriginalName()
+            );
 
-            // Ensure uploads/images folder exists
-            $uploadPath = public_path('uploads/images');
+            // ✅ වෙනස්කම්: public_path() වෙනුවට base_path() භාවිතා කරන්න
+            $uploadPath = base_path('uploads'); // මෙය project root එකේ uploads ෆෝල්ඩරයට යොමු කරයි
+
             if (!file_exists($uploadPath)) {
-                mkdir($uploadPath, 0755, true); // recursive creation
+                mkdir($uploadPath, 0755, true);
             }
 
-            // Move image to uploads/images
             $image->move($uploadPath, $imageName);
 
-            // Full URL of the uploaded image
-            $imageURL = config('constants.image_url') . $imageName;
+            // ✅ වෙනස්කම්: 'public/' නොමැතිව URL එක ජනනය කරන්න
+            $imageURL = config('services.image.base_url') . $imageName;
+            // හෝ
+            // $imageURL = config('app.url') . '/uploads/' . $imageName;
 
             return response()->json([
                 'status' => 'success',
@@ -92,16 +97,12 @@ class ImageUploadService
                 'message' => 'Image uploaded successfully'
             ]);
         } catch (ValidationException $ve) {
-            // Validation errors
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
                 'errors' => $ve->errors()
             ], 422);
         } catch (\Exception $e) {
-            // Log the error for debugging
-            Log::error('Image upload failed: ' . $e->getMessage());
-
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to upload image',

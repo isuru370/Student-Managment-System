@@ -9,15 +9,27 @@ class ClassHalls extends Model
 {
     use HasFactory;
 
-    // Table name
     protected $table = 'class_halls';
 
-    // Fillable columns
     protected $fillable = [
         'hall_id',
         'hall_name',
         'hall_type',
         'hall_price',
         'status',
+    ];
+
+    protected $casts = [
+        'id'         => 'integer',
+
+        // Prices
+        'hall_price' => 'float',
+
+        // Status
+        'status'     => 'boolean',
+
+        // Timestamps
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 }

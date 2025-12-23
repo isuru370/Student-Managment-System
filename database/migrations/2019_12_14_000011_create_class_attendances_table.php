@@ -10,21 +10,28 @@ class CreateClassAttendancesTable extends Migration
     public function up()
     {
         Schema::create('class_attendances', function (Blueprint $table) {
-            $table->bigIncrements('id');
+            $table->id();
+
             $table->string('start');
             $table->string('end');
-            $table->string('status');
-            $table->unsignedBigInteger('class_category_has_student_class_id');
+
+            $table->integer('status');
+
+            $table->foreignId('class_category_has_student_class_id')
+                ->constrained('class_category_has_student_class');
+
             $table->string('start_time');
             $table->string('end_time');
             $table->string('day_of_week');
-            $table->boolean('is_ongoing');
-            $table->unsignedBigInteger('class_hall_id');
-            $table->string('date');
-            $table->timestamps();
 
-            $table->foreign('class_category_has_student_class_id')->references('id')->on('class_category_has_student_class');
-            $table->foreign('class_hall_id')->references('id')->on('class_halls');
+            $table->boolean('is_ongoing')->default(false);
+
+            $table->foreignId('class_hall_id')
+                ->constrained('class_halls');
+
+            $table->date('date');
+
+            $table->timestamps();
         });
     }
 

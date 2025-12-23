@@ -10,12 +10,12 @@ class CreateClassHallsTable extends Migration
     public function up()
     {
         Schema::create('class_halls', function (Blueprint $table) {
-            $table->bigIncrements('id');
-            $table->string('hall_id');
+            $table->id();
+            $table->string('hall_id')->unique();
             $table->string('hall_name');
             $table->string('hall_type')->nullable();
-            $table->double('hall_price')->nullable();
-            $table->boolean('status')->nullable();
+            $table->decimal('hall_price', 10, 2)->nullable();
+            $table->boolean('status')->default(true);
             $table->timestamps();
         });
     }

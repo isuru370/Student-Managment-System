@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\BankBranch;
 use Exception;
-use Illuminate\Http\Resources\Json\JsonResource;
 
 class BankBranchService
 {

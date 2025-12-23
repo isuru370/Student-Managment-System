@@ -6,10 +6,6 @@ use App\Models\ClassRoom;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class ClassRoomService
 {
@@ -225,10 +221,6 @@ class ClassRoomService
             ]);
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Failed to deactivate class (active flag):', [
-                'class_id' => $id,
-                'error' => $e->getMessage()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to deactivate class',
@@ -264,10 +256,6 @@ class ClassRoomService
             ]);
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Failed to deactivate class (ongoing flag):', [
-                'class_id' => $id,
-                'error' => $e->getMessage()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to deactivate class',
@@ -303,10 +291,6 @@ class ClassRoomService
             ]);
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Failed to reactivate class (active flag):', [
-                'class_id' => $id,
-                'error' => $e->getMessage()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to reactivate class',
@@ -342,10 +326,6 @@ class ClassRoomService
             ]);
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Failed to reactivate class (ongoing flag):', [
-                'class_id' => $id,
-                'error' => $e->getMessage()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to mark class as ongoing',

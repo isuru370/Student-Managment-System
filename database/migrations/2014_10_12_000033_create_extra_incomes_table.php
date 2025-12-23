@@ -17,6 +17,7 @@ class CreateExtraIncomesTable extends Migration
         });
     }
 
+    
     public function down()
     {
         Schema::dropIfExists('extra_incomes');

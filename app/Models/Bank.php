@@ -9,9 +9,18 @@ class Bank extends Model
 {
     use HasFactory;
 
-    // Specify the correct table name
     protected $table = 'banks';
-    protected $fillable = ['bank_name', 'bank_code'];
+
+    protected $fillable = [
+        'bank_name',
+        'bank_code',
+    ];
+
+    protected $casts = [
+        'id'         => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 
     public function branches()
     {

@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\DB;
+use App\Models\ClassCategoryHasStudentClass;
 use App\Models\StudentStudentStudentClass;
 
 class StudentClassSeparateService
@@ -26,17 +26,24 @@ class StudentClassSeparateService
         }
 
         // 3) Fetch all categories for these classes at once
-        $allCategories = DB::table('class_category_has_student_class as cc')
-            ->join('class_categories as c', 'cc.class_category_id', '=', 'c.id')
-            ->select(
-                'cc.id as class_category_has_student_class_id',
-                'cc.fees',
-                'cc.student_classes_id',
-                'c.id as category_id',
-                'c.category_name'
-            )
-            ->whereIn('cc.student_classes_id', $studentClassIds)
+        $allCategories = ClassCategoryHasStudentClass::with(['classCategory', 'studentClass'])
+            ->select([
+                'id',
+                'fees',
+                'student_classes_id',
+                'class_category_id'
+            ])
+            ->whereIn('student_classes_id', $studentClassIds)
             ->get()
+            ->map(function ($item) {
+                return [
+                    'class_category_has_student_class_id' => $item->id,
+                    'fees' => $item->fees,
+                    'student_classes_id' => $item->student_classes_id,
+                    'category_id' => $item->class_category_id,
+                    'category_name' => $item->classCategory->category_name ?? null
+                ];
+            })
             ->groupBy('student_classes_id');
 
         $result = collect();

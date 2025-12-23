@@ -22,6 +22,17 @@ class TeacherPayment extends Model
         'teacher_id'
     ];
 
+    // Type casting for JSON responses
+    protected $casts = [
+        'payment'    => 'double',
+        'status'     => 'boolean',
+        'user_id'    => 'integer',
+        'teacher_id' => 'integer',
+        'date'       => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
     public function reasonDetail()
     {
         return $this->belongsTo(PaymentReason::class, 'reason_code', 'reason_code'); // foreignKey, ownerKey

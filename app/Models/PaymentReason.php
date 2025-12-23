@@ -15,4 +15,11 @@ class PaymentReason extends Model
         'reason_code',
         'reason',
     ];
+
+    // Type casting for JSON responses
+    protected $casts = [
+        'id'         => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 }

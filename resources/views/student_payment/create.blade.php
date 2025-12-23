@@ -579,13 +579,13 @@
                     </div>
                     <div class="col-md-5">
                         <p class="mb-0"><strong>Status:</strong> 
-                            <span class="badge ${student.student_status === '1' ? 'bg-success' : 'bg-danger'}">
-                                ${student.student_status === '1' ? 'Active' : 'Inactive'}
+                            <span class="badge ${student.student_status == 1 ? 'bg-success' : 'bg-danger'}">
+                                ${student.student_status == 1 ? 'Active' : 'Inactive'}
                             </span>
                         </p>
                         <p class="mb-0"><strong>Free Card:</strong> 
-                            <span class="badge ${studentData.is_free_card === 1 ? 'bg-success' : 'bg-secondary'}">
-                                ${studentData.is_free_card === 1 ? 'Yes' : 'No'}
+                            <span class="badge ${studentData.is_free_card == 1 ? 'bg-success' : 'bg-secondary'}">
+                                ${studentData.is_free_card == 1 ? 'Yes' : 'No'}
                             </span>
                         </p>
                     </div>
@@ -599,7 +599,7 @@
                 let html = '<div class="row g-4">';
 
                 classesData.forEach(classData => {
-                    const isFreeCard = classData.is_free_card === 1;
+                    const isFreeCard = classData.is_free_card == 1;
                     const classInactive = classData.status == 0;
                     const classFee = classData.classCategoryHasStudentClass?.class_fee ||
                         classData.class_category_has_student_class?.fees || '0';

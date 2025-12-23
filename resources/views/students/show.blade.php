@@ -285,7 +285,7 @@
             document.getElementById('studentName').textContent = `${student.fname} ${student.lname}`;
             document.getElementById('studentId').textContent = student.custom_id;
             document.getElementById('studentGrade').textContent = `Grade ${student.grade?.grade_name || 'N/A'}`;
-            document.getElementById('studentStatus').textContent = student.is_active === '1' ? 'Active' : 'Inactive';
+            document.getElementById('studentStatus').textContent = student.is_active == 1 ? 'Active' : 'Inactive';
             
             document.getElementById('fname').textContent = student.fname || 'N/A';
             document.getElementById('lname').textContent = student.lname || 'N/A';
@@ -312,7 +312,7 @@
             document.getElementById('admissionStatus').textContent = student.admission == 1 ? 'Yes' : 'No';
             document.getElementById('freeCardStatus').textContent = student.is_freecard == 1 ? 'Yes' : 'No';
             document.getElementById('createdAt').textContent = new Date(student.created_at).toLocaleDateString();
-            document.getElementById('activeStatus').textContent = student.is_active === '1' ? 'Active' : 'Inactive';
+            document.getElementById('activeStatus').textContent = student.is_active == 1 ? 'Active' : 'Inactive';
 
             studentDetails.style.display = 'block';
         }

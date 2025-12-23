@@ -655,7 +655,7 @@
             const studentCode = student.custom_id || student.code || 'N/A';
 
             // Check student status from API response (is_active field)
-            const isStudentActive = student.is_active === "1" || student.is_active === 1 || student.status === 1;
+            const isStudentActive = student.is_active == 1 ;
 
             elements.studentInfo.innerHTML = `
                             <div class="row align-items-center">

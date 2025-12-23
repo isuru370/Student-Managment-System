@@ -36,6 +36,16 @@ class Student extends Model
         'student_school'
     ];
 
+    // Type casting for JSON responses
+    protected $casts = [
+        'grade_id'    => 'integer',
+        'admission'   => 'boolean',
+        'is_freecard' => 'boolean',
+        'is_active'   => 'boolean',
+        'created_at'  => 'datetime',
+        'updated_at'  => 'datetime',
+    ];
+
     // Relationship: student belongs to grade
     public function grade()
     {

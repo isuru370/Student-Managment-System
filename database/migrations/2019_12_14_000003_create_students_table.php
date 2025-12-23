@@ -29,7 +29,8 @@ class CreateStudentsTable extends Migration
             $table->string('guardian_mobile');
             $table->string('is_active');
             $table->mediumText('img_url');
-            $table->unsignedBigInteger('grade_id');
+            $table->unsignedBigInteger('grade_id')
+                ->constrained('grades');
             $table->boolean('admission');
             $table->boolean('is_freecard');
             $table->string('student_school')->nullable();

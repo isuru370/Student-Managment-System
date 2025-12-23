@@ -13,7 +13,8 @@ class CreateQuickPhotoTable extends Migration
             $table->bigIncrements('id');
             $table->string('custom_id');
             $table->string('quick_img');
-            $table->unsignedBigInteger('grade_id');
+            $table->foreignId('grade_id')
+                ->constrained('grades');
             $table->boolean('is_active');
             $table->timestamps();
         });

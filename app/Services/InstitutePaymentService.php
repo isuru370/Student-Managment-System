@@ -235,8 +235,8 @@ class InstitutePaymentService
             $totalExpenses = $expenses->sum('payment');
 
             // Calculate net total
-            $grossIncome = round($totalIncomeFromClasses + $extraIncome, 2);
-            $netTotal = round($admissionPayment + ($grossIncome - $totalExpenses), 2);
+            $grossIncome = round($totalIncomeFromClasses + $extraIncome + $admissionPayment, 2);
+            $netTotal = round($grossIncome - $totalExpenses, 2);
 
             // Format expense details - FIXED: Use Carbon::parse() to convert string to Carbon
             $expenseDetails = $expenses->map(function ($expense) {

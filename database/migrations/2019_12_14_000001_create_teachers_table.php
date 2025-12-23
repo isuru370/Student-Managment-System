@@ -21,10 +21,10 @@ class CreateTeachersTable extends Migration
             $table->string('gender');
             $table->string('address1');
             $table->string('address2');
-            $table->string('address3');
+            $table->string('address3')->nullable();
             $table->boolean('is_active');
-            $table->longText('graduation_details');
-            $table->longText('experience');
+            $table->longText('graduation_details')->nullable();
+            $table->longText('experience')->nullable();
             $table->double('precentage');
             $table->string('account_number')->nullable();
             $table->bigInteger('bank_branch_id')->nullable();

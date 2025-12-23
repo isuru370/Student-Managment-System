@@ -15,4 +15,11 @@ class ExtraIncomes extends Model
         'reason',
         'amount',
     ];
+
+    // Type casting for JSON responses
+    protected $casts = [
+        'amount'     => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 }

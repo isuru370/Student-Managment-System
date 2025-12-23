@@ -15,7 +15,8 @@ class CreateExamTable extends Migration
             $table->string('date');
             $table->string('start_time')->nullable();
             $table->string('end_time')->nullable();
-            $table->unsignedBigInteger('student_classes_id');
+            $table->foreignId('student_classes_id')
+                ->constrained('student_classes');
             $table->boolean('is_canceled');
             $table->timestamps();
 

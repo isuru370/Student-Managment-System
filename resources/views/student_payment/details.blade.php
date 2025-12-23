@@ -101,8 +101,8 @@
                         <label for="statusFilter" class="form-label">Payment Status</label>
                         <select class="form-select" id="statusFilter">
                             <option value="all">All Status</option>
-                            <option value="1">Active</option>
-                            <option value="0">Deleted</option>
+                            <option value="true">Active (True)</option>
+                            <option value="false">Deleted (False)</option>
                         </select>
                     </div>
                     <div class="col-md-4">
@@ -213,6 +213,58 @@
         });
     });
 
+    // Helper function to convert values to boolean
+    function getBooleanValue(value) {
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'number') return value === 1;
+        if (typeof value === 'string') {
+            if (value.toLowerCase() === 'true') return true;
+            if (value.toLowerCase() === 'false') return false;
+            return value === '1';
+        }
+        return false;
+    }
+
+    // Format date to Sri Lankan format (DD-MM-YYYY)
+    function formatDateToSriLankan(dateString) {
+        if (!dateString) return 'N/A';
+        
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return dateString;
+            
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            
+            return `${day}-${month}-${year}`;
+        } catch (error) {
+            console.error('Error formatting date:', error, dateString);
+            return dateString;
+        }
+    }
+
+    // Format time to Sri Lankan 12-hour format
+    function formatTimeToSriLankan(dateString) {
+        if (!dateString) return '';
+        
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '';
+            
+            let hours = date.getHours();
+            let minutes = date.getMinutes().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // Convert 0 to 12
+            
+            return `${hours}:${minutes} ${ampm}`;
+        } catch (error) {
+            console.error('Error formatting time:', error);
+            return '';
+        }
+    }
+
     function fetchStudentInfo(studentId) {
         fetch(`/api/student-classes/student/${studentId}/filter`)
             .then(response => response.json())
@@ -234,6 +286,10 @@
 
     function displayStudentInfo(studentData) {
         const student = studentData.student;
+        const studentStatus = getBooleanValue(student.student_status);
+        const statusText = studentStatus ? 'Active' : 'Inactive';
+        const statusClass = studentStatus ? 'bg-success' : 'bg-danger';
+        
         document.getElementById('studentInfo').innerHTML = `
             <div class="col-md-2 text-center">
                 <img src="${student.img_url}" alt="Student Photo" 
@@ -250,8 +306,8 @@
                 <p class="mb-1"><strong>Subject:</strong> ${studentData.student_class.subject.subject_name}</p>
                 <p class="mb-1"><strong>Teacher:</strong> ${studentData.student_class.teacher.first_name}</p>
                 <p class="mb-0"><strong>Status:</strong> 
-                    <span class="badge ${student.student_status === '1' ? 'bg-success' : 'bg-danger'}">
-                        ${student.student_status === '1' ? 'Active' : 'Inactive'}
+                    <span class="badge ${statusClass}">
+                        ${statusText}
                     </span>
                 </p>
             </div>
@@ -273,19 +329,14 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    // Ensure each payment has created_at date
-                    data.data.monthly_view.forEach(month => {
-                        month.payments.forEach(payment => {
-                            if (!payment.created_at) {
-                                payment.created_at = payment.payment_date;
-                            }
-                        });
-                    });
-
-                    allPaymentData = data.data.monthly_view;
+                    // Process payment data to ensure proper boolean values and dates
+                    allPaymentData = processPaymentData(data.data.monthly_view);
                     filteredPaymentData = [...allPaymentData];
                     displayPaymentSummary(data.data.summary);
                     displayMonthlyPayments(allPaymentData);
+                    
+                    // Populate month filter with unique months
+                    populateMonthFilter(allPaymentData);
                 } else {
                     throw new Error(data.message);
                 }
@@ -302,10 +353,46 @@
             });
     }
 
+    function processPaymentData(monthlyData) {
+        return monthlyData.map(month => ({
+            ...month,
+            year_month: month.year_month,
+            month: month.month,
+            total_amount: month.total_amount,
+            payment_count: month.payment_count,
+            payments: month.payments.map(payment => ({
+                ...payment,
+                // 🔥 CRITICAL: Convert status to boolean
+                status: getBooleanValue(payment.status),
+                status_text: getBooleanValue(payment.status) ? 'Active' : 'Deleted',
+                created_at: payment.created_at || payment.payment_date,
+                display_date: formatDateTimeToSriLankan(payment.payment_date)
+            }))
+        }));
+    }
+
+    function formatDateTimeToSriLankan(dateString) {
+        const datePart = formatDateToSriLankan(dateString);
+        const timePart = formatTimeToSriLankan(dateString);
+        
+        return timePart ? `${datePart} ${timePart}` : datePart;
+    }
+
     function displayPaymentSummary(summary) {
-        document.getElementById('totalPaid').textContent = `LKR ${summary.total_paid.toLocaleString()}`;
+        document.getElementById('totalPaid').textContent = `LKR ${summary.total_paid.toLocaleString('en-LK')}`;
         document.getElementById('totalPayments').textContent = summary.total_payments;
         document.getElementById('activePayments').textContent = summary.active_payments || '0';
+    }
+
+    function populateMonthFilter(monthlyData) {
+        const monthFilter = document.getElementById('monthFilter');
+        let options = '<option value="all">All Months</option>';
+        
+        monthlyData.forEach(month => {
+            options += `<option value="${month.year_month}">${month.month}</option>`;
+        });
+        
+        monthFilter.innerHTML = options;
     }
 
     function applyFilters() {
@@ -319,8 +406,12 @@
             }
 
             const filteredPayments = month.payments.filter(payment => {
-                if (statusFilter !== 'all' && payment.status.toString() !== statusFilter) {
-                    return false;
+                // 🔥 FIXED: Handle status as boolean comparison
+                if (statusFilter !== 'all') {
+                    const filterBoolean = statusFilter === 'true';
+                    if (payment.status !== filterBoolean) {
+                        return false;
+                    }
                 }
 
                 if (searchFilter && !payment.payment_for.toLowerCase().includes(searchFilter)) {
@@ -408,7 +499,7 @@
                         </h5>
                         <div class="text-end">
                             <span class="badge bg-primary fs-6">
-                                LKR ${month.total_amount.toLocaleString()}
+                                LKR ${month.total_amount.toLocaleString('en-LK')}
                             </span>
                             <small class="text-muted d-block">${month.payment_count} payment(s)</small>
                         </div>
@@ -418,14 +509,16 @@
             `;
 
             paymentsToShow.forEach(payment => {
-                const statusClass = payment.status === 1 ? 'bg-success' : 'bg-danger';
-                const statusText = payment.status_text;
+                // 🔥 FIXED: Use boolean status directly
+                const statusClass = payment.status === true ? 'bg-success' : 'bg-danger';
+                const statusText = payment.status === true ? 'Active' : 'Deleted';
                 
                 const canEditDelete = payment.can_edit_delete !== undefined 
                     ? payment.can_edit_delete 
                     : isPaymentWithin7Days(payment.created_at);
                 
-                const actionButtons = payment.status === 1 
+                // 🔥 FIXED: Only show edit/delete for active payments
+                const actionButtons = payment.status === true 
                     ? canEditDelete
                         ? `
                             <div class="btn-group btn-group-sm">
@@ -448,15 +541,15 @@
                         <span class="badge bg-secondary">${statusText}</span>
                     `;
 
-                const timeIndicator = canEditDelete && payment.status === 1
+                const timeIndicator = canEditDelete && payment.status === true
                     ? '<span class="badge bg-info me-1"><i class="fas fa-clock me-1"></i>Editable</span>'
-                    : payment.status === 1 
+                    : payment.status === true 
                         ? '<span class="badge bg-secondary me-1"><i class="fas fa-lock me-1"></i>Locked</span>'
                         : '';
 
                 html += `
                     <div class="col-md-6 col-lg-4">
-                        <div class="card payment-card h-100 ${payment.status === 0 ? 'opacity-75' : ''}">
+                        <div class="card payment-card h-100 ${payment.status === false ? 'opacity-75' : ''}">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <h6 class="card-title mb-0">${payment.payment_for}</h6>
@@ -471,13 +564,13 @@
                                 </p>
                                 <p class="card-text mb-2">
                                     <i class="fas fa-money-bill me-2 text-muted"></i>
-                                    <strong class="text-success">LKR ${payment.amount.toLocaleString()}</strong>
+                                    <strong class="text-success">LKR ${payment.amount.toLocaleString('en-LK')}</strong>
                                 </p>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <small class="text-muted">ID: ${payment.id}</small>
                                     ${actionButtons}
                                 </div>
-                                ${!canEditDelete && payment.status === 1 ? `
+                                ${!canEditDelete && payment.status === true ? `
                                     <div class="mt-2">
                                         <small class="text-muted">
                                             <i class="fas fa-info-circle me-1"></i>

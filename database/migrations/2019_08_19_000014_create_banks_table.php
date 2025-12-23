@@ -17,6 +17,7 @@ class CreateBanksTable extends Migration
         });
     }
 
+    
     public function down()
     {
         Schema::dropIfExists('banks');

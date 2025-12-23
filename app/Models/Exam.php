@@ -20,7 +20,15 @@ class Exam extends Model
         "is_canceled"
     ];
 
-    
+    // Type casting for JSON responses
+    protected $casts = [
+        'student_classes_id' => 'integer',
+        'is_canceled'        => 'boolean',
+        // Timestamps
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
     public function studentClasses()
     {
         return $this->belongsTo(ClassRoom::class, 'student_classes_id');

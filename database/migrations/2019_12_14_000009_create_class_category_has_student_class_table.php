@@ -10,14 +10,17 @@ class CreateClassCategoryHasStudentClassTable extends Migration
     public function up()
     {
         Schema::create('class_category_has_student_class', function (Blueprint $table) {
-            $table->bigIncrements('id');
-            $table->double('fees');
-            $table->unsignedBigInteger('student_classes_id');
-            $table->unsignedBigInteger('class_category_id');
-            $table->timestamps();
+            $table->id();
 
-            $table->foreign('student_classes_id')->references('id')->on('student_classes');
-            $table->foreign('class_category_id')->references('id')->on('class_categories');
+            $table->decimal('fees', 10, 2);
+
+            $table->foreignId('student_classes_id')
+                ->constrained('student_classes');
+
+            $table->foreignId('class_category_id')
+                ->constrained('class_categories');
+
+            $table->timestamps();
         });
     }
 

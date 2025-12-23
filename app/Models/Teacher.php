@@ -11,6 +11,7 @@ class Teacher extends Model
 
     // Specify the correct table name
     protected $table = 'teachers';
+
     protected $fillable = [
         'custom_id',
         'fname',
@@ -26,9 +27,18 @@ class Teacher extends Model
         'is_active',
         'graduation_details',
         'experience',
-        'precentage',
+        'precentage', // column name unchanged
         'account_number',
         'bank_branch_id',
+    ];
+
+    // Type casting for JSON responses
+    protected $casts = [
+        'is_active'     => 'boolean',
+        'bank_branch_id'=> 'integer',
+        'precentage'    => 'double',
+        'created_at'    => 'datetime',
+        'updated_at'    => 'datetime',
     ];
 
     public function bankBranch()

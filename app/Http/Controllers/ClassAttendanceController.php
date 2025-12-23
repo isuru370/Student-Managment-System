@@ -44,6 +44,11 @@ class ClassAttendanceController extends Controller
         return $this->classAttendanceService->storeBulk($request);
     }
 
+    public  function bulkDelete(Request $request)
+    {
+        return $this->classAttendanceService->bulkDelete($request);
+    }
+
     public  function store(Request $request)
     {
         return $this->classAttendanceService->store($request);

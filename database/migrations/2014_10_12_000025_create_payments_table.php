@@ -15,8 +15,10 @@ class CreatePaymentsTable extends Migration
             $table->boolean('status');
             $table->string('amount');
             $table->string('payment_for');
-            $table->unsignedBigInteger('student_id');
-            $table->unsignedBigInteger('student_student_student_classes_id');
+            $table->foreignId('student_id')
+                ->constrained('students');
+            $table->foreign('student_student_student_classes_id')
+                ->constrained('student_student_student_classes');
             $table->timestamps();
         });
     }

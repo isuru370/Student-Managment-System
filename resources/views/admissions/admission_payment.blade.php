@@ -57,6 +57,24 @@
                         </div>
                     </div>
 
+                    <!-- Date Range Filter -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label">Date Range From</label>
+                            <input type="date" class="form-control" id="dateRangeFrom">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Date Range To</label>
+                            <input type="date" class="form-control" id="dateRangeTo">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <button class="btn btn-outline-primary w-100" onclick="applyDateRangeFilter()">
+                                <i class="fas fa-calendar-alt me-2"></i>Apply Date Range
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Bulk Actions Section -->
                     <div class="row mb-4" id="bulkActionsSection" style="display: none;">
                         <div class="col-12">
@@ -126,6 +144,7 @@
                             <div>
                                 <span class="text-muted" id="tableInfo">Showing 0 students</span>
                                 <span class="badge bg-info ms-2" id="admissionStats"></span>
+                                <span class="badge bg-secondary ms-2" id="dateRangeInfo"></span>
                             </div>
                             <div class="d-flex align-items-center">
                                 <span class="me-2 text-muted">Show:</span>
@@ -201,6 +220,14 @@
                             <strong>Name:</strong> <span id="modalStudentName" class="fw-bold"></span>
                         </div>
                     </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Grade:</strong> <span id="modalStudentGrade" class="text-muted"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Mobile:</strong> <span id="modalStudentMobile" class="text-muted"></span>
+                        </div>
+                    </div>
 
                     <div id="admissionsLoading" class="text-center py-3">
                         <div class="spinner-border spinner-border-sm" role="status">
@@ -218,6 +245,7 @@
                                         <th>Admission Type</th>
                                         <th>Amount</th>
                                         <th>Payment Date</th>
+                                        <th>Time</th>
                                     </tr>
                                 </thead>
                                 <tbody id="admissionsTableBody">
@@ -268,6 +296,14 @@
         .admission-not-paid {
             background-color: #fff3cd;
         }
+
+        .sl-date {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .sl-time {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
     </style>
 @endpush
 
@@ -284,10 +320,25 @@
         let pageSize = 25;
         let totalPages = 1;
 
+        // Date range variables
+        let dateRangeFrom = null;
+        let dateRangeTo = null;
+
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function () {
             loadAllStudents();
             loadAdmissionTypes();
+            
+            // Set default date range to current month
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            document.getElementById('dateRangeFrom').valueAsDate = firstDay;
+            document.getElementById('dateRangeTo').valueAsDate = lastDay;
+            
+            dateRangeFrom = firstDay.toISOString().split('T')[0];
+            dateRangeTo = lastDay.toISOString().split('T')[0];
         });
 
         async function loadAllStudents() {
@@ -300,8 +351,15 @@
                 const result = await response.json();
 
                 if (result.status === 'success' && result.data) {
-                    // 🔥 CONVERT STRING VALUES TO NUMERIC
-                    allStudents = convertStudentDataToNumeric(result.data.data || result.data);
+                    // Convert student data with proper boolean handling
+                    allStudents = convertStudentData(result.data.data || result.data);
+                    
+                    // Ensure all students have proper created_at
+                    allStudents = allStudents.map(student => ({
+                        ...student,
+                        created_at: student.created_at || student.created_date || new Date().toISOString()
+                    }));
+                    
                     applyFilters();
                 } else {
                     throw new Error(result.message || 'No students found');
@@ -312,52 +370,91 @@
             }
         }
 
-        // 🔥 NEW FUNCTION: Convert student data string values to numeric
-        function convertStudentDataToNumeric(students) {
-            if (!Array.isArray(students)) return [];
-
-            return students.map(student => {
-                const converted = { ...student };
-
-                // Convert admission status to integer
-                if (converted.admission !== undefined) {
-                    if (typeof converted.admission === 'string') {
-                        converted.admission = converted.admission === '1' ? 1 : 0;
-                    } else if (typeof converted.admission === 'number') {
-                        converted.admission = converted.admission === 1 ? 1 : 0;
-                    } else {
-                        converted.admission = 0;
-                    }
-                } else {
-                    converted.admission = 0;
-                }
-
-                // Convert other numeric fields if they exist
-                if (converted.id !== undefined) {
-                    converted.id = parseInt(converted.id) || 0;
-                }
-
-                if (converted.custom_id && typeof converted.custom_id === 'string') {
-                    // Keep custom_id as string but ensure it's not numeric
-                }
-
-                if (converted.grade && typeof converted.grade === 'object') {
-                    if (converted.grade.id !== undefined) {
-                        converted.grade.id = parseInt(converted.grade.id) || 0;
-                    }
-                }
-
-                return converted;
-            });
+        // ================= UTILITY FUNCTIONS FOR SRI LANKAN FORMAT =================
+        // Format date to Sri Lankan format (DD-MM-YYYY)
+        function formatDateToSriLankan(dateString) {
+            if (!dateString) return 'N/A';
+            
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return dateString;
+                
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const year = date.getFullYear();
+                
+                return `${day}-${month}-${year}`;
+            } catch (error) {
+                console.error('Error formatting date:', error, dateString);
+                return dateString;
+            }
         }
 
+        // Format time to Sri Lankan 12-hour format
+        function formatTimeToSriLankan(dateString) {
+            if (!dateString) return '';
+            
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return '';
+                
+                let hours = date.getHours();
+                let minutes = date.getMinutes().toString().padStart(2, '0');
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12; // Convert 0 to 12
+                
+                return `${hours}:${minutes} ${ampm}`;
+            } catch (error) {
+                console.error('Error formatting time:', error);
+                return '';
+            }
+        }
+
+        // Format date and time to Sri Lankan format
+        function formatDateTimeToSriLankan(dateString) {
+            const datePart = formatDateToSriLankan(dateString);
+            const timePart = formatTimeToSriLankan(dateString);
+            
+            return timePart ? `${datePart} ${timePart}` : datePart;
+        }
+
+        // Convert student data with proper boolean handling for admission status
+        function convertStudentData(students) {
+            return students.map(student => ({
+                ...student,
+                id: parseInt(student.id) || student.id,
+                // 🔥 CRITICAL FIX: Handle boolean admission status correctly
+                admission: getBooleanValue(student.admission),
+                custom_id: student.custom_id || student.student_id || 'N/A',
+                fname: student.fname || student.first_name || '',
+                lname: student.lname || student.last_name || '',
+                mobile: student.mobile || student.phone || student.telephone || 'N/A',
+                created_at: student.created_at || student.created_date || new Date().toISOString(),
+                grade: student.grade || student.grade_info || { grade_name: 'N/A' }
+            }));
+        }
+
+        // 🔥 FUNCTION TO CONVERT ANY VALUE TO BOOLEAN
+        function getBooleanValue(value) {
+            if (typeof value === 'boolean') return value;
+            if (typeof value === 'number') return value === 1;
+            if (typeof value === 'string') {
+                if (value.toLowerCase() === 'true') return true;
+                if (value.toLowerCase() === 'false') return false;
+                return value === '1';
+            }
+            return false;
+        }
+
+        // ================= FILTER FUNCTIONS =================
         function applyFilters() {
             const filterDate = document.getElementById('filterDate').value;
             const admissionStatus = document.getElementById('admissionStatusFilter').value;
 
             let filtered = [...allStudents];
 
-            // Apply date filter
+            // Apply date filter (single date)
             if (filterDate) {
                 filtered = filtered.filter(student => {
                     const studentDate = new Date(student.created_at).toISOString().split('T')[0];
@@ -365,16 +462,29 @@
                 });
             }
 
-            // 🔥 FIXED: Admission status filter with numeric comparison
+            // Apply date range filter
+            if (dateRangeFrom && dateRangeTo) {
+                filtered = filtered.filter(student => {
+                    const studentDate = new Date(student.created_at).toISOString().split('T')[0];
+                    return studentDate >= dateRangeFrom && studentDate <= dateRangeTo;
+                });
+                
+                // Update date range info badge
+                const fromFormatted = formatDateToSriLankan(dateRangeFrom);
+                const toFormatted = formatDateToSriLankan(dateRangeTo);
+                document.getElementById('dateRangeInfo').textContent = `${fromFormatted} to ${toFormatted}`;
+            } else {
+                document.getElementById('dateRangeInfo').textContent = '';
+            }
+
+            // Apply admission status filter - USING BOOLEAN COMPARISON
             if (admissionStatus === 'paid') {
                 filtered = filtered.filter(student => {
-                    const admissionStatus = convertToNumber(student.admission);
-                    return admissionStatus === 1;
+                    return student.admission === true;
                 });
             } else if (admissionStatus === 'not_paid') {
                 filtered = filtered.filter(student => {
-                    const admissionStatus = convertToNumber(student.admission);
-                    return admissionStatus === 0;
+                    return student.admission === false;
                 });
             }
 
@@ -388,29 +498,36 @@
             }
         }
 
-        // 🔥 NEW HELPER: Convert any value to number (safe)
-        function convertToNumber(value) {
-            if (value === null || value === undefined) return 0;
-            if (typeof value === 'number') return value;
-            if (typeof value === 'string') {
-                const cleanValue = value.toString().trim();
-                if (cleanValue === '1' || cleanValue === 'true' || cleanValue === 'yes') return 1;
-                if (cleanValue === '0' || cleanValue === 'false' || cleanValue === 'no') return 0;
-                return parseInt(cleanValue) || 0;
+        // Apply date range filter
+        function applyDateRangeFilter() {
+            dateRangeFrom = document.getElementById('dateRangeFrom').value;
+            dateRangeTo = document.getElementById('dateRangeTo').value;
+            
+            if (dateRangeFrom && dateRangeTo && dateRangeFrom > dateRangeTo) {
+                showAlert('Start date must be before end date', 'warning');
+                return;
             }
-            return 0;
+            
+            applyFilters();
         }
 
-        // ================= CLEAR FILTERS =================
+        // Clear all filters
         function clearFilters() {
             document.getElementById('filterDate').value = '';
             document.getElementById('admissionStatusFilter').value = 'all';
+            document.getElementById('dateRangeFrom').valueAsDate = null;
+            document.getElementById('dateRangeTo').valueAsDate = null;
+            
+            dateRangeFrom = null;
+            dateRangeTo = null;
+            
             filteredStudents = [...allStudents];
             currentPage = 1;
             displayStudents();
             showContentState();
         }
 
+        // ================= ADMISSION TYPES =================
         async function loadAdmissionTypes() {
             try {
                 const response = await fetch('/api/admissions/dropdown');
@@ -426,11 +543,11 @@
                     typesArray = result.data;
                 }
 
-                // 🔥 CONVERT ADMISSION TYPE AMOUNTS TO NUMERIC
+                // Convert admission type amounts to numeric
                 admissionTypes = typesArray.map(type => ({
                     ...type,
-                    id: convertToNumber(type.id),
-                    amount: convertToNumber(type.amount)
+                    id: type.id,
+                    amount: parseFloat(type.amount) || 0
                 }));
 
                 populateAdmissionTypesDropdown();
@@ -445,8 +562,7 @@
             let options = '<option value="">Select Admission Type</option>';
 
             admissionTypes.forEach(type => {
-                // 🔥 Use numeric amount
-                options += `<option value="${type.id}" data-amount="${type.amount}">${type.name} - Rs. ${type.amount}</option>`;
+                options += `<option value="${type.id}" data-amount="${type.amount}">${type.name} - Rs. ${type.amount.toLocaleString('en-LK')}</option>`;
             });
 
             dropdown.innerHTML = options;
@@ -454,31 +570,12 @@
             dropdown.addEventListener('change', function () {
                 const selectedOption = this.options[this.selectedIndex];
                 const amount = selectedOption.getAttribute('data-amount');
-                document.getElementById('paymentAmount').value = amount ? 'Rs. ' + amount : '';
+                document.getElementById('paymentAmount').value = amount ? 'Rs. ' + parseFloat(amount).toLocaleString('en-LK') : '';
                 updateProcessButton();
             });
         }
 
-        // ================= POPULATE ADMISSION TYPES DROPDOWN =================
-        function populateAdmissionTypesDropdown() {
-            const dropdown = document.getElementById('admissionType');
-            let options = '<option value="">Select Admission Type</option>';
-
-            admissionTypes.forEach(type => {
-                options += `<option value="${type.id}" data-amount="${type.amount}">${type.name} - Rs. ${type.amount}</option>`;
-            });
-
-            dropdown.innerHTML = options;
-
-            // Add event listener for amount update
-            dropdown.addEventListener('change', function () {
-                const selectedOption = this.options[this.selectedIndex];
-                const amount = selectedOption.getAttribute('data-amount');
-                document.getElementById('paymentAmount').value = amount ? 'Rs. ' + amount : '';
-                updateProcessButton();
-            });
-        }
-
+        // ================= DISPLAY STUDENTS =================
         function displayStudents() {
             const tableBody = document.getElementById('studentsTableBody');
             const tableInfo = document.getElementById('tableInfo');
@@ -489,14 +586,9 @@
                 return;
             }
 
-            // 🔥 FIXED: Calculate admission statistics with numeric values
-            const paidCount = filteredStudents.filter(student => {
-                return convertToNumber(student.admission) === 1;
-            }).length;
-
-            const notPaidCount = filteredStudents.filter(student => {
-                return convertToNumber(student.admission) === 0;
-            }).length;
+            // Calculate admission statistics - USING BOOLEAN COMPARISON
+            const paidCount = filteredStudents.filter(student => student.admission === true).length;
+            const notPaidCount = filteredStudents.filter(student => student.admission === false).length;
 
             // Update table info and stats
             const startIndex = (currentPage - 1) * pageSize;
@@ -512,36 +604,38 @@
 
             paginatedStudents.forEach(student => {
                 const isSelected = selectedStudents.includes(student.id);
-                const createdDate = new Date(student.created_at).toLocaleDateString();
+                
+                // Format date to Sri Lankan format
+                const createdDate = formatDateToSriLankan(student.created_at);
 
-                // 🔥 FIXED: Convert admission status to number for display
-                const admissionStatus = convertToNumber(student.admission);
-                const statusText = admissionStatus === 1 ? 'Paid' : 'Not Paid';
-                const statusBadge = admissionStatus === 1 ?
+                // 🔥 ADMISSION STATUS - USING BOOLEAN
+                const admissionStatus = student.admission; // This is boolean true/false
+                const statusText = admissionStatus === true ? 'Paid' : 'Not Paid';
+                const statusBadge = admissionStatus === true ?
                     '<span class="badge bg-success payment-badge"><i class="fas fa-check me-1"></i>Paid</span>' :
                     '<span class="badge bg-danger payment-badge"><i class="fas fa-times me-1"></i>Not Paid</span>';
 
-                const rowClass = admissionStatus === 1 ? 'admission-paid' : 'admission-not-paid';
+                const rowClass = admissionStatus === true ? 'admission-paid' : 'admission-not-paid';
 
                 html += `
-                            <tr class="student-row ${rowClass}">
-                                <td>
-                                    <input type="checkbox" ${isSelected ? 'checked' : ''} 
-                                           onchange="toggleStudentSelection(${student.id}, this)">
-                                </td>
-                                <td>${student.custom_id}</td>
-                                <td>${student.fname} ${student.lname}</td>
-                                <td>${student.grade ? student.grade.grade_name : 'N/A'}</td>
-                                <td>${student.mobile || 'N/A'}</td>
-                                <td>${createdDate}</td>
-                                <td>${statusBadge}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-info" onclick="viewStudentAdmissions(${student.id}, '${student.custom_id}', '${student.fname} ${student.lname}')">
-                                        <i class="fas fa-eye me-1"></i>View Admissions
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
+                    <tr class="student-row ${rowClass}">
+                        <td>
+                            <input type="checkbox" ${isSelected ? 'checked' : ''} 
+                                   onchange="toggleStudentSelection(${student.id}, this)">
+                        </td>
+                        <td>${student.custom_id}</td>
+                        <td>${student.fname} ${student.lname}</td>
+                        <td>${student.grade ? student.grade.grade_name : 'N/A'}</td>
+                        <td>${student.mobile || 'N/A'}</td>
+                        <td class="sl-date">${createdDate}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" onclick="viewStudentAdmissions(${student.id}, '${student.custom_id}', '${student.fname} ${student.lname}')">
+                                <i class="fas fa-eye me-1"></i>View Admissions
+                            </button>
+                        </td>
+                    </tr>
+                `;
             });
 
             tableBody.innerHTML = html;
@@ -562,21 +656,21 @@
 
             // Previous button
             paginationHtml += `
-                                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                                            <a class="page-link" href="#" onclick="changePage(${currentPage - 1})" aria-label="Previous">
-                                                <span aria-hidden="true">&laquo;</span>
-                                            </a>
-                                        </li>
-                                    `;
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1})" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            `;
 
             // Page numbers
             for (let i = 1; i <= totalPages; i++) {
                 if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
                     paginationHtml += `
-                                                <li class="page-item ${i === currentPage ? 'active' : ''}">
-                                                    <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
-                                                </li>
-                                            `;
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                        </li>
+                    `;
                 } else if (i === currentPage - 3 || i === currentPage + 3) {
                     paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
                 }
@@ -584,12 +678,12 @@
 
             // Next button
             paginationHtml += `
-                                        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                                            <a class="page-link" href="#" onclick="changePage(${currentPage + 1})" aria-label="Next">
-                                                <span aria-hidden="true">&raquo;</span>
-                                            </a>
-                                        </li>
-                                    `;
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1})" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            `;
 
             paginationContainer.innerHTML = paginationHtml;
         }
@@ -606,11 +700,17 @@
             displayStudents();
         }
 
+        // ================= VIEW STUDENT ADMISSIONS =================
         async function viewStudentAdmissions(studentId, customId, studentName) {
             currentModalStudentId = studentId;
 
+            // Find the student to get additional details
+            const student = allStudents.find(s => s.id == studentId);
+            
             document.getElementById('modalStudentId').textContent = customId;
             document.getElementById('modalStudentName').textContent = studentName;
+            document.getElementById('modalStudentGrade').textContent = student && student.grade ? student.grade.grade_name : 'N/A';
+            document.getElementById('modalStudentMobile').textContent = student && student.mobile ? student.mobile : 'N/A';
 
             document.getElementById('admissionsLoading').style.display = 'block';
             document.getElementById('admissionsContent').style.display = 'none';
@@ -630,16 +730,18 @@
                     let admissionsHtml = '';
 
                     result.data.forEach(payment => {
-                        const paymentDate = new Date(payment.created_at).toLocaleDateString();
-                        // 🔥 CONVERT PAYMENT AMOUNT TO NUMBER
-                        const amount = convertToNumber(payment.amount);
+                        // Format dates to Sri Lankan format
+                        const paymentDate = formatDateToSriLankan(payment.created_at);
+                        const paymentTime = formatTimeToSriLankan(payment.created_at);
+                        
                         admissionsHtml += `
-                        <tr>
-                            <td>${payment.admission_name}</td>
-                            <td>Rs. ${amount}</td>
-                            <td>${paymentDate}</td>
-                        </tr>
-                    `;
+                            <tr>
+                                <td>${payment.admission_name}</td>
+                                <td>Rs. ${parseFloat(payment.amount).toLocaleString('en-LK')}</td>
+                                <td class="sl-date">${paymentDate}</td>
+                                <td class="sl-time">${paymentTime}</td>
+                            </tr>
+                        `;
                     });
 
                     admissionsBody.innerHTML = admissionsHtml;
@@ -735,6 +837,7 @@
             button.disabled = !(selectedStudents.length > 0 && admissionType);
         }
 
+        // ================= BULK PAYMENT PROCESSING =================
         async function processBulkPayments() {
             const admissionTypeId = document.getElementById('admissionType').value;
             const admissionType = admissionTypes.find(type => type.id == admissionTypeId);
@@ -749,14 +852,23 @@
                 return;
             }
 
-            // 🔥 FIXED: Ensure amount is numeric
-            const amount = convertToNumber(admissionType.amount);
+            const amount = admissionType.amount;
+
+            // Show confirmation dialog
+            const confirmMessage = `Are you sure you want to process admission payments for ${selectedStudents.length} student(s)?\n\n` +
+                                 `Admission Type: ${admissionType.name}\n` +
+                                 `Amount per student: Rs. ${amount.toLocaleString('en-LK')}\n` +
+                                 `Total Amount: Rs. ${(amount * selectedStudents.length).toLocaleString('en-LK')}`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
 
             // Prepare payment data
             const payments = selectedStudents.map(studentId => ({
                 student_id: studentId,
                 admission_id: parseInt(admissionTypeId),
-                amount: amount // 🔥 Now numeric instead of string
+                amount: amount
             }));
 
             const paymentData = {
@@ -829,13 +941,13 @@
             document.getElementById('studentsTableSection').style.display = 'none';
             document.getElementById('noStudentsMessage').style.display = 'block';
             document.getElementById('noStudentsMessage').innerHTML = `
-                                        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                                        <h4 class="text-danger">Error Loading Students</h4>
-                                        <p class="text-muted">${message}</p>
-                                        <button class="btn btn-primary mt-3" onclick="loadAllStudents()">
-                                            <i class="fas fa-redo me-2"></i>Try Again
-                                        </button>
-                                    `;
+                <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                <h4 class="text-danger">Error Loading Students</h4>
+                <p class="text-muted">${message}</p>
+                <button class="btn btn-primary mt-3" onclick="loadAllStudents()">
+                    <i class="fas fa-redo me-2"></i>Try Again
+                </button>
+            `;
         }
 
         function showAlert(message, type) {
@@ -845,9 +957,9 @@
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
             alertDiv.innerHTML = `
-                                        ${message}
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                    `;
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
 
             document.querySelector('.card-body').insertBefore(alertDiv, document.querySelector('.card-body').firstChild);
 

@@ -401,7 +401,7 @@ class StudentService
                 'gender'            => 'required|in:male,female,other',
                 'address1'          => 'required|string|max:255',
                 'address2'          => 'required|string|max:255',
-                'address3'          => 'required|string|max:255',
+                'address3'          => 'nullable|string|max:255',
                 'guardian_fname'    => 'required|string|max:255',
                 'guardian_lname'    => 'required|string|max:255',
                 'guardian_nic'      => 'nullable|string|max:20',

@@ -18,6 +18,7 @@ class CreatePaymentReasonTable extends Migration
             $table->timestamps();
         });
 
+        
         // පෙරනිමි දත්ත ඇතුළත් කිරීම
         DB::table('payment_reason')->insert([
             [

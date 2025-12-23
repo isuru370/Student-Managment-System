@@ -12,7 +12,8 @@ class CreateSystemUsersTable extends Migration
         Schema::create('system_users', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('custom_id');
-            $table->unsignedBigInteger('user_id');
+            $table->foreignId('user_id')
+                ->constrained('users');
             $table->string('fname');
             $table->string('lname');
             $table->string('email');

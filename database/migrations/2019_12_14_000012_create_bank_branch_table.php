@@ -16,6 +16,7 @@ class CreateBankBranchTable extends Migration
             $table->string('branch_code');
             $table->timestamps();
 
+            
             $table->foreign('bank_id')->references('id')->on('banks');
         });
     }

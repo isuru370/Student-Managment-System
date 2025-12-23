@@ -10,6 +10,7 @@ class ClassAttendance extends Model
     use HasFactory;
 
     protected $table = 'class_attendances';
+
     protected $appends = ['classAttendanceId'];
 
     protected $fillable = [
@@ -25,23 +26,38 @@ class ClassAttendance extends Model
         'date'
     ];
 
+    protected $casts = [
+        'id'       => 'integer',
+
+        // Foreign keys
+        'class_category_has_student_class_id' => 'integer',
+        'class_hall_id' => 'integer',
+
+        // Status & flags
+        'status'     => 'integer',
+        'is_ongoing' => 'boolean',
+
+        // Date & time
+        'date'       => 'date',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
     public function getClassAttendanceIdAttribute()
     {
-        return $this->attributes['id'];
+        return $this->id;
     }
 
     public function classCategoryStudentClass()
     {
-        return $this->belongsTo(ClassCategoryHasStudentClass::class, 'class_category_has_student_class_id');
+        return $this->belongsTo(
+            ClassCategoryHasStudentClass::class,
+            'class_category_has_student_class_id'
+        );
     }
 
-    public function hall() // renamed for convenience
+    public function hall()
     {
         return $this->belongsTo(ClassHalls::class, 'class_hall_id');
     }
-
-    protected $casts = [
-        'date' => 'date',
-        'status' => 'integer'
-    ];
 }

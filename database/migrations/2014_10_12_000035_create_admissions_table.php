@@ -10,9 +10,9 @@ class CreateAdmissionsTable extends Migration
     public function up()
     {
         Schema::create('admissions', function (Blueprint $table) {
-            $table->bigIncrements('id');
+            $table->id();
             $table->string('name');
-            $table->double('amount');
+            $table->decimal('amount', 10, 2);
             $table->timestamps();
         });
     }
