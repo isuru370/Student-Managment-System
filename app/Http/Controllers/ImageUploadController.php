@@ -21,6 +21,6 @@ class ImageUploadController extends Controller
     }
     public function publickUpload(Request $request)
     {
-        return $this->imageUploadService->publickUpload($request);
+        return $this->imageUploadService->publicUpload($request);
     }
 }

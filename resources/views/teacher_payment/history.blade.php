@@ -62,22 +62,30 @@
                 </div>
             </div>
         </div>
-
-        <!-- Current Month Warning -->
+        
+        <!-- In your HTML template, update the currentMonthWarning div -->
         <div class="row mb-3 d-none" id="currentMonthWarning">
             <div class="col-md-12">
-                <div class="alert alert-warning alert-dismissible fade show py-2" role="alert">
+                <div class="alert alert-info alert-dismissible fade show py-2" role="alert">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <i class="fas fa-info-circle me-2"></i>
                         <div>
-                            <strong>Current month data is not available</strong>
-                            <p class="mb-0 small">Only previous months' payment history can be viewed. The system will automatically show the previous month's data.</p>
+                            <strong>Viewing Current Month</strong>
+                            <p class="mb-0 small">You can view current month data, but payments can only be made for previous months. The pay button is disabled for the current month.</p>
                         </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             </div>
         </div>
+
+<!-- Also remove or update the "Current Month Not Available" block since it's no longer needed -->
+<div id="currentMonthBlock" class="text-center d-none">
+    <div class="alert alert-info py-2">
+        <h6 class="mb-1"><i class="fas fa-calendar-alt"></i> Current Month Data</h6>
+        <p class="mb-0 small">Viewing current month's collection data. Payment processing available only for previous months.</p>
+    </div>
+</div>
 
         <!-- Teacher Summary Section -->
         <div class="row mb-3">
@@ -431,7 +439,15 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
-        
+        .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.current-month-data {
+    border: 2px dashed #0dcaf0;
+    background-color: rgba(13, 202, 240, 0.05);
+}
         .current-month-warning {
             animation: pulse 2s infinite;
         }
@@ -743,68 +759,50 @@
 
         // Data Fetching with string to number conversion
         async function fetchTeacherData(month, year) {
-            // Validate month and year
-            if (!month || !year) {
-                console.error('Month or year is undefined:', { month, year });
-                const prev = getPreviousMonthYear();
-                month = prev.month;
-                year = prev.year;
-            }
+    // Validate month and year
+    if (!month || !year) {
+        console.error('Month or year is undefined:', { month, year });
+        const prev = getPreviousMonthYear();
+        month = prev.month;
+        year = prev.year;
+    }
 
-            showLoading(true);
-            showTable(false);
-            showCurrentMonthBlock(false);
-            showEmptyState(false);
-            showSalaryTable(false);
-            showSalaryEmptyState(false);
+    showLoading(true);
+    showTable(false);
+    showCurrentMonthBlock(false); // Remove this block entirely
+    showEmptyState(false);
+    showSalaryTable(false);
+    showSalaryEmptyState(false);
 
-            // Check if trying to view current month
-            if (isCurrentMonth(month, year)) {
-                showLoading(false);
-                showCurrentMonthBlock(true);
-                
-                // Auto-select previous month
-                const prev = getPreviousMonthYear();
-                if (monthSelect) monthSelect.value = prev.month;
-                if (yearSelect) yearSelect.value = prev.year;
-                
-                // Update display
-                updateSelectedMonthYear(prev.month, prev.year);
-                
-                // Fetch previous month data
-                await fetchTeacherData(prev.month, prev.year);
-                return;
-            }
-
-            try {
-                const url = `/api/teacher-payments/monthly-income/${teacherId}/${year}-${month}`;
-                console.log('Fetching from:', url);
-                
-                const response = await fetch(url);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                console.log('Raw API Response:', data);
-                
-                if (data.status === 'success') {
-                    // CONVERT STRING VALUES TO NUMBERS
-                    teacherData = convertApiResponseToNumbers(data);
-                    console.log('Converted Teacher Data:', teacherData);
-                    
-                    renderAllSections();
-                } else {
-                    throw new Error(data.message || 'Failed to load data');
-                }
-            } catch (error) {
-                console.error('Error fetching teacher data:', error);
-                showEmptyState(true);
-            } finally {
-                showLoading(false);
-            }
+    try {
+        const url = `/api/teacher-payments/monthly-income/${teacherId}/${year}-${month}`;
+        console.log('Fetching from:', url);
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        const data = await response.json();
+        console.log('Raw API Response:', data);
+        
+        if (data.status === 'success') {
+            // CONVERT STRING VALUES TO NUMBERS
+            teacherData = convertApiResponseToNumbers(data);
+            console.log('Converted Teacher Data:', teacherData);
+            
+            renderAllSections();
+        } else {
+            throw new Error(data.message || 'Failed to load data');
+        }
+    } catch (error) {
+        console.error('Error fetching teacher data:', error);
+        showEmptyState(true);
+    } finally {
+        showLoading(false);
+    }
+}
 
         function renderAllSections() {
             if (!teacherData) return;
@@ -818,7 +816,7 @@
 
         // Render teacher data with safe numeric values
         function renderTeacherData() {
-            if (!teacherData) return;
+           if (!teacherData) return;
 
             // Teacher Information
             if (teacherNameTitle) {
@@ -894,19 +892,32 @@
 
             // Pay Button
             if (payTeacherBtn) {
-                const netPayable = convertStringToNumber(teacherData.net_payable) || 0;
-                const isPaid = teacherData.is_salary_paid || false;
-                
-                if (netPayable > 0 && !isPaid) {
-                    payTeacherBtn.disabled = false;
-                    payTeacherBtn.title = `Pay ${formatCurrency(netPayable)}`;
-                    payTeacherBtn.innerHTML = '<i class="fas fa-money-check-alt me-1"></i> Pay Teacher';
-                } else {
-                    payTeacherBtn.disabled = true;
-                    payTeacherBtn.title = isPaid ? 'Salary already paid' : 'No amount payable';
-                    payTeacherBtn.innerHTML = '<i class="fas fa-money-check-alt me-1"></i> Pay Teacher';
-                }
+        const netPayable = convertStringToNumber(teacherData.net_payable) || 0;
+        const isPaid = teacherData.is_salary_paid || false;
+        const isCurrent = isCurrentMonth(currentMonth, currentYear);
+        
+        if (netPayable > 0 && !isPaid && !isCurrent) {
+            // Only enable if not current month, not paid, and has payable amount
+            payTeacherBtn.disabled = false;
+            payTeacherBtn.title = `Pay ${formatCurrency(netPayable)}`;
+            payTeacherBtn.innerHTML = '<i class="fas fa-money-check-alt me-1"></i> Pay Teacher';
+            payTeacherBtn.classList.remove('d-none');
+        } else {
+            payTeacherBtn.disabled = true;
+            
+            if (isCurrent) {
+                payTeacherBtn.title = 'Current month - payment not available yet';
+                payTeacherBtn.innerHTML = '<i class="fas fa-calendar-times me-1"></i> Current Month';
+                payTeacherBtn.classList.add('d-none'); // Hide the button entirely for current month
+            } else if (isPaid) {
+                payTeacherBtn.title = 'Salary already paid';
+                payTeacherBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Already Paid';
+            } else {
+                payTeacherBtn.title = 'No amount payable';
+                payTeacherBtn.innerHTML = '<i class="fas fa-money-check-alt me-1"></i> Pay Teacher';
             }
+        }
+    }
         }
 
         // Render classes cards with numeric values
@@ -1193,28 +1204,25 @@
         }
 
         function handleMonthYearChange() {
-            const month = monthSelect.value;
-            const year = yearSelect.value;
-            
-            if (!month || !year) {
-                console.error('Month or year is undefined');
-                return;
-            }
-            
-            if (isCurrentMonth(month, year)) {
-                alert('Current month data is not available. Showing previous month instead.');
-                
-                const prev = getPreviousMonthYear();
-                monthSelect.value = prev.month;
-                yearSelect.value = prev.year;
-                
-                updateSelectedMonthYear(prev.month, prev.year);
-                fetchTeacherData(prev.month, prev.year);
-            } else {
-                updateSelectedMonthYear(month, year);
-                fetchTeacherData(month, year);
-            }
-        }
+    const month = monthSelect.value;
+    const year = yearSelect.value;
+    
+    if (!month || !year) {
+        console.error('Month or year is undefined');
+        return;
+    }
+    
+    // Instead of blocking current month, allow viewing but disable payment
+    updateSelectedMonthYear(month, year);
+    fetchTeacherData(month, year);
+    
+    // Show/hide current month warning
+    if (isCurrentMonth(month, year)) {
+        currentMonthWarning.classList.remove('d-none');
+    } else {
+        currentMonthWarning.classList.add('d-none');
+    }
+}
 
         function setupPayTeacherButton() {
             if (!payTeacherBtn) return;

@@ -234,7 +234,7 @@
 @push('scripts')
     <script>
         const classId = {{ $id }};
-        const baseUrl = 'http://127.0.0.1:8000';
+        const baseUrl = '{{ config('app.url') }}';
 
         document.addEventListener('DOMContentLoaded', function() {
             loadClassDetails();

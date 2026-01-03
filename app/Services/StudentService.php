@@ -22,15 +22,45 @@ class StudentService
     public function fetchStudents()
     {
         try {
-            $students = Student::with([
+            $perPage = request()->get('per_page', 15); // Default to 15 items per page
+            $search = request()->get('search', '');
+
+            $studentsQuery = Student::with([
                 'grade' => function ($query) {
                     $query->select('id', 'grade_name');
                 },
-            ])->orderBy('id', 'desc')->get();
+            ]);
+
+            // Add search functionality if search parameter is provided
+            if (!empty($search)) {
+                $studentsQuery->where(function ($query) use ($search) {
+                    $query->where('fname', 'like', "%{$search}%")
+                        ->orWhere('lname', 'like', "%{$search}%")
+                        ->orWhere('custom_id', 'like', "%{$search}%")
+                        ->orWhere('mobile', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhereHas('grade', function ($gradeQuery) use ($search) {
+                            $gradeQuery->where('grade_name', 'like', "%{$search}%");
+                        });
+                });
+            }
+
+            $students = $studentsQuery->orderBy('id', 'desc')->paginate($perPage);
 
             return response()->json([
                 'status' => 'success',
-                'data' => $students
+                'data' => [
+                    'students' => $students->items(),
+                    'pagination' => [
+                        'current_page' => $students->currentPage(),
+                        'last_page' => $students->lastPage(),
+                        'per_page' => $students->perPage(),
+                        'total' => $students->total(),
+                        'from' => $students->firstItem(),
+                        'to' => $students->lastItem(),
+                        'links' => $students->links()->toHtml() ?? [], // For Blade templates
+                    ]
+                ]
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -40,6 +70,8 @@ class StudentService
             ], 500);
         }
     }
+
+
 
     // Optional: Get only active student
     public function fetchActiveStudents()
@@ -613,24 +645,66 @@ class StudentService
                 throw new Exception("Invalid Grade ID.");
             }
 
-            // Determine grade code
-            if (is_numeric($grade->grade_name)) {
-                $gradeCode = str_pad($grade->grade_name, 2, '0', STR_PAD_LEFT);
-            } else {
-                preg_match('/\d{4}/', $grade->grade_name, $matches);
-                $year = $matches ? substr($matches[0], 2) : "00";
+            // Grade code එක grade ID අනුව හෝ grade name අනුව තීරණය කරන්න
+            $gradeCode = '';
+
+            // Grade name වලින් අංකය ගන්න (Grade 9, Grade 10, 2025 A/L)
+            if (preg_match('/\d+/', $grade->grade_name, $matches)) {
+                // Grade 9 -> 09, Grade 10 -> 10
+                $gradeCode = str_pad($matches[0], 2, '0', STR_PAD_LEFT);
+            } elseif (preg_match('/(\d{4})/', $grade->grade_name, $matches)) {
+                // 2025 A/L -> 25
+                $year = substr($matches[0], 2); // පසුව ඉරියව් 2
                 $gradeCode = $year;
+            } else {
+                // අනෙක් අවස්ථාවලට grade ID එක භාවිතා කරන්න
+                $gradeCode = str_pad($gradeId, 2, '0', STR_PAD_LEFT);
             }
 
-            // Count students in this grade
-            $studentCount = Student::where('grade_id', $gradeId)->count() + 1;
+            // මෙම grade එකේ ඇති ළමයින්ගේ ගණන (active හෝ සියල්ල)
+            $studentCount = Student::where('grade_id', $gradeId)->count();
 
-            // Generate the custom ID - RETURN STRING, NOT JSON
-            $customId = "SA" . $gradeCode . str_pad($studentCount, 3, '0', STR_PAD_LEFT);
+            // ඊළඟ අංකය = දැනට ඇති count + 1
+            $nextNumber = $studentCount + 1;
 
-            return $customId; // Just return the string
+            // 3 digits format කරන්න (023, 112, 123 වගේ)
+            $sequenceNumber = str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
 
+            // Custom ID generate කරන්න
+            $customId = "SA" . $gradeCode . $sequenceNumber;
+
+            // ප්‍රථම වරට උත්සාහ කරනකොට අංකය භාවිතා වී ඇත්දැයි පරීක්ෂා කරන්න
+            $counter = 1;
+            $originalCustomId = $customId;
+
+            while (Student::where('custom_id', $customId)->exists()) {
+                // අංකය දැනටමත් තිබේ නම්, ඊළඟ අංකයට යන්න
+                $nextNumber = $studentCount + $counter + 1;
+                $sequenceNumber = str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+                $customId = "SA" . $gradeCode . $sequenceNumber;
+                $counter++;
+
+                // ආරක්ෂිත ලූපයක් සඳහා
+                if ($counter > 100) {
+                    throw new Exception('Unable to generate unique custom ID after 100 attempts');
+                }
+            }
+
+            Log::info('Generated Custom ID', [
+                'grade_id' => $gradeId,
+                'grade_name' => $grade->grade_name,
+                'grade_code' => $gradeCode,
+                'student_count' => $studentCount,
+                'next_number' => $nextNumber,
+                'custom_id' => $customId
+            ]);
+
+            return $customId;
         } catch (Exception $e) {
+            Log::error('Failed to generate custom ID', [
+                'grade_id' => $gradeId,
+                'error' => $e->getMessage()
+            ]);
             throw new Exception('Failed to generate custom ID: ' . $e->getMessage());
         }
     }
@@ -668,7 +742,7 @@ class StudentService
             $studentCount = Student::where('grade_id', $gradeId)->count() + 1;
 
             // Generate the custom ID
-            $customId = "SA" . $gradeCode . str_pad($studentCount, 3, '0', STR_PAD_LEFT);
+            $customId = "CS" . $gradeCode . str_pad($studentCount, 3, '0', STR_PAD_LEFT);
 
             return response()->json([
                 'status' => 'success',

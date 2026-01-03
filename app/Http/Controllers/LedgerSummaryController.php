@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Services\LedgerSummaryService;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class LedgerSummaryController extends Controller
 {
@@ -13,6 +14,20 @@ class LedgerSummaryController extends Controller
     public function __construct(LedgerSummaryService $ledgerService)
     {
         $this->ledgerService = $ledgerService;
+    }
+
+    // TestController.php හි
+    public function testMonth($yearMonth)
+    {
+        $date = Carbon::createFromFormat('Y-m', $yearMonth);
+
+        return response()->json([
+            'input' => $yearMonth,
+            'carbon_date' => $date->format('Y-m-d H:i:s'),
+            'month_name' => $date->format('F Y'),
+            'start_of_month' => $date->copy()->startOfMonth()->format('Y-m-d'),
+            'end_of_month' => $date->copy()->endOfMonth()->format('Y-m-d'),
+        ]);
     }
 
     /**

@@ -120,10 +120,11 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Filter by Status</label>
+                                <!-- In the status filter dropdown -->
                                 <select class="form-select" id="statusFilter">
                                     <option value="">All Status</option>
-                                    <option value="1">Active</option>
-                                    <option value="0">Inactive</option>
+                                    <option value="true">Active</option>
+                                    <option value="false">Inactive</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -307,32 +308,32 @@
 
                 if (classData) {
                     document.getElementById('classInfo').innerHTML = `
-                                                        <div class="row">
-                                                            <div class="col-md-3">
-                                                                <strong>Class Name:</strong><br>
-                                                                <span class="fs-5 fw-bold text-primary">${classData.class_name}</span>
-                                                            </div>
-                                                            <div class="col-md-3">
-                                                                <strong>Teacher:</strong><br>
-                                                                <span class="fs-6">${classData.teacher ? classData.teacher.fname + ' ' + classData.teacher.lname : 'N/A'}</span>
-                                                                <br><small class="text-muted">${classData.teacher ? classData.teacher.custom_id : ''}</small>
-                                                            </div>
-                                                            <div class="col-md-2">
-                                                                <strong>Subject:</strong><br>
-                                                                <span class="badge bg-light text-dark border">${classData.subject ? classData.subject.subject_name : 'N/A'}</span>
-                                                            </div>
-                                                            <div class="col-md-2">
-                                                                <strong>Grade:</strong><br>
-                                                                <span class="badge bg-primary">${classData.grade ? 'Grade ' + classData.grade.grade_name : 'N/A'}</span>
-                                                            </div>
-                                                            <div class="col-md-2">
-                                                                <strong>Status:</strong><br>
-                                                                <span class="badge ${classData.is_active ? 'bg-success' : 'bg-secondary'}">
-                                                                    ${classData.is_active ? 'Active' : 'Inactive'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    `;
+                        <div class="row">
+                            <div class="col-md-3">
+                                <strong>Class Name:</strong><br>
+                                <span class="fs-5 fw-bold text-primary">${classData.class_name}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Teacher:</strong><br>
+                                <span class="fs-6">${classData.teacher ? classData.teacher.fname + ' ' + classData.teacher.lname : 'N/A'}</span>
+                                <br><small class="text-muted">${classData.teacher ? classData.teacher.custom_id : ''}</small>
+                            </div>
+                            <div class="col-md-2">
+                                <strong>Subject:</strong><br>
+                                <span class="badge bg-light text-dark border">${classData.subject ? classData.subject.subject_name : 'N/A'}</span>
+                            </div>
+                            <div class="col-md-2">
+                                <strong>Grade:</strong><br>
+                                <span class="badge bg-primary">${classData.grade ? 'Grade ' + classData.grade.grade_name : 'N/A'}</span>
+                            </div>
+                            <div class="col-md-2">
+                                <strong>Status:</strong><br>
+                                <span class="badge ${classData.is_active ? 'bg-success' : 'bg-secondary'}">
+                                    ${classData.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                            </div>
+                        </div>
+                    `;
                 }
 
                 // Load categories
@@ -340,10 +341,10 @@
             } catch (error) {
                 console.error('Error loading class info:', error);
                 document.getElementById('classInfo').innerHTML = `
-                                                    <div class="alert alert-danger">
-                                                        Failed to load class information: ${error.message}
-                                                    </div>
-                                                `;
+                    <div class="alert alert-danger">
+                        Failed to load class information: ${error.message}
+                    </div>
+                `;
             }
         }
 
@@ -353,11 +354,11 @@
 
             if (!categories || categories.length === 0) {
                 container.innerHTML = `
-                                    <div class="alert alert-warning">
-                                        <i class="fas fa-exclamation-triangle me-2"></i>
-                                        No categories available for this class.
-                                    </div>
-                                `;
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No categories available for this class.
+                    </div>
+                `;
                 return;
             }
 
@@ -366,32 +367,32 @@
                 const fee = category.fees || 0;
 
                 return `
-                                    <div class="col-md-4 mb-3">
-                                        <div class="card category-card" onclick="selectCategory(${category.id}, '${categoryName}', ${fee})">
-                                            <div class="card-body">
-                                                <h6 class="card-title">${categoryName}</h6>
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <span class="badge bg-success badge-fee">
-                                                        <i class="fas fa-rupee-sign me-1"></i>${fee.toFixed(2)}
-                                                    </span>
-                                                    <small class="text-muted">Click to view students</small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `;
+                    <div class="col-md-4 mb-3">
+                        <div class="card category-card" onclick="selectCategory(${category.id}, '${categoryName}', ${fee})">
+                            <div class="card-body">
+                                <h6 class="card-title">${categoryName}</h6>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-success badge-fee">
+                                        <i class="fas fa-rupee-sign me-1"></i>${fee.toFixed(2)}
+                                    </span>
+                                    <small class="text-muted">Click to view students</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
             }).join('');
 
             // Wrap in row
             container.innerHTML = `<div class="row">${container.innerHTML}</div>`;
 
-            // NEW: Automatically select first category
+            // Automatically select first category
             if (categories.length > 0) {
                 const firstCategory = categories[0];
                 const categoryName = firstCategory.class_category ? firstCategory.class_category.category_name : 'Unknown';
                 const fee = firstCategory.fees || 0;
 
-                // Auto-select first category with isAutoSelect flag
+                // Auto-select first category
                 setTimeout(() => {
                     selectCategory(firstCategory.id, categoryName, fee, true);
                 }, 500);
@@ -405,12 +406,12 @@
             selectedCategoryFee = fee;
 
             // Update UI - Only if not auto-selecting
-            if (!isAutoSelect) {
+            if (!isAutoSelect && event && event.currentTarget) {
                 document.querySelectorAll('.category-card').forEach(card => {
                     card.classList.remove('selected');
                 });
                 event.currentTarget.classList.add('selected');
-            } else {
+            } else if (isAutoSelect) {
                 // For auto-select, find and select the first category card
                 document.querySelectorAll('.category-card').forEach(card => {
                     card.classList.remove('selected');
@@ -423,9 +424,12 @@
             }
 
             // Show selected category info
-            document.getElementById('selectedCategoryInfo').style.display = 'block';
-            document.getElementById('selectedCategoryName').textContent = categoryName;
-            document.getElementById('selectedCategoryFee').textContent = fee.toFixed(2);
+            const selectedCategoryInfo = document.getElementById('selectedCategoryInfo');
+            if (selectedCategoryInfo) {
+                selectedCategoryInfo.style.display = 'block';
+                document.getElementById('selectedCategoryName').textContent = categoryName;
+                document.getElementById('selectedCategoryFee').textContent = fee.toFixed(2);
+            }
 
             // Load enrolled students for this category
             await loadEnrolledStudents(categoryId);
@@ -438,35 +442,66 @@
             try {
                 console.log('Loading students for class:', classId, 'category:', categoryId);
 
-                const response = await fetch(`/api/student-classes/all/${classId}/category/${categoryId}`);
+                // Use the correct endpoint from your example
+                const response = await fetch(`/api/student-classes/${classId}/category/${categoryId}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const data = await response.json();
-                console.log('Raw API Response:', data);
+                console.log('Raw Students API Response:', data);
 
-                // FIX: Handle different response structures
+                // Handle different response structures
                 if (data.status === "empty") {
                     allEnrolledStudents = [];
                 } else if (Array.isArray(data)) {
+                    // If the response is already an array
                     allEnrolledStudents = data;
                 } else if (data.data && Array.isArray(data.data)) {
+                    // If response has data property with array
                     allEnrolledStudents = data.data;
+                } else if (data.id) {
+                    // If the response is a single object (like your example)
+                    allEnrolledStudents = [data];
                 } else {
                     allEnrolledStudents = [];
                 }
 
-                // FIX: Check student data structure
-                allEnrolledStudents.forEach((enrollment, index) => {
-                    console.log(`Enrollment ${index}:`, enrollment);
-                    if (!enrollment.student) {
-                        console.warn(`Enrollment ${enrollment.id} has no student data!`);
-                    }
-                });
-
                 console.log('Processed students count:', allEnrolledStudents.length);
+
+                // Since your API response doesn't include student data directly,
+                // we need to fetch student details for each enrollment
+                if (allEnrolledStudents.length > 0) {
+                    allEnrolledStudents = await Promise.all(
+                        allEnrolledStudents.map(async (enrollment) => {
+                            try {
+                                // Fetch student details
+                                const studentResponse = await fetch(`/api/students/${enrollment.student_id}`);
+                                if (studentResponse.ok) {
+                                    const studentData = await studentResponse.json();
+                                    return {
+                                        ...enrollment,
+                                        student: studentData.data || studentData,
+                                        // Map grade_id from student data
+                                        grade_id: studentData.data?.grade_id || studentData.grade_id
+                                    };
+                                }
+                            } catch (error) {
+                                console.error('Error fetching student details:', error);
+                            }
+                            return {
+                                ...enrollment,
+                                student: {
+                                    id: enrollment.student_id,
+                                    custom_id: `SID-${enrollment.student_id}`,
+                                    fname: 'Unknown',
+                                    lname: 'Student'
+                                }
+                            };
+                        })
+                    );
+                }
 
                 filteredStudents = [...allEnrolledStudents];
                 studentsCurrentPage = 1;
@@ -474,8 +509,9 @@
                 renderStudentsTable();
                 hideStudentsLoading();
 
-                if (allEnrolledStudents.length > 0) {
-                    document.getElementById('bulkActions').style.display = 'block';
+                const bulkActions = document.getElementById('bulkActions');
+                if (bulkActions && allEnrolledStudents.length > 0) {
+                    bulkActions.style.display = 'block';
                 }
 
             } catch (error) {
@@ -489,21 +525,54 @@
         // Load Grades Dropdown
         async function loadGradesDropdown() {
             try {
+                const gradeSelect = document.getElementById('gradeFilter');
+                if (!gradeSelect) return;
+
+                // Show loading state
+                gradeSelect.innerHTML = '<option value="">Loading grades...</option>';
+
                 const response = await fetch(api('grades/dropdown'));
                 if (!response.ok) throw new Error('Failed to load grades');
 
                 const data = await response.json();
-                const grades = data.data || data;
-                const gradeSelect = document.getElementById('gradeFilter');
+                console.log('Grades API Response:', data);
 
+                // Clear existing options
+                gradeSelect.innerHTML = '<option value="">All Grades</option>';
+
+                // Check different possible response structures
+                let grades = [];
+                if (data.data && Array.isArray(data.data)) {
+                    grades = data.data;
+                } else if (Array.isArray(data)) {
+                    grades = data;
+                } else if (data.grades && Array.isArray(data.grades)) {
+                    grades = data.grades;
+                }
+
+                console.log('Loaded grades:', grades);
+
+                if (grades.length === 0) {
+                    console.warn('No grades returned from API');
+                    return;
+                }
+
+                // Populate dropdown
                 grades.forEach(grade => {
-                    const option = document.createElement('option');
-                    option.value = grade.id;
-                    option.textContent = `Grade ${grade.grade_name}`;
-                    gradeSelect.appendChild(option);
+                    if (grade && grade.id && grade.grade_name) {
+                        const option = document.createElement('option');
+                        option.value = grade.id;
+                        option.textContent = `Grade ${grade.grade_name}`;
+                        gradeSelect.appendChild(option);
+                    }
                 });
+
             } catch (error) {
                 console.error('Error loading grades:', error);
+                const gradeSelect = document.getElementById('gradeFilter');
+                if (gradeSelect) {
+                    gradeSelect.innerHTML = '<option value="">Error loading grades</option>';
+                }
             }
         }
 
@@ -512,18 +581,25 @@
             const tbody = document.getElementById('studentsTableBody');
             const emptyState = document.getElementById('studentsEmpty');
             const paginationContainer = document.getElementById('studentsPagination');
+            const tableResponsive = document.querySelector('.table-responsive');
+            const bulkActions = document.getElementById('bulkActions');
+            const filterSummary = document.getElementById('filterSummary');
+
+            if (!tbody) return;
 
             tbody.innerHTML = '';
 
             if (filteredStudents.length === 0) {
-                emptyState.classList.remove('d-none');
-                paginationContainer.classList.add('d-none');
-                document.getElementById('bulkActions').style.display = 'none';
+                if (emptyState) emptyState.classList.remove('d-none');
+                if (paginationContainer) paginationContainer.classList.add('d-none');
+                if (bulkActions) bulkActions.style.display = 'none';
+                if (filterSummary) filterSummary.classList.add('d-none');
                 return;
             }
 
-            emptyState.classList.add('d-none');
-            paginationContainer.classList.remove('d-none');
+            if (emptyState) emptyState.classList.add('d-none');
+            if (paginationContainer) paginationContainer.classList.remove('d-none');
+            if (tableResponsive) tableResponsive.classList.remove('d-none');
 
             // Calculate pagination
             const totalPages = Math.ceil(filteredStudents.length / studentsRecordsPerPage);
@@ -531,60 +607,88 @@
             const endIndex = Math.min(startIndex + studentsRecordsPerPage, filteredStudents.length);
             const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
 
+            // Get the grade dropdown options to map grade IDs to names
+            const gradeDropdown = document.getElementById('gradeFilter');
+            const gradeOptions = gradeDropdown ? Array.from(gradeDropdown.options) : [];
+
+            // Create a mapping of grade ID to grade name
+            const gradeMap = {};
+            gradeOptions.forEach(option => {
+                if (option.value && option.value !== '') {
+                    // Extract grade name from the option text (remove "Grade " prefix)
+                    const gradeName = option.textContent.replace('Grade ', '');
+                    gradeMap[option.value] = gradeName;
+                }
+            });
+
             // Render table rows
             paginatedStudents.forEach((enrollment, index) => {
                 const actualIndex = startIndex + index;
-                const student = enrollment.student;
+                const student = enrollment.student || {};
                 const isSelected = selectedStudents.has(enrollment.id);
-                const isActive = enrollment.status === 1;
 
-                // FIX: Get grade name properly
+                // FIXED: Handle status as boolean (true/false) not 1/0
+                const isActiveBoolean = enrollment.status === true || enrollment.status === 'true';
+
+                // Get grade name properly
                 let gradeDisplay = 'N/A';
-                if (student.grade && student.grade.grade_name) {
-                    gradeDisplay = `Grade ${student.grade.grade_name}`;
+                let gradeId = null;
+
+                // Try to get grade ID from different sources
+                if (enrollment.grade_id) {
+                    gradeId = enrollment.grade_id;
                 } else if (student.grade_id) {
-                    gradeDisplay = `Grade ID: ${student.grade_id}`;
+                    gradeId = student.grade_id;
+                } else if (student.grade && student.grade.id) {
+                    gradeId = student.grade.id;
                 }
 
-                console.log(`Student ${student.custom_id}: grade_id=${student.grade_id}, grade_object=`, student.grade);
+                // Get grade name from grade map or directly from student data
+                if (gradeId && gradeMap[gradeId]) {
+                    gradeDisplay = gradeMap[gradeId];
+                } else if (student.grade && student.grade.grade_name) {
+                    gradeDisplay = student.grade.grade_name;
+                } else if (gradeId) {
+                    gradeDisplay = `ID: ${gradeId}`;
+                }
 
                 const row = `
-                <tr class="student-row ${isSelected ? 'selected' : ''}">
-                    <td>
-                        <input type="checkbox" class="form-check-input student-checkbox" 
-                               value="${enrollment.id}" ${isSelected ? 'checked' : ''}
-                               onchange="toggleStudentSelection(${enrollment.id}, this.checked)">
-                    </td>
-                    <td class="fw-bold text-muted">${actualIndex + 1}</td>
-                    <td>
-                        <span class="badge bg-secondary">${student.custom_id}</span>
-                    </td>
-                    <td>
-                        <strong>${student.fname} ${student.lname}</strong>
-                    </td>
-                    <td>
-                        <span class="badge bg-info">${gradeDisplay}</span>
-                    </td>
-                    <td>${student.guardian_mobile || student.mobile || 'N/A'}</td>
-                    <td>
-                        <span class="badge ${isActive ? 'bg-success' : 'bg-warning text-dark'}">
-                            ${isActive ? 'Active' : 'Inactive'}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="btn-group btn-group-sm">
-                            ${isActive ?
+                    <tr class="student-row ${isSelected ? 'selected' : ''}">
+                        <td>
+                            <input type="checkbox" class="form-check-input student-checkbox" 
+                                   value="${enrollment.id}" ${isSelected ? 'checked' : ''}
+                                   onchange="toggleStudentSelection(${enrollment.id}, this.checked)">
+                        </td>
+                        <td class="fw-bold text-muted">${actualIndex + 1}</td>
+                        <td>
+                            <span class="badge bg-secondary">${student.custom_id || 'N/A'}</span>
+                        </td>
+                        <td>
+                            <strong>${student.fname || ''} ${student.lname || ''}</strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">${gradeDisplay}</span>
+                        </td>
+                        <td>${student.guardian_mobile || student.mobile || 'N/A'}</td>
+                        <td>
+                            <span class="badge ${isActiveBoolean ? 'bg-success' : 'bg-warning text-dark'}">
+                                ${isActiveBoolean ? 'Active' : 'Inactive'}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                ${isActiveBoolean ?
                         `<button class="btn btn-warning" onclick="deactivateStudent(${enrollment.id})" title="Deactivate">
-                                    <i class="fas fa-user-minus"></i>
-                                </button>` :
+                                        <i class="fas fa-user-minus"></i>
+                                    </button>` :
                         `<button class="btn btn-success" onclick="activateStudent(${enrollment.id})" title="Activate">
-                                    <i class="fas fa-user-check"></i>
-                                </button>`
+                                        <i class="fas fa-user-check"></i>
+                                    </button>`
                     }
-                        </div>
-                    </td>
-                </tr>
-            `;
+                            </div>
+                        </td>
+                    </tr>
+                `;
                 tbody.innerHTML += row;
             });
 
@@ -597,6 +701,7 @@
             updateSelectedCount();
             updateSelectAllCheckbox();
             updateBulkActionButtons();
+            updateFilterSummary();
         }
 
         // Update Select All Checkbox State
@@ -605,39 +710,47 @@
             const allCheckboxes = document.querySelectorAll('.student-checkbox');
             const checkedCheckboxes = document.querySelectorAll('.student-checkbox:checked');
 
-            selectAllCheckbox.checked = checkedCheckboxes.length === allCheckboxes.length && allCheckboxes.length > 0;
-            selectAllCheckbox.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = checkedCheckboxes.length === allCheckboxes.length && allCheckboxes.length > 0;
+                selectAllCheckbox.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+            }
         }
 
         // Update Bulk Action Buttons
         function updateBulkActionButtons() {
             const bulkDeactivateBtn = document.getElementById('bulkDeactivateBtn');
-            bulkDeactivateBtn.disabled = selectedStudents.size === 0;
+            if (bulkDeactivateBtn) {
+                bulkDeactivateBtn.disabled = selectedStudents.size === 0;
+            }
         }
 
         // Update Pagination Information
         function updatePaginationInfo(startIndex, endIndex, total) {
             const infoElement = document.getElementById('paginationInfo');
-            if (total === 0) {
-                infoElement.textContent = 'Showing 0 to 0 of 0 entries';
-            } else {
-                infoElement.textContent = `Showing ${startIndex + 1} to ${endIndex} of ${total} entries`;
+            if (infoElement) {
+                if (total === 0) {
+                    infoElement.textContent = 'Showing 0 to 0 of 0 entries';
+                } else {
+                    infoElement.textContent = `Showing ${startIndex + 1} to ${endIndex} of ${total} entries`;
+                }
             }
         }
 
         // Update Pagination Controls
         function updatePaginationControls(totalPages) {
             const paginationContainer = document.getElementById('paginationControls');
+            if (!paginationContainer) return;
+
             paginationContainer.innerHTML = '';
 
             // Previous button
             const prevButton = `
-                                                <li class="page-item ${studentsCurrentPage === 1 ? 'disabled' : ''}">
-                                                    <a class="page-link" href="#" onclick="changePage(${studentsCurrentPage - 1})" aria-label="Previous">
-                                                        <span aria-hidden="true">&laquo;</span>
-                                                    </a>
-                                                </li>
-                                            `;
+                <li class="page-item ${studentsCurrentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${studentsCurrentPage - 1})" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            `;
             paginationContainer.innerHTML += prevButton;
 
             // Page numbers
@@ -651,21 +764,21 @@
 
             for (let i = startPage; i <= endPage; i++) {
                 const pageItem = `
-                                                    <li class="page-item ${i === studentsCurrentPage ? 'active' : ''}">
-                                                        <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
-                                                    </li>
-                                                `;
+                    <li class="page-item ${i === studentsCurrentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                    </li>
+                `;
                 paginationContainer.innerHTML += pageItem;
             }
 
             // Next button
             const nextButton = `
-                                                <li class="page-item ${studentsCurrentPage === totalPages ? 'disabled' : ''}">
-                                                    <a class="page-link" href="#" onclick="changePage(${studentsCurrentPage + 1})" aria-label="Next">
-                                                        <span aria-hidden="true">&raquo;</span>
-                                                    </a>
-                                                </li>
-                                            `;
+                <li class="page-item ${studentsCurrentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${studentsCurrentPage + 1})" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            `;
             paginationContainer.innerHTML += nextButton;
         }
 
@@ -697,7 +810,7 @@
             updateBulkActionButtons();
         }
 
-        function toggleSelectAll() {
+        function toggleSelectAll(event) {
             const isChecked = event.target.checked;
             const checkboxes = document.querySelectorAll('.student-checkbox');
 
@@ -729,7 +842,11 @@
             document.querySelectorAll('.student-row').forEach(row => {
                 row.classList.remove('selected');
             });
-            document.getElementById('selectAllStudents').checked = false;
+
+            const selectAllStudents = document.getElementById('selectAllStudents');
+            if (selectAllStudents) {
+                selectAllStudents.checked = false;
+            }
 
             updateSelectedCount();
             updateBulkActionButtons();
@@ -737,14 +854,12 @@
 
         // Filter Students
         function filterStudents() {
-            const searchTerm = document.getElementById('studentSearch').value.toLowerCase();
-            const gradeFilter = document.getElementById('gradeFilter').value;
-            const statusFilter = document.getElementById('statusFilter').value;
-
-            console.log('Filtering - Search:', searchTerm, 'Grade:', gradeFilter, 'Status:', statusFilter);
+            const searchTerm = document.getElementById('studentSearch')?.value.toLowerCase() || '';
+            const gradeFilter = document.getElementById('gradeFilter')?.value || '';
+            const statusFilter = document.getElementById('statusFilter')?.value || '';
 
             filteredStudents = allEnrolledStudents.filter(enrollment => {
-                const student = enrollment.student;
+                const student = enrollment.student || {};
 
                 // Check if student object exists
                 if (!student) {
@@ -757,34 +872,67 @@
                     (student.lname && student.lname.toLowerCase().includes(searchTerm)) ||
                     (student.custom_id && student.custom_id.toLowerCase().includes(searchTerm));
 
-                // Grade filter - FIXED: Check both grade_id and nested grade object
+                // Grade filter
                 let matchesGrade = true;
                 if (gradeFilter) {
-                    // First check student.grade_id
-                    if (student.grade_id && student.grade_id.toString() === gradeFilter.toString()) {
-                        matchesGrade = true;
-                    }
-                    // Then check nested grade object
-                    else if (student.grade && student.grade.id && student.grade.id.toString() === gradeFilter.toString()) {
-                        matchesGrade = true;
-                    } else {
-                        matchesGrade = false;
-                    }
+                    // Try multiple possible locations for grade_id
+                    const studentGradeId = enrollment.grade_id ||
+                        student.grade_id ||
+                        student.grade?.id;
+
+                    matchesGrade = studentGradeId && studentGradeId.toString() === gradeFilter.toString();
                 }
 
-                // Status filter
-                const matchesStatus = !statusFilter ||
-                    enrollment.status.toString() === statusFilter;
-
-                console.log(`Student ${student.custom_id}: search=${matchesSearch}, grade=${matchesGrade}, status=${matchesStatus}, grade_id=${student.grade_id}, grade_object=`, student.grade);
+                // Status filter - FIXED: Handle boolean status
+                let matchesStatus = true;
+                if (statusFilter) {
+                    // Convert enrollment status to boolean
+                    const isActive = enrollment.status === true || enrollment.status === 'true';
+                    // Convert filter value to boolean
+                    const filterActive = statusFilter === 'true';
+                    // Compare the boolean values
+                    matchesStatus = isActive === filterActive;
+                }
 
                 return matchesSearch && matchesGrade && matchesStatus;
             });
 
-            console.log('Filtered students count:', filteredStudents.length);
-
             studentsCurrentPage = 1;
             renderStudentsTable();
+        }
+
+        // Update Filter Summary
+        function updateFilterSummary() {
+            const searchTerm = document.getElementById('studentSearch')?.value || '';
+            const gradeFilter = document.getElementById('gradeFilter');
+            const statusFilter = document.getElementById('statusFilter');
+            const summaryElement = document.getElementById('filterSummary');
+            const activeFiltersElement = document.getElementById('activeFilters');
+
+            if (!summaryElement || !activeFiltersElement) return;
+
+            let filters = [];
+
+            if (searchTerm) {
+                filters.push(`Search: "${searchTerm}"`);
+            }
+
+            if (gradeFilter && gradeFilter.value) {
+                const selectedGrade = gradeFilter.options[gradeFilter.selectedIndex].text;
+                filters.push(`Grade: ${selectedGrade}`);
+            }
+
+            if (statusFilter && statusFilter.value) {
+                const selectedStatus = statusFilter.options[statusFilter.selectedIndex].text;
+                filters.push(`Status: ${selectedStatus}`);
+            }
+
+            if (filters.length > 0) {
+                activeFiltersElement.textContent = filters.join(' • ');
+                summaryElement.classList.remove('d-none');
+            } else {
+                summaryElement.classList.add('d-none');
+            }
         }
 
         // Bulk Deactivate Students
@@ -799,11 +947,13 @@
             }
 
             const bulkDeactivateBtn = document.getElementById('bulkDeactivateBtn');
-            const originalText = bulkDeactivateBtn.innerHTML;
+            const originalText = bulkDeactivateBtn ? bulkDeactivateBtn.innerHTML : '';
 
             try {
-                bulkDeactivateBtn.disabled = true;
-                bulkDeactivateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Deactivating...';
+                if (bulkDeactivateBtn) {
+                    bulkDeactivateBtn.disabled = true;
+                    bulkDeactivateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Deactivating...';
+                }
 
                 const enrollmentIds = Array.from(selectedStudents);
                 const requestData = {
@@ -841,8 +991,10 @@
                 console.error('Error bulk deactivating students:', error);
                 showAlert('Failed to deactivate students: ' + error.message, 'danger');
             } finally {
-                bulkDeactivateBtn.disabled = false;
-                bulkDeactivateBtn.innerHTML = '<i class="fas fa-user-minus me-1"></i>Deactivate Selected';
+                if (bulkDeactivateBtn) {
+                    bulkDeactivateBtn.disabled = false;
+                    bulkDeactivateBtn.innerHTML = '<i class="fas fa-user-minus me-1"></i>Deactivate Selected';
+                }
             }
         }
 
@@ -929,45 +1081,77 @@
                 card.classList.remove('selected');
             });
 
-            document.getElementById('selectedCategoryInfo').style.display = 'none';
-            document.getElementById('bulkActions').style.display = 'none';
+            const selectedCategoryInfo = document.getElementById('selectedCategoryInfo');
+            if (selectedCategoryInfo) selectedCategoryInfo.style.display = 'none';
+
+            const bulkActions = document.getElementById('bulkActions');
+            if (bulkActions) bulkActions.style.display = 'none';
+
+            const filterSummary = document.getElementById('filterSummary');
+            if (filterSummary) filterSummary.classList.add('d-none');
 
             // Clear table
             const tbody = document.getElementById('studentsTableBody');
-            tbody.innerHTML = '';
-            document.getElementById('studentsEmpty').classList.remove('d-none');
-            document.getElementById('studentsPagination').classList.add('d-none');
+            if (tbody) tbody.innerHTML = '';
+
+            const studentsEmpty = document.getElementById('studentsEmpty');
+            if (studentsEmpty) studentsEmpty.classList.remove('d-none');
+
+            const studentsPagination = document.getElementById('studentsPagination');
+            if (studentsPagination) studentsPagination.classList.add('d-none');
 
             updateSelectedCount();
         }
 
         function clearSearch() {
-            document.getElementById('studentSearch').value = '';
-            document.getElementById('gradeFilter').value = '';
-            document.getElementById('statusFilter').value = '';
+            const studentSearch = document.getElementById('studentSearch');
+            const gradeFilter = document.getElementById('gradeFilter');
+            const statusFilter = document.getElementById('statusFilter');
+
+            if (studentSearch) studentSearch.value = '';
+            if (gradeFilter) gradeFilter.value = '';
+            if (statusFilter) statusFilter.value = '';
+
             filterStudents();
         }
 
         function updateSelectedCount() {
             const count = selectedStudents.size;
-            document.getElementById('selectedStudentsCount').textContent = `${count} student${count !== 1 ? 's' : ''} selected`;
+            const selectedStudentsCount = document.getElementById('selectedStudentsCount');
+            if (selectedStudentsCount) {
+                selectedStudentsCount.textContent = `${count} student${count !== 1 ? 's' : ''} selected`;
+            }
         }
 
         function showStudentsLoading() {
-            document.getElementById('studentsLoading').classList.remove('d-none');
-            document.getElementById('studentsTableBody').closest('.table-responsive').classList.add('d-none');
-            document.getElementById('studentsPagination').classList.add('d-none');
+            const studentsLoading = document.getElementById('studentsLoading');
+            const tableResponsive = document.querySelector('.table-responsive');
+            const paginationContainer = document.getElementById('studentsPagination');
+            const filterSummary = document.getElementById('filterSummary');
+
+            if (studentsLoading) studentsLoading.classList.remove('d-none');
+            if (tableResponsive) tableResponsive.classList.add('d-none');
+            if (paginationContainer) paginationContainer.classList.add('d-none');
+            if (filterSummary) filterSummary.classList.add('d-none');
         }
 
         function hideStudentsLoading() {
-            document.getElementById('studentsLoading').classList.add('d-none');
-            document.getElementById('studentsTableBody').closest('.table-responsive').classList.remove('d-none');
+            const studentsLoading = document.getElementById('studentsLoading');
+            if (studentsLoading) studentsLoading.classList.add('d-none');
         }
 
         function showStudentsEmptyState() {
-            document.getElementById('studentsEmpty').classList.remove('d-none');
-            document.getElementById('studentsTableBody').closest('.table-responsive').classList.add('d-none');
-            document.getElementById('studentsPagination').classList.add('d-none');
+            const studentsEmpty = document.getElementById('studentsEmpty');
+            const tableResponsive = document.querySelector('.table-responsive');
+            const paginationContainer = document.getElementById('studentsPagination');
+            const filterSummary = document.getElementById('filterSummary');
+            const bulkActions = document.getElementById('bulkActions');
+
+            if (studentsEmpty) studentsEmpty.classList.remove('d-none');
+            if (tableResponsive) tableResponsive.classList.add('d-none');
+            if (paginationContainer) paginationContainer.classList.add('d-none');
+            if (filterSummary) filterSummary.classList.add('d-none');
+            if (bulkActions) bulkActions.style.display = 'none';
         }
 
         function showAlert(message, type) {
@@ -975,9 +1159,9 @@
             alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
             alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
             alertDiv.innerHTML = `
-                                                <strong>${type === 'success' ? 'Success!' : type === 'warning' ? 'Warning!' : 'Error!'}</strong> ${message}
-                                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                            `;
+                <strong>${type === 'success' ? 'Success!' : type === 'warning' ? 'Warning!' : 'Error!'}</strong> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
 
             document.body.appendChild(alertDiv);
 

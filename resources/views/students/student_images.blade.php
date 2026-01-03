@@ -213,6 +213,7 @@
         let uploadedImgUrl = null;
         let cameraStream = null;
         let allQuickPhotos = []; // Store all photos for client-side filtering
+        let currentAlert = null;
 
         // ================= LOAD GRADES =================
         async function loadGrades() {
@@ -290,10 +291,14 @@
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             canvas.toBlob(blob => {
-                const file = new File([blob], "camera_capture.jpg", { type: "image/jpeg" });
+                const file = new File([blob], "camera_capture_" + Date.now() + ".jpg", {
+                    type: "image/jpeg",
+                    lastModified: Date.now()
+                });
                 uploadImage(file);
                 closeCamera();
                 document.getElementById('cameraWrapper').style.display = 'none';
@@ -317,26 +322,41 @@
                 }
                 uploadImage(file);
             }
+            // Reset input for same file upload
+            e.target.value = '';
         });
 
         // Drag and drop functionality
         const fileUploadArea = document.querySelector('.file-upload-area');
         fileUploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
-            fileUploadArea.classList.add('bg-primary', 'text-white');
+            e.stopPropagation();
+            fileUploadArea.style.borderColor = '#0d6efd';
+            fileUploadArea.style.backgroundColor = '#e7f1ff';
         });
 
         fileUploadArea.addEventListener('dragleave', (e) => {
             e.preventDefault();
-            fileUploadArea.classList.remove('bg-primary', 'text-white');
+            e.stopPropagation();
+            fileUploadArea.style.borderColor = '#dee2e6';
+            fileUploadArea.style.backgroundColor = '#f8f9fa';
         });
 
         fileUploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
-            fileUploadArea.classList.remove('bg-primary', 'text-white');
+            e.stopPropagation();
+            fileUploadArea.style.borderColor = '#dee2e6';
+            fileUploadArea.style.backgroundColor = '#f8f9fa';
+
             const file = e.dataTransfer.files[0];
             if (file && file.type.startsWith('image/')) {
+                if (file.size > 5 * 1024 * 1024) {
+                    showAlert('Image size should be less than 5MB', 'danger');
+                    return;
+                }
                 uploadImage(file);
+            } else {
+                showAlert('Please drop a valid image file', 'warning');
             }
         });
 
@@ -356,19 +376,36 @@
                 });
 
                 const data = await res.json();
+                console.log('Upload response:', data);
 
                 if (data.status === 'success') {
-                    // Construct full URL for local storage
-                    uploadedImgUrl = "{{ url('/') }}" + '/uploads/' + data.image_url;
+                    // FIX: Use image_url directly from response
+                    uploadedImgUrl = data.image_url;
+
                     const preview = document.getElementById('previewImg');
                     const placeholder = document.getElementById('previewPlaceholder');
 
-                    preview.src = uploadedImgUrl;
+                    // Add cache busting to prevent cached images
+                    const cacheBuster = '?t=' + Date.now();
+                    preview.src = uploadedImgUrl + cacheBuster;
                     preview.style.display = 'block';
                     placeholder.style.display = 'none';
 
-                    // Enable save button
-                    document.getElementById('saveBtn').disabled = false;
+                    // Handle image load error
+                    preview.onerror = function () {
+                        console.error('Failed to load image:', uploadedImgUrl);
+                        showAlert('Failed to load image preview. The image may have been moved or deleted.', 'warning');
+                        preview.style.display = 'none';
+                        placeholder.style.display = 'block';
+                        uploadedImgUrl = null;
+                        document.getElementById('saveBtn').disabled = true;
+                    };
+
+                    // Enable save button if grade is selected
+                    const gradeSelect = document.getElementById('gradeSelect');
+                    if (gradeSelect.value) {
+                        document.getElementById('saveBtn').disabled = false;
+                    }
 
                     showAlert('Image uploaded successfully!', 'success');
                 } else {
@@ -393,10 +430,10 @@
                 return;
             }
 
-
             try {
-                document.getElementById('saveBtn').disabled = true;
-                document.getElementById('saveBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+                const saveBtn = document.getElementById('saveBtn');
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
 
                 const res = await fetch('/api/quick-photos', {
                     method: 'POST',
@@ -412,8 +449,9 @@
                 });
 
                 const data = await res.json();
+                console.log('Save response:', data);
 
-                if (data.status === 'success') {
+                if (data.status === 'success' || res.ok) {
                     // Reset form
                     uploadedImgUrl = null;
                     document.getElementById('previewImg').style.display = 'none';
@@ -430,8 +468,9 @@
                 console.error('Save error:', e);
                 showAlert('Failed to save quick image: ' + e.message, 'danger');
             } finally {
-                document.getElementById('saveBtn').disabled = false;
-                document.getElementById('saveBtn').innerHTML = '<i class="fas fa-save me-2"></i>Save Quick Image';
+                const saveBtn = document.getElementById('saveBtn');
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Quick Image';
             }
         });
 
@@ -492,34 +531,42 @@
                 const col = document.createElement('div');
                 col.className = 'col-md-6 col-lg-4';
 
-                // Construct full image URL for local storage
-                const imageUrl = item.quick_img.startsWith('http') ?
-                    item.quick_img :
-                    "{{ url('/') }}" + '/uploads/' + item.quick_img;
+                // FIX: Use image URL directly from API response
+                let imageUrl = item.quick_img || item.image_url || '';
+
+                if (!imageUrl) {
+                    console.warn('No image URL for item:', item);
+                    return; // Skip if no image URL
+                }
+
+                // Add cache busting
+                const cacheBuster = '?t=' + Date.now();
+                const fullImageUrl = imageUrl + cacheBuster;
 
                 col.innerHTML = `
-                    <div class="card h-100 shadow-sm quick-image-card">
-                        <img src="${imageUrl}" class="card-img-top" 
-                             style="height: 200px; object-fit: cover;" 
-                             alt="Quick image for ${item.grade?.grade_name || 'Unknown'}">
-                        ${item.custom_id ? `
-                            <div class="custom-id-badge">
-                                <small>ID: ${item.custom_id}</small>
-                            </div>
-                        ` : ''}
-                        <div class="card-body">
-                            <h6 class="card-title">Grade ${item.grade?.grade_name || 'N/A'}</h6>
-                            <span class="badge ${item.is_active ? 'bg-success' : 'bg-secondary'}">
-                                ${item.is_active ? 'Active' : 'Inactive'}
-                            </span>
+                        <div class="card h-100 shadow-sm quick-image-card">
+                            <img src="${fullImageUrl}" class="card-img-top" 
+                                 style="height: 200px; object-fit: cover; width: 100%;" 
+                                 alt="Quick image for ${item.grade?.grade_name || 'Unknown'}"
+                                 onerror="this.src='https://via.placeholder.com/300x200?text=Image+Not+Found'">
                             ${item.custom_id ? `
-                                <div class="mt-2">
-                                    <small class="text-muted">Custom ID: ${item.custom_id}</small>
+                                <div class="custom-id-badge">
+                                    <small>ID: ${item.custom_id}</small>
                                 </div>
                             ` : ''}
+                            <div class="card-body">
+                                <h6 class="card-title">Grade ${item.grade?.grade_name || 'N/A'}</h6>
+                                <span class="badge ${item.is_active ? 'bg-success' : 'bg-secondary'}">
+                                    ${item.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                                ${item.custom_id ? `
+                                    <div class="mt-2">
+                                        <small class="text-muted">Custom ID: ${item.custom_id}</small>
+                                    </div>
+                                ` : ''}
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
                 container.appendChild(col);
             });
 
@@ -575,22 +622,40 @@
         }
 
         function showAlert(message, type) {
+            // Remove existing alert
+            if (currentAlert) {
+                currentAlert.remove();
+            }
+
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 500px;';
+
+            const icon = type === 'success' ? 'fa-check-circle' :
+                type === 'warning' ? 'fa-exclamation-triangle' :
+                    type === 'info' ? 'fa-info-circle' : 'fa-times-circle';
+
             alertDiv.innerHTML = `
-                <strong>${type === 'success' ? 'Success!' : type === 'warning' ? 'Warning!' : 'Error!'}</strong> ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
+                    <div class="d-flex align-items-start">
+                        <i class="fas ${icon} fa-lg me-3 mt-1"></i>
+                        <div class="flex-grow-1">
+                            <strong>${type === 'success' ? 'Success!' : type === 'warning' ? 'Warning!' : type === 'info' ? 'Info:' : 'Error!'}</strong> 
+                            <span>${message}</span>
+                        </div>
+                        <button type="button" class="btn-close ms-2" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
 
             document.body.appendChild(alertDiv);
+            currentAlert = alertDiv;
 
-            // Auto remove after 5 seconds
+            // Auto remove after delay
             setTimeout(() => {
                 if (alertDiv.parentNode) {
                     alertDiv.remove();
+                    currentAlert = null;
                 }
-            }, 5000);
+            }, type === 'success' ? 3000 : 5000);
         }
 
         // ================= INITIALIZATION =================

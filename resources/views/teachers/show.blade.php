@@ -19,21 +19,25 @@
                             <h5 class="card-title mb-1">Teacher Details</h5>
                             <p class="text-muted mb-0">View complete teacher information</p>
                         </div>
+
                         <div class="d-flex gap-2">
-                            <a href="{{ route('teachers.index') }}" class="btn btn-outline-secondary">
+                            <a href="{{ route('teachers.index') }}" class="btn btn-outline-secondary text-white">
                                 <i class="fas fa-arrow-left me-2"></i>Back to Teachers
                             </a>
+
                             <button onclick="window.location.href='{{ route('teachers.edit', $id) }}'"
-                                class="btn btn-outline-primary">
+                                class="btn btn-outline-primary text-white">
                                 <i class="fas fa-edit me-2"></i>Edit Teacher
                             </button>
+
                             <button onclick="window.location.href='{{ route('teachers.classes', $id) }}'"
-                                class="btn btn-outline-primary">
+                                class="btn btn-outline-success text-white">
                                 <i class="fas fa-chalkboard me-2"></i>View Classes
                             </button>
                         </div>
                     </div>
                 </div>
+
 
                 <div class="card-body">
                     <!-- Loading Spinner -->
@@ -276,7 +280,12 @@
             showLoading();
 
             fetch(`/api/teachers/${currentTeacherId}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     hideLoading();
                     if (data.status === 'success') {
@@ -292,6 +301,8 @@
         }
 
         function displayTeacherDetails(teacher) {
+            console.log('Teacher data received:', teacher); // Debug log
+
             // Teacher Profile Header
             document.getElementById('teacherInitials').textContent = getInitials(teacher.fname, teacher.lname);
             document.getElementById('teacherName').textContent = `${teacher.fname} ${teacher.lname}`;
@@ -300,7 +311,7 @@
 
             // Status badge
             const statusBadge = document.getElementById('statusBadge');
-            if (teacher.is_active) {
+            if (teacher.is_active === true || teacher.is_active === 1 || teacher.is_active === '1') {
                 statusBadge.className = 'badge bg-success fs-6 p-2';
                 statusBadge.textContent = 'Active';
             } else {
@@ -309,16 +320,16 @@
             }
 
             // Last updated
-            document.getElementById('lastUpdated').textContent = `Last updated: ${formatDate(teacher.updated_at)}`;
+            document.getElementById('lastUpdated').textContent = `Last updated: ${formatDateTime(teacher.updated_at)}`;
 
             // Personal Information
             document.getElementById('fullName').textContent = `${teacher.fname} ${teacher.lname}`;
             document.getElementById('displayEmail').textContent = teacher.email || '-';
             document.getElementById('displayMobile').textContent = teacher.mobile || '-';
             document.getElementById('displayNic').textContent = teacher.nic || '-';
-            document.getElementById('displayBday').textContent = teacher.bday ? formatDate(teacher.bday) : '-';
+            document.getElementById('displayBday').textContent = formatDate(teacher.bday) || '-';
             document.getElementById('displayGender').textContent = teacher.gender ? capitalizeFirst(teacher.gender) : '-';
-            document.getElementById('displayStatus').textContent = teacher.is_active ? 'Active' : 'Inactive';
+            document.getElementById('displayStatus').textContent = (teacher.is_active === true || teacher.is_active === 1 || teacher.is_active === '1') ? 'Active' : 'Inactive';
 
             // Address Information
             document.getElementById('displayAddress1').textContent = teacher.address1 || '-';
@@ -327,14 +338,43 @@
 
             // Professional Information
             document.getElementById('displayGraduation').textContent = teacher.graduation_details || '-';
-            document.getElementById('displayExperience').textContent = teacher.experience ? `${teacher.experience} years` : '-';
-            document.getElementById('displayPercentage').textContent = teacher.precentage ? `${teacher.precentage}%` : '-';
+
+            // Fix for experience field
+            let experienceText = '-';
+            if (teacher.experience !== null && teacher.experience !== undefined) {
+                if (typeof teacher.experience === 'string' && teacher.experience.toLowerCase().includes('year')) {
+                    experienceText = teacher.experience;
+                } else if (typeof teacher.experience === 'number') {
+                    experienceText = `${teacher.experience} year${teacher.experience !== 1 ? 's' : ''}`;
+                } else if (typeof teacher.experience === 'string') {
+                    experienceText = teacher.experience;
+                }
+            }
+            document.getElementById('displayExperience').textContent = experienceText;
+
+            // Fix for percentage field
+            let percentageText = '-';
+            if (teacher.precentage !== null && teacher.precentage !== undefined) {
+                const percentage = parseFloat(teacher.precentage);
+                if (!isNaN(percentage)) {
+                    percentageText = `${percentage}%`;
+                } else {
+                    percentageText = teacher.precentage;
+                }
+            }
+            document.getElementById('displayPercentage').textContent = percentageText;
 
             // Bank Information
-            document.getElementById('displayBank').textContent = teacher.bank_branch && teacher.bank_branch.bank ?
-                `${teacher.bank_branch.bank.bank_name} (${teacher.bank_branch.bank.bank_code})` : '-';
-            document.getElementById('displayBranch').textContent = teacher.bank_branch ?
-                `${teacher.bank_branch.branch_name} (${teacher.bank_branch.branch_code})` : '-';
+            let bankText = '-';
+            let branchText = '-';
+
+            if (teacher.bank_branch && teacher.bank_branch.bank) {
+                bankText = `${teacher.bank_branch.bank.bank_name} (${teacher.bank_branch.bank.bank_code})`;
+                branchText = `${teacher.bank_branch.branch_name} (${teacher.bank_branch.branch_code})`;
+            }
+
+            document.getElementById('displayBank').textContent = bankText;
+            document.getElementById('displayBranch').textContent = branchText;
             document.getElementById('displayAccountNumber').textContent = teacher.account_number || '-';
 
             // Timeline
@@ -347,24 +387,65 @@
 
         // Helper functions
         function getInitials(firstName, lastName) {
+            if (!firstName || !lastName) return 'TM';
             return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
         }
 
         function formatDate(dateString) {
-            if (!dateString) return '-';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-GB');
+            if (!dateString) return null;
+
+            // Try to parse as date object first
+            let date = new Date(dateString);
+
+            // If invalid date, try to parse MM/DD/YYYY format
+            if (isNaN(date.getTime())) {
+                // Check if it's in MM/DD/YYYY format
+                if (typeof dateString === 'string' && dateString.includes('/')) {
+                    const parts = dateString.split('/');
+                    if (parts.length === 3) {
+                        // Assuming MM/DD/YYYY format
+                        const month = parts[0];
+                        const day = parts[1];
+                        const year = parts[2];
+
+                        // Try creating date with YYYY-MM-DD format
+                        date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+
+                        // If still invalid, return original string
+                        if (isNaN(date.getTime())) {
+                            return dateString;
+                        }
+                    } else {
+                        return dateString;
+                    }
+                } else {
+                    return dateString;
+                }
+            }
+
+            return date.toLocaleDateString('en-GB'); // DD/MM/YYYY format
         }
 
         function formatDateTime(dateTimeString) {
             if (!dateTimeString) return '-';
+
             const date = new Date(dateTimeString);
-            return date.toLocaleString('en-GB');
+            if (isNaN(date.getTime())) {
+                return dateTimeString;
+            }
+
+            return date.toLocaleString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
         }
 
         function capitalizeFirst(string) {
             if (!string) return '-';
-            return string.charAt(0).toUpperCase() + string.slice(1);
+            return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
         }
 
         function showLoading() {
@@ -378,8 +459,12 @@
         }
 
         function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
             document.getElementById('errorText').textContent = message;
-            document.getElementById('errorMessage').classList.remove('d-none');
+            errorDiv.classList.remove('d-none');
+
+            // Scroll to error message
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     </script>
 @endpush

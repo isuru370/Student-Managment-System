@@ -25,6 +25,7 @@ class EmailsController extends Controller
             // 2. Get payment data
             $paymentData = $this->teacherPaymentsService->studentPaymentMonth($teacherId, $yearMonth);
 
+            dd($paymentData);
             if (!$paymentData['success']) {
                 return response()->json([
                     'error' => 'Failed to fetch payment data',

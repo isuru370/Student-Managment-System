@@ -95,6 +95,100 @@ class StudentAdmissionPaymentService
         ], 200);
     }
 
+    public function fetchPayAdmissionsStaticCart($year, $month)
+    {
+        // Get payments for the selected year and month
+        $payments = AdmissionPayments::with('admission')
+            ->whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
+            ->get();
+
+        // Calculate daily collections
+        $dailyCollections = [];
+        $totalAmount = 0;
+
+        // Group payments by day
+        foreach ($payments as $payment) {
+            $day = $payment->created_at->format('Y-m-d');
+            $amount = (float) $payment->amount;
+
+            // Add to total
+            $totalAmount += $amount;
+
+            // Add to daily collections
+            if (!isset($dailyCollections[$day])) {
+                $dailyCollections[$day] = 0;
+            }
+            $dailyCollections[$day] += $amount;
+        }
+
+        // Format daily collections for chart
+        $formattedDailyCollections = [];
+        foreach ($dailyCollections as $date => $amount) {
+            $formattedDailyCollections[] = [
+                'date' => $date,
+                'amount' => $amount
+            ];
+        }
+
+        // Sort daily collections by date
+        usort($formattedDailyCollections, function ($a, $b) {
+            return strcmp($a['date'], $b['date']);
+        });
+
+        // Format response data
+        $result = $payments->map(function ($payment) {
+            return [
+                'id' => $payment->id,
+                'admission_name' => $payment->admission ? $payment->admission->name : 'N/A',
+                'amount' => $payment->amount,
+                'created_at' => $payment->created_at->toDateTimeString(),
+            ];
+        });
+
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'payments' => $result,
+                'summary' => [
+                    'total_amount' => $totalAmount,
+                    'payment_count' => $payments->count(),
+                    'selected_year' => $year,
+                    'selected_month' => $month,
+                    'month_name' => date('F', mktime(0, 0, 0, $month, 1))
+                ],
+                'daily_collections' => $formattedDailyCollections,
+                'chart_data' => $this->formatChartData($formattedDailyCollections)
+            ]
+        ], 200);
+    }
+
+    // Helper method to format data for line chart
+    private function formatChartData($dailyCollections)
+    {
+        $labels = [];
+        $data = [];
+
+        foreach ($dailyCollections as $collection) {
+            // Format date for display (e.g., "Jan 01")
+            $date = \Carbon\Carbon::parse($collection['date']);
+            $labels[] = $date->format('M d');
+            $data[] = $collection['amount'];
+        }
+
+        return [
+            'labels' => $labels,
+            'datasets' => [
+                [
+                    'label' => 'Daily Collections',
+                    'data' => $data,
+                    'borderColor' => 'rgb(75, 192, 192)',
+                    'backgroundColor' => 'rgba(75, 192, 192, 0.2)',
+                    'tension' => 0.1
+                ]
+            ]
+        ];
+    }
     public function fetchStudentAdmissions(Request $request)
     {
         // Validate that student_id exists and is an integer

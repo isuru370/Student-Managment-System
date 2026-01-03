@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@yield('title', 'Student Management System')</title>
+    <title>@yield('title', 'Success Acadamy')</title>
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -669,6 +669,12 @@
                                                 <i class="fas fa-plus-circle"></i> Teacher Income
                                             </a>
                                         </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {{ request()->routeIs('teacher_payment.expenses') ? 'active' : '' }}"
+                                                href="{{ route('teacher_payment.expenses') }}">
+                                                <i class="fas fa-plus-circle"></i> Teacher Expenses
+                                            </a>
+                                        </li>
                                     </ul>
                                 </div>
                             </li>
@@ -697,14 +703,37 @@
                                     </ul>
                                 </div>
                             </li>
+                            {{-- Submenu: Welfare Payment --}}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#welfareSubmenu" data-bs-toggle="collapse"
+                                role="button" aria-expanded="false" aria-controls="welfareSubmenu">
+                                <i class="fas fa-book"></i> Welfare Payment
+                                </a>
 
+                                <div class="collapse {{ request()->routeIs('welfare_settings.*') ? 'show' : '' }}" id="welfareSubmenu">
+                                    <ul class="nav flex-column ms-3">
+                                        <li class="nav-item">
+                                            <a class="nav-link {{ request()->routeIs('welfare_settings.index') ? 'active' : '' }}"
+                                            href="{{ route('welfare_settings.index') }}">
+                                            <i class="fas fa-plus-circle"></i> Welfare
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                           <a class="nav-link {{ request()->routeIs('welfare_payments.index') ? 'active' : '' }}"
+   href="{{ route('welfare_payments.index') }}">
+   <i class="fas fa-plus-circle"></i> Welfare Summary
+</a>
 
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
                         </ul>
                     </div>
                 </li>
 
                 <!-- Other menu items -->
-                <li class="nav-item">
+                {{-- <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('classes') ? 'active' : '' }}"
                         href="{{ route('classes') }}">
                         <i class="fas fa-book"></i> <span>Classes</span>
@@ -715,7 +744,7 @@
                         href="{{ route('reports') }}">
                         <i class="fas fa-chart-bar"></i> <span>Reports</span>
                     </a>
-                </li>
+                </li> --}}
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}"
                         href="{{ route('settings.index') }}">

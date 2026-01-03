@@ -42,7 +42,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="academy-name">SUCCESS ACADEMY</div>
+        <div class="academy-name">SAVIDYA EDUCATION</div>
         <div>PAYMENT RECEIPT</div>
     </div>
     

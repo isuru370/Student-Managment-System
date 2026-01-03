@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Exception;
 use Illuminate\Validation\Rule;
 
@@ -103,7 +104,7 @@ class TeacherService
         DB::beginTransaction();
 
         try {
-            // 🟢 Validate inputs
+            // 🟢 Validate inputs - Fixed experience validation
             $validated = $request->validate([
                 'fname' => 'required|string|max:255',
                 'lname' => 'required|string|max:255',
@@ -125,16 +126,17 @@ class TeacherService
                 'address2' => 'nullable|string|max:255',
                 'address3' => 'nullable|string|max:255',
                 'graduation_details' => 'nullable|string',
-                'experience' => 'nullable|integer|min:0',
-                'precentage' => 'nullable|numeric|min:0|max:100',
+                'experience' => 'nullable|string|max:100', // ✅ Fixed: removed min:0
+                'precentage' => 'required|numeric|min:0|max:100', // ✅ Make required
                 'account_number' => 'nullable|string|max:50',
                 'bank_branch_id' => 'nullable|exists:bank_branch,id',
+                'is_active' => 'nullable|boolean',
             ]);
 
             // Custom ID එක create කිරීම
             $customId = $this->generateCustomId();
 
-            // Create Teacher
+            // Create Teacher - Provide defaults for NOT NULL fields
             $teacher = Teacher::create([
                 'custom_id' => $customId,
                 'fname' => $validated['fname'],
@@ -144,13 +146,13 @@ class TeacherService
                 'nic' => $validated['nic'] ?? null,
                 'bday' => $validated['bday'] ?? null,
                 'gender' => $validated['gender'] ?? null,
-                'address1' => $validated['address1'] ?? null,
-                'address2' => $validated['address2'] ?? null,
+                'address1' => $validated['address1'] ?? '', // Empty string for NOT NULL
+                'address2' => $validated['address2'] ?? '', // Empty string for NOT NULL
                 'address3' => $validated['address3'] ?? null,
-                'is_active' => $request->is_active ?? 1,
+                'is_active' => $request->has('is_active') ? $request->is_active : true,
                 'graduation_details' => $validated['graduation_details'] ?? null,
-                'experience' => $validated['experience'] ?? null,
-                'precentage' => $validated['precentage'] ?? null,
+                'experience' => $validated['experience'] ?? 'Less than a year', // Default value
+                'precentage' => $validated['precentage'] ?? 0,
                 'account_number' => $validated['account_number'] ?? null,
                 'bank_branch_id' => $validated['bank_branch_id'] ?? null,
             ]);
@@ -173,6 +175,12 @@ class TeacherService
         } catch (Exception $e) {
             DB::rollBack();
 
+            Log::error('Teacher creation error:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'An error occurred while creating the teacher.',
@@ -191,79 +199,86 @@ class TeacherService
             if (!$teacher) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Teacher සොයාගන්න නොලැබුණි.'
+                    'message' => 'Teacher could not be found.'
                 ], 404);
             }
 
-            //  Update validation rules
-            $request->validate([
+            // Update validation rules
+            $validated = $request->validate([
                 'fname' => 'required|string|max:255',
                 'lname' => 'required|string|max:255',
-
-                // Email duplicate check (ignore current record)
                 'email' => [
                     'required',
                     'email',
                     Rule::unique('teachers', 'email')->ignore($id)
                 ],
-
                 'mobile' => 'required|string|max:15',
-
-                // NIC duplicate check (nullable + ignore current record)
                 'nic' => [
                     'nullable',
                     'string',
                     'max:20',
                     Rule::unique('teachers', 'nic')->ignore($id)
                 ],
-
                 'bday' => 'nullable|date',
                 'gender' => 'nullable|in:male,female,other',
                 'address1' => 'nullable|string|max:255',
                 'address2' => 'nullable|string|max:255',
                 'address3' => 'nullable|string|max:255',
                 'graduation_details' => 'nullable|string',
-                'experience' => 'nullable|integer|min:0',
-                'precentage' => 'nullable|numeric|min:0|max:100',
+                'experience' => 'nullable|string|max:100', // ✅ Add validation
+                'precentage' => 'required|numeric|min:0|max:100', // ✅ Make required
                 'account_number' => 'nullable|string|max:50',
                 'bank_branch_id' => 'nullable|exists:bank_branch,id',
-                'is_active' => 'boolean',
+                'is_active' => 'nullable|boolean',
             ]);
 
-            // 🟢Update database record
+            // 🟢Update database record - Fix experience logic
             $teacher->update([
-                'fname' => $request->fname,
-                'lname' => $request->lname,
-                'email' => $request->email,
-                'mobile' => $request->mobile,
-                'nic' => $request->nic,
-                'bday' => $request->bday,
-                'gender' => $request->gender,
-                'address1' => $request->address1,
-                'address2' => $request->address2,
-                'address3' => $request->address3,
-                'is_active' => $request->is_active ?? $teacher->is_active,
-                'graduation_details' => $request->graduation_details,
-                'experience' => $request->experience,
-                'precentage' => $request->precentage,
-                'account_number' => $request->account_number,
-                'bank_branch_id' => $request->bank_branch_id,
+                'fname' => $validated['fname'],
+                'lname' => $validated['lname'],
+                'email' => $validated['email'],
+                'mobile' => $validated['mobile'],
+                'nic' => $validated['nic'] ?? null,
+                'bday' => $validated['bday'] ?? null,
+                'gender' => $validated['gender'] ?? null,
+                'address1' => $validated['address1'] ?? $teacher->address1,
+                'address2' => $validated['address2'] ?? $teacher->address2,
+                'address3' => $validated['address3'] ?? $teacher->address3,
+                'is_active' => $request->has('is_active') ? $request->is_active : $teacher->is_active,
+                'graduation_details' => $validated['graduation_details'] ?? $teacher->graduation_details,
+                'experience' => $validated['experience'] ?? $teacher->experience ?? 'Less than a year', // ✅ Fix default
+                'precentage' => $validated['precentage'] ?? $teacher->precentage,
+                'account_number' => $validated['account_number'] ?? $teacher->account_number,
+                'bank_branch_id' => $validated['bank_branch_id'] ?? $teacher->bank_branch_id,
             ]);
 
             DB::commit();
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Teacher update කිරීම සාර්ථකයි.',
+                'message' => 'Teacher update successful.',
                 'data' => $teacher
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
         } catch (Exception $e) {
             DB::rollBack();
 
+            Log::error('Teacher update error:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Teacher update කිරීමේදී දෝෂයක් ඇතිවිය.',
-                'error' => $e->getMessage()
+                'message' => 'An error occurred while updating the teacher.',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

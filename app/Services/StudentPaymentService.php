@@ -75,7 +75,7 @@ class StudentPaymentService
             $monthlyData[$yearMonth]['payment_count']++;
             $monthlyData[$yearMonth]['payments'][] = [
                 'id' => $payment->id,
-                'payment_date' => $paymentDate->format('Y-m-d'),
+                'payment_date' => $paymentDate->format('Y-m-d'), 
                 'display_date' => $paymentDate->format('M d, Y'),
                 'amount' => floatval($payment->amount),
                 'payment_for' => $payment->payment_for,

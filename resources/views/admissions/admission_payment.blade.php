@@ -21,13 +21,86 @@
                     </h5>
                 </div>
                 <div class="card-body">
+                    <!-- Chart Section at the Top -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-header bg-gradient-primary text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-chart-line me-2"></i>
+                                        Admission Payments Chart
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
+                                            <label class="form-label">Select Year</label>
+                                            <select class="form-select" id="chartYear">
+                                                @php
+                                                    $currentYear = date('Y');
+                                                    $years = range($currentYear, $currentYear - 5);
+                                                @endphp
+                                                @foreach($years as $year)
+                                                    <option value="{{ $year }}" {{ $year == $currentYear ? 'selected' : '' }}>
+                                                        {{ $year }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Select Month</label>
+                                            <select class="form-select" id="chartMonth">
+                                                @php
+                                                    $months = [
+                                                        1 => 'January',
+                                                        2 => 'February',
+                                                        3 => 'March',
+                                                        4 => 'April',
+                                                        5 => 'May',
+                                                        6 => 'June',
+                                                        7 => 'July',
+                                                        8 => 'August',
+                                                        9 => 'September',
+                                                        10 => 'October',
+                                                        11 => 'November',
+                                                        12 => 'December'
+                                                    ];
+                                                    $currentMonth = date('n');
+                                                @endphp
+                                                @foreach($months as $num => $name)
+                                                    <option value="{{ $num }}" {{ $num == $currentMonth ? 'selected' : '' }}>
+                                                        {{ $name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2 align-self-end">
+                                            <button class="btn btn-primary w-100" onclick="loadChartData()">
+                                                <i class="fas fa-sync me-2"></i>Load Chart
+                                            </button>
+                                        </div>
+                                        <div class="col-md-4 align-self-end text-end">
+                                            <div class="alert alert-info mb-0 py-2">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                Total: <span class="fw-bold" id="chartTotal">Rs. 0.00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="chart-container">
+                                        <canvas id="admissionsChart" height="100"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Filters Section -->
                     <div class="row mb-4">
                         <div class="col-md-3">
                             <label class="form-label">Filter by Date</label>
                             <input type="date" class="form-control" id="filterDate">
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <label class="form-label">Admission Status</label>
                             <select class="form-select" id="admissionStatusFilter">
                                 <option value="all">All Students</option>
@@ -47,11 +120,11 @@
                                 <i class="fas fa-times me-2"></i>Clear
                             </button>
                         </div>
-                        <div class="col-md-3 text-end">
+                        <div class="col-md-2 text-end">
                             <label class="form-label">&nbsp;</label>
                             <div>
                                 <button class="btn btn-success" onclick="loadAllStudents()">
-                                    <i class="fas fa-sync me-2"></i>Refresh All
+                                    <i class="fas fa-sync me-2"></i>Refresh
                                 </button>
                             </div>
                         </div>
@@ -67,11 +140,17 @@
                             <label class="form-label">Date Range To</label>
                             <input type="date" class="form-control" id="dateRangeTo">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label">&nbsp;</label>
                             <button class="btn btn-outline-primary w-100" onclick="applyDateRangeFilter()">
-                                <i class="fas fa-calendar-alt me-2"></i>Apply Date Range
+                                <i class="fas fa-calendar-alt me-2"></i>Apply Range
                             </button>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="alert alert-warning mb-0 py-2">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                <span id="statsSummary">Paid: 0 | Not Paid: 0 | Total: 0</span>
+                            </div>
                         </div>
                     </div>
 
@@ -143,7 +222,6 @@
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div>
                                 <span class="text-muted" id="tableInfo">Showing 0 students</span>
-                                <span class="badge bg-info ms-2" id="admissionStats"></span>
                                 <span class="badge bg-secondary ms-2" id="dateRangeInfo"></span>
                             </div>
                             <div class="d-flex align-items-center">
@@ -169,7 +247,7 @@
                                         <th>Name</th>
                                         <th>Grade</th>
                                         <th>Mobile</th>
-                                        <th>Created Date</th>
+                                        <th>Register Date</th> <!-- Changed from Created Date -->
                                         <th>Admission Status</th>
                                         <th>Actions</th>
                                     </tr>
@@ -304,16 +382,24 @@
         .sl-time {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
     </style>
 @endpush
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         let allStudents = [];
         let filteredStudents = [];
         let selectedStudents = [];
         let admissionTypes = [];
         let currentModalStudentId = null;
+        let admissionsChart = null;
 
         // Pagination variables
         let currentPage = 1;
@@ -328,19 +414,222 @@
         document.addEventListener('DOMContentLoaded', function () {
             loadAllStudents();
             loadAdmissionTypes();
-            
+            initializeChart();
+
             // Set default date range to current month
             const today = new Date();
             const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
             const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-            
+
             document.getElementById('dateRangeFrom').valueAsDate = firstDay;
             document.getElementById('dateRangeTo').valueAsDate = lastDay;
-            
+
             dateRangeFrom = firstDay.toISOString().split('T')[0];
             dateRangeTo = lastDay.toISOString().split('T')[0];
+
+            // Load chart data
+            setTimeout(() => {
+                loadChartData();
+            }, 500);
         });
 
+        // ================= CHART FUNCTIONS =================
+        function initializeChart() {
+            const ctx = document.getElementById('admissionsChart');
+            if (!ctx) {
+                console.error('Chart canvas not found');
+                return;
+            }
+
+            // Create empty chart initially
+            admissionsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Daily Collections',
+                        data: [],
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#0d6efd',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return 'Rs. ' + context.parsed.y.toLocaleString('en-LK');
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function (value) {
+                                    return 'Rs. ' + value.toLocaleString('en-LK');
+                                },
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Amount (LKR)',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadChartData() {
+            const year = document.getElementById('chartYear').value;
+            const month = document.getElementById('chartMonth').value;
+
+            try {
+                // Show loading state
+                document.getElementById('chartTotal').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+
+                const response = await fetch(`/api/payment-admissions/chart/${year}/${month}`);
+                if (!response.ok) throw new Error('Failed to fetch chart data');
+
+                const result = await response.json();
+                console.log('Chart API Response:', result); // Debug log
+
+                if (result.status === true && result.data) {
+                    updateChart(result.data);
+                } else {
+                    throw new Error(result.message || 'Invalid chart data');
+                }
+            } catch (error) {
+                console.error('Error loading chart data:', error);
+                showAlert('Failed to load chart data: ' + error.message, 'danger');
+                // Reset chart total display
+                document.getElementById('chartTotal').textContent = 'Rs. 0.00';
+            }
+        }
+
+        function updateChart(chartData) {
+            console.log('Chart data for update:', chartData); // Debug log
+
+            if (!admissionsChart) {
+                console.error('Chart not initialized');
+                return;
+            }
+
+            // Update total amount
+            if (chartData.summary && chartData.summary.total_amount !== undefined) {
+                const totalAmount = parseFloat(chartData.summary.total_amount);
+                document.getElementById('chartTotal').textContent =
+                    'Rs. ' + totalAmount.toLocaleString('en-LK', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+            } else if (chartData.total_amount !== undefined) {
+                const totalAmount = parseFloat(chartData.total_amount);
+                document.getElementById('chartTotal').textContent =
+                    'Rs. ' + totalAmount.toLocaleString('en-LK', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+            }
+
+            // Prepare labels and data for chart
+            let labels = [];
+            let data = [];
+
+            // Check different possible data formats
+            if (chartData.chart_data && chartData.chart_data.labels && chartData.chart_data.datasets) {
+                // Format 1: chart_data structure
+                labels = chartData.chart_data.labels;
+                data = chartData.chart_data.datasets[0].data;
+            } else if (chartData.daily_collections && Array.isArray(chartData.daily_collections)) {
+                // Format 2: daily_collections structure
+                chartData.daily_collections.forEach(item => {
+                    if (item.date && item.amount !== undefined) {
+                        const date = new Date(item.date);
+                        labels.push(date.getDate() + ' ' + date.toLocaleDateString('en-US', { month: 'short' }));
+                        data.push(parseFloat(item.amount));
+                    }
+                });
+            } else if (chartData.payments && Array.isArray(chartData.payments)) {
+                // Format 3: Group payments by date
+                const dailyMap = {};
+                chartData.payments.forEach(payment => {
+                    if (payment.created_at) {
+                        const date = new Date(payment.created_at);
+                        const dateKey = date.toISOString().split('T')[0];
+                        const amount = parseFloat(payment.amount) || 0;
+
+                        if (!dailyMap[dateKey]) {
+                            dailyMap[dateKey] = 0;
+                        }
+                        dailyMap[dateKey] += amount;
+                    }
+                });
+
+                // Convert to arrays
+                Object.keys(dailyMap).sort().forEach(dateKey => {
+                    const date = new Date(dateKey);
+                    labels.push(date.getDate() + ' ' + date.toLocaleDateString('en-US', { month: 'short' }));
+                    data.push(dailyMap[dateKey]);
+                });
+            }
+
+            console.log('Final chart labels:', labels);
+            console.log('Final chart data:', data);
+
+            // Update chart
+            admissionsChart.data.labels = labels;
+            admissionsChart.data.datasets[0].data = data;
+            admissionsChart.update();
+
+            // If no data, show message
+            if (data.length === 0) {
+                console.warn('No chart data available');
+            }
+        }
+
+        // ================= STUDENT FUNCTIONS =================
         async function loadAllStudents() {
             try {
                 showLoadingState();
@@ -353,13 +642,13 @@
                 if (result.status === 'success' && result.data) {
                     // Convert student data with proper boolean handling
                     allStudents = convertStudentData(result.data.data || result.data);
-                    
+
                     // Ensure all students have proper created_at
                     allStudents = allStudents.map(student => ({
                         ...student,
                         created_at: student.created_at || student.created_date || new Date().toISOString()
                     }));
-                    
+
                     applyFilters();
                 } else {
                     throw new Error(result.message || 'No students found');
@@ -374,15 +663,15 @@
         // Format date to Sri Lankan format (DD-MM-YYYY)
         function formatDateToSriLankan(dateString) {
             if (!dateString) return 'N/A';
-            
+
             try {
                 const date = new Date(dateString);
                 if (isNaN(date.getTime())) return dateString;
-                
+
                 const day = date.getDate().toString().padStart(2, '0');
                 const month = (date.getMonth() + 1).toString().padStart(2, '0');
                 const year = date.getFullYear();
-                
+
                 return `${day}-${month}-${year}`;
             } catch (error) {
                 console.error('Error formatting date:', error, dateString);
@@ -393,30 +682,22 @@
         // Format time to Sri Lankan 12-hour format
         function formatTimeToSriLankan(dateString) {
             if (!dateString) return '';
-            
+
             try {
                 const date = new Date(dateString);
                 if (isNaN(date.getTime())) return '';
-                
+
                 let hours = date.getHours();
                 let minutes = date.getMinutes().toString().padStart(2, '0');
                 const ampm = hours >= 12 ? 'PM' : 'AM';
                 hours = hours % 12;
                 hours = hours ? hours : 12; // Convert 0 to 12
-                
+
                 return `${hours}:${minutes} ${ampm}`;
             } catch (error) {
                 console.error('Error formatting time:', error);
                 return '';
             }
-        }
-
-        // Format date and time to Sri Lankan format
-        function formatDateTimeToSriLankan(dateString) {
-            const datePart = formatDateToSriLankan(dateString);
-            const timePart = formatTimeToSriLankan(dateString);
-            
-            return timePart ? `${datePart} ${timePart}` : datePart;
         }
 
         // Convert student data with proper boolean handling for admission status
@@ -468,7 +749,7 @@
                     const studentDate = new Date(student.created_at).toISOString().split('T')[0];
                     return studentDate >= dateRangeFrom && studentDate <= dateRangeTo;
                 });
-                
+
                 // Update date range info badge
                 const fromFormatted = formatDateToSriLankan(dateRangeFrom);
                 const toFormatted = formatDateToSriLankan(dateRangeTo);
@@ -492,22 +773,38 @@
             currentPage = 1;
             displayStudents();
             showContentState();
+            updateStatsSummary();
 
             if (filteredStudents.length === 0) {
                 showNoStudentsMessage();
             }
         }
 
+        // Update statistics summary
+        function updateStatsSummary() {
+            if (!filteredStudents || filteredStudents.length === 0) {
+                document.getElementById('statsSummary').textContent = 'Paid: 0 | Not Paid: 0 | Total: 0';
+                return;
+            }
+
+            const paidCount = filteredStudents.filter(student => student.admission === true).length;
+            const notPaidCount = filteredStudents.filter(student => student.admission === false).length;
+            const totalCount = filteredStudents.length;
+
+            document.getElementById('statsSummary').textContent =
+                `Paid: ${paidCount} | Not Paid: ${notPaidCount} | Total: ${totalCount}`;
+        }
+
         // Apply date range filter
         function applyDateRangeFilter() {
             dateRangeFrom = document.getElementById('dateRangeFrom').value;
             dateRangeTo = document.getElementById('dateRangeTo').value;
-            
+
             if (dateRangeFrom && dateRangeTo && dateRangeFrom > dateRangeTo) {
                 showAlert('Start date must be before end date', 'warning');
                 return;
             }
-            
+
             applyFilters();
         }
 
@@ -517,14 +814,15 @@
             document.getElementById('admissionStatusFilter').value = 'all';
             document.getElementById('dateRangeFrom').valueAsDate = null;
             document.getElementById('dateRangeTo').valueAsDate = null;
-            
+
             dateRangeFrom = null;
             dateRangeTo = null;
-            
+
             filteredStudents = [...allStudents];
             currentPage = 1;
             displayStudents();
             showContentState();
+            updateStatsSummary();
         }
 
         // ================= ADMISSION TYPES =================
@@ -579,34 +877,31 @@
         function displayStudents() {
             const tableBody = document.getElementById('studentsTableBody');
             const tableInfo = document.getElementById('tableInfo');
-            const admissionStats = document.getElementById('admissionStats');
 
             if (filteredStudents.length === 0) {
                 showNoStudentsMessage();
                 return;
             }
 
-            // Calculate admission statistics - USING BOOLEAN COMPARISON
-            const paidCount = filteredStudents.filter(student => student.admission === true).length;
-            const notPaidCount = filteredStudents.filter(student => student.admission === false).length;
-
-            // Update table info and stats
-            const startIndex = (currentPage - 1) * pageSize;
-            const endIndex = Math.min(startIndex + pageSize, filteredStudents.length);
-            tableInfo.textContent = `Showing ${startIndex + 1}-${endIndex} of ${filteredStudents.length} students`;
-            admissionStats.textContent = `Paid: ${paidCount} | Not Paid: ${notPaidCount}`;
-
             // Calculate pagination
             totalPages = Math.ceil(filteredStudents.length / pageSize);
-            const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
+            const paginatedStudents = filteredStudents.slice(
+                (currentPage - 1) * pageSize,
+                currentPage * pageSize
+            );
+
+            // Update table info
+            const startIndex = (currentPage - 1) * pageSize + 1;
+            const endIndex = Math.min(startIndex + pageSize - 1, filteredStudents.length);
+            tableInfo.textContent = `Showing ${startIndex}-${endIndex} of ${filteredStudents.length} students`;
 
             let html = '';
 
             paginatedStudents.forEach(student => {
                 const isSelected = selectedStudents.includes(student.id);
-                
-                // Format date to Sri Lankan format
-                const createdDate = formatDateToSriLankan(student.created_at);
+
+                // Format date to Sri Lankan format - CHANGED FROM Created Date to Register Date
+                const registerDate = formatDateToSriLankan(student.created_at);
 
                 // 🔥 ADMISSION STATUS - USING BOOLEAN
                 const admissionStatus = student.admission; // This is boolean true/false
@@ -627,7 +922,7 @@
                         <td>${student.fname} ${student.lname}</td>
                         <td>${student.grade ? student.grade.grade_name : 'N/A'}</td>
                         <td>${student.mobile || 'N/A'}</td>
-                        <td class="sl-date">${createdDate}</td>
+                        <td class="sl-date">${registerDate}</td> <!-- Changed to Register Date -->
                         <td>${statusBadge}</td>
                         <td>
                             <button class="btn btn-sm btn-outline-info" onclick="viewStudentAdmissions(${student.id}, '${student.custom_id}', '${student.fname} ${student.lname}')">
@@ -706,7 +1001,7 @@
 
             // Find the student to get additional details
             const student = allStudents.find(s => s.id == studentId);
-            
+
             document.getElementById('modalStudentId').textContent = customId;
             document.getElementById('modalStudentName').textContent = studentName;
             document.getElementById('modalStudentGrade').textContent = student && student.grade ? student.grade.grade_name : 'N/A';
@@ -733,7 +1028,7 @@
                         // Format dates to Sri Lankan format
                         const paymentDate = formatDateToSriLankan(payment.created_at);
                         const paymentTime = formatTimeToSriLankan(payment.created_at);
-                        
+
                         admissionsHtml += `
                             <tr>
                                 <td>${payment.admission_name}</td>
@@ -856,9 +1151,9 @@
 
             // Show confirmation dialog
             const confirmMessage = `Are you sure you want to process admission payments for ${selectedStudents.length} student(s)?\n\n` +
-                                 `Admission Type: ${admissionType.name}\n` +
-                                 `Amount per student: Rs. ${amount.toLocaleString('en-LK')}\n` +
-                                 `Total Amount: Rs. ${(amount * selectedStudents.length).toLocaleString('en-LK')}`;
+                `Admission Type: ${admissionType.name}\n` +
+                `Amount per student: Rs. ${amount.toLocaleString('en-LK')}\n` +
+                `Total Amount: Rs. ${(amount * selectedStudents.length).toLocaleString('en-LK')}`;
 
             if (!confirm(confirmMessage)) {
                 return;
@@ -901,6 +1196,7 @@
                     document.getElementById('admissionType').value = '';
                     document.getElementById('paymentAmount').value = '';
                     await loadAllStudents();
+                    await loadChartData(); // Reload chart data
                 } else {
                     throw new Error(result.message || 'Payment processing failed');
                 }

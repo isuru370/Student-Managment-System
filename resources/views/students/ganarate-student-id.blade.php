@@ -69,7 +69,7 @@
         }
 
         .id-card-logo {
-            width: 14mm;
+            width: 4mm;
         }
 
         /* Modal ID Card Styles */

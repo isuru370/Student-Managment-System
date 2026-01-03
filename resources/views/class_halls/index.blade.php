@@ -85,14 +85,14 @@
                         <div class="mb-3">
                             <label for="hall_id" class="form-label">Hall ID <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="hall_id" name="hall_id" required
-                                placeholder="Enter unique hall ID">
+                                placeholder="Enter unique hall ID (e.g., H01, HALL-001)">
                             <div class="form-text">Unique identifier for the hall</div>
                             <span class="text-danger error-text hall_id_error"></span>
                         </div>
                         <div class="mb-3">
                             <label for="hall_name" class="form-label">Hall Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="hall_name" name="hall_name" required
-                                placeholder="Enter hall name">
+                                placeholder="Enter hall name (e.g., Hall 1, Main Auditorium)">
                             <span class="text-danger error-text hall_name_error"></span>
                         </div>
                         <div class="mb-3">
@@ -101,17 +101,25 @@
                                 <option value="">Select Type</option>
                                 <option value="AC">AC Hall</option>
                                 <option value="Non AC">Non AC Hall</option>
+                                <option value="Auditorium">Auditorium</option>
+                                <option value="Classroom">Classroom</option>
+                                <option value="HALL">Normal Hall</option>
                             </select>
                             <span class="text-danger error-text hall_type_error"></span>
                         </div>
                         <div class="mb-3">
                             <label for="hall_price" class="form-label">Price <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <span class="input-group-text">$</span>
+                                <span class="input-group-text">Rs.</span>
                                 <input type="number" step="0.01" class="form-control" id="hall_price" name="hall_price"
                                     required placeholder="0.00" min="0">
                             </div>
+                            <div class="form-text">Enter 0 for free halls</div>
                             <span class="text-danger error-text hall_price_error"></span>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="hall_status" name="status" checked>
+                            <label class="form-check-label" for="hall_status">Active</label>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -161,17 +169,24 @@
                                 <option value="">Select Type</option>
                                 <option value="AC">AC Hall</option>
                                 <option value="Non AC">Non AC Hall</option>
+                                <option value="Auditorium">Auditorium</option>
+                                <option value="Classroom">Classroom</option>
+                                <option value="HALL">Normal Hall</option>
                             </select>
                             <span class="text-danger error-text edit_hall_type_error"></span>
                         </div>
                         <div class="mb-3">
                             <label for="edit_hall_price" class="form-label">Price <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <span class="input-group-text">$</span>
+                                <span class="input-group-text">Rs.</span>
                                 <input type="number" step="0.01" class="form-control" id="edit_hall_price" name="hall_price"
-                                    required>
+                                    required min="0">
                             </div>
                             <span class="text-danger error-text edit_hall_price_error"></span>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="edit_hall_status" name="status">
+                            <label class="form-check-label" for="edit_hall_status">Active</label>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -206,6 +221,14 @@
 
         .btn-group .btn:last-child {
             margin-right: 0;
+        }
+        
+        .price-cell {
+            font-weight: 600;
+        }
+        
+        .price-free {
+            color: #28a745;
         }
     </style>
 @endpush
@@ -257,6 +280,41 @@
             document.getElementById('noHallsMessage').style.display = 'block';
         }
 
+        // Format price with Rs. symbol
+        function formatPrice(price) {
+            if (price === null || price === undefined) return 'N/A';
+            const numPrice = parseFloat(price);
+            if (numPrice === 0) return '<span class="price-cell price-free">Free</span>';
+            return `<span class="price-cell">Rs. ${numPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
+        }
+
+        // Get status text
+        function getStatusText(status) {
+            if (status === true || status == 1) return 'Active';
+            if (status === false || status == 0) return 'Inactive';
+            return 'Not Set';
+        }
+
+        // Get status badge
+        function getStatusBadge(status) {
+            if (status === true || status == 1) return '<span class="badge bg-success">Active</span>';
+            if (status === false || status == 0) return '<span class="badge bg-danger">Inactive</span>';
+            return '<span class="badge bg-secondary">Not Set</span>';
+        }
+
+        // Get hall type display text
+        function getHallTypeDisplay(type) {
+            if (!type) return 'N/A';
+            const typeMap = {
+                'AC': 'AC Hall',
+                'Non AC': 'Non AC Hall',
+                'Auditorium': 'Auditorium',
+                'Classroom': 'Classroom',
+                'HALL': 'Normal Hall'
+            };
+            return typeMap[type] || type;
+        }
+
         // Load halls data
         async function loadHalls() {
             try {
@@ -272,41 +330,58 @@
                     tbody.innerHTML = '';
 
                     result.data.forEach((hall, index) => {
-                        const statusBadge = hall.status == 1 ?
-                            '<span class="badge bg-success">Active</span>' :
-                            '<span class="badge bg-danger">Inactive</span>';
-
-                        const actionButtons = hall.status == 1 ?
-                            `
+                        const statusBadge = getStatusBadge(hall.status);
+                        
+                        // Determine action buttons based on status
+                        let actionButtons = '';
+                        if (hall.status === true || hall.status == 1) {
+                            actionButtons = `
                                 <div class="btn-group">
                                     <button class="btn btn-sm btn-warning edit-hall" data-id="${hall.id}" data-bs-toggle="tooltip" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-danger deactivate-hall" data-id="${hall.id}" data-bs-toggle="tooltip" title="Deactivate">
+                                    <button class="btn btn-sm btn-danger toggle-status" data-id="${hall.id}" data-action="deactivate" data-bs-toggle="tooltip" title="Deactivate">
                                         <i class="fas fa-times"></i>
                                     </button>
                                 </div>
-                                ` :
-                            `
+                            `;
+                        } else if (hall.status === false || hall.status == 0) {
+                            actionButtons = `
                                 <div class="btn-group">
-                                    <button class="btn btn-sm btn-success activate-hall" data-id="${hall.id}" data-bs-toggle="tooltip" title="Activate">
+                                    <button class="btn btn-sm btn-warning edit-hall" data-id="${hall.id}" data-bs-toggle="tooltip" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-success toggle-status" data-id="${hall.id}" data-action="activate" data-bs-toggle="tooltip" title="Activate">
                                         <i class="fas fa-check"></i>
                                     </button>
                                 </div>
-                                `;
+                            `;
+                        } else {
+                            // For null status
+                            actionButtons = `
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-warning edit-hall" data-id="${hall.id}" data-bs-toggle="tooltip" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-success toggle-status" data-id="${hall.id}" data-action="activate" data-bs-toggle="tooltip" title="Set as Active">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </div>
+                            `;
+                        }
 
                         const row = `
-                                <tr>
-                                    <td>${index + 1}</td>
-                                    <td><strong>${hall.hall_id}</strong></td>
-                                    <td>${hall.hall_name}</td>
-                                    <td>${hall.hall_type}</td>
-                                    <td>$${parseFloat(hall.hall_price).toFixed(2)}</td>
-                                    <td>${statusBadge}</td>
-                                    <td>${new Date(hall.created_at).toLocaleDateString()}</td>
-                                    <td>${actionButtons}</td>
-                                </tr>
-                            `;
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td><strong>${hall.hall_id || 'N/A'}</strong></td>
+                                <td>${hall.hall_name || 'N/A'}</td>
+                                <td>${getHallTypeDisplay(hall.hall_type)}</td>
+                                <td>${formatPrice(hall.hall_price)}</td>
+                                <td>${statusBadge}</td>
+                                <td>${hall.created_at ? new Date(hall.created_at).toLocaleDateString('en-IN') : 'N/A'}</td>
+                                <td>${actionButtons}</td>
+                            </tr>
+                        `;
                         tbody.innerHTML += row;
                     });
 
@@ -339,7 +414,13 @@
 
                 try {
                     const formData = new FormData(this);
-                    const data = Object.fromEntries(formData.entries());
+                    const data = {
+                        hall_id: formData.get('hall_id'),
+                        hall_name: formData.get('hall_name'),
+                        hall_type: formData.get('hall_type'),
+                        hall_price: parseFloat(formData.get('hall_price')) || 0,
+                        status: formData.get('status') ? 1 : 0
+                    };
 
                     const response = await fetch('/api/halls', {
                         method: 'POST',
@@ -411,7 +492,13 @@
                 try {
                     const hallId = document.getElementById('edit_hall_id').value;
                     const formData = new FormData(this);
-                    const data = Object.fromEntries(formData.entries());
+                    const data = {
+                        hall_id: formData.get('hall_id'),
+                        hall_name: formData.get('hall_name'),
+                        hall_type: formData.get('hall_type'),
+                        hall_price: parseFloat(formData.get('hall_price')) || 0,
+                        status: formData.get('status') ? 1 : 0
+                    };
 
                     const response = await fetch(`/api/halls/${hallId}`, {
                         method: 'PUT',
@@ -460,19 +547,43 @@
                 }
             });
 
-            // Deactivate Hall
-            document.addEventListener('click', function (e) {
-                if (e.target.closest('.deactivate-hall')) {
-                    const hallId = e.target.closest('.deactivate-hall').getAttribute('data-id');
-                    toggleHallStatus(hallId, 'deactivate');
-                }
-            });
+            // Toggle Status (Activate/Deactivate) - FIXED VERSION
+            document.addEventListener('click', async function (e) {
+                if (e.target.closest('.toggle-status')) {
+                    const button = e.target.closest('.toggle-status');
+                    const hallId = button.getAttribute('data-id');
+                    const action = button.getAttribute('data-action');
+                    
+                    const actionText = action === 'activate' ? 'activate' : 'deactivate';
+                    const actionPast = action === 'activate' ? 'activated' : 'deactivated';
 
-            // Activate Hall
-            document.addEventListener('click', function (e) {
-                if (e.target.closest('.activate-hall')) {
-                    const hallId = e.target.closest('.activate-hall').getAttribute('data-id');
-                    toggleHallStatus(hallId, 'activate');
+                    if (!confirm(`Are you sure you want to ${actionText} this hall?`)) {
+                        return;
+                    }
+
+                    try {
+                        // Use the correct endpoint format from your original code
+                        const url = `/api/halls/${hallId}/${action}`;
+                        const response = await fetch(url, {
+                            method: 'PATCH',
+                            headers: {
+                                'X-CSRF-TOKEN': getCsrfToken(),
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok && result.status) {
+                            loadHalls();
+                            showAlert(`Hall ${actionPast} successfully!`);
+                        } else {
+                            throw new Error(result.message || `Failed to ${actionText} hall`);
+                        }
+                    } catch (error) {
+                        console.error(`Error ${actionText}ing hall:`, error);
+                        showAlert(`Error ${actionText}ing hall: ` + error.message, 'danger');
+                    }
                 }
             });
         }
@@ -486,10 +597,11 @@
                 if (result.status) {
                     const hall = result.data;
                     document.getElementById('edit_hall_id').value = hall.id;
-                    document.getElementById('edit_hall_id_field').value = hall.hall_id;
-                    document.getElementById('edit_hall_name').value = hall.hall_name;
-                    document.getElementById('edit_hall_type').value = hall.hall_type;
-                    document.getElementById('edit_hall_price').value = hall.hall_price;
+                    document.getElementById('edit_hall_id_field').value = hall.hall_id || '';
+                    document.getElementById('edit_hall_name').value = hall.hall_name || '';
+                    document.getElementById('edit_hall_type').value = hall.hall_type || '';
+                    document.getElementById('edit_hall_price').value = hall.hall_price || 0;
+                    document.getElementById('edit_hall_status').checked = hall.status == 1;
 
                     // Clear previous errors
                     document.querySelectorAll('.error-text').forEach(el => el.textContent = '');
@@ -502,38 +614,6 @@
             } catch (error) {
                 console.error('Error loading hall data:', error);
                 showAlert('Error loading hall data: ' + error.message, 'danger');
-            }
-        }
-
-        // Toggle Hall Status (Activate/Deactivate)
-        async function toggleHallStatus(hallId, action) {
-            const actionText = action === 'activate' ? 'activate' : 'deactivate';
-
-            if (!confirm(`Are you sure you want to ${actionText} this hall?`)) {
-                return;
-            }
-
-            try {
-                const url = `/api/halls/${hallId}/${action}`;
-                const response = await fetch(url, {
-                    method: 'PATCH',
-                    headers: {
-                        'X-CSRF-TOKEN': getCsrfToken(),
-                        'Accept': 'application/json'
-                    }
-                });
-
-                const result = await response.json();
-
-                if (response.ok && result.status) {
-                    loadHalls();
-                    showAlert(`Hall ${actionText}d successfully!`);
-                } else {
-                    throw new Error(result.message || `Failed to ${actionText} hall`);
-                }
-            } catch (error) {
-                console.error(`Error ${actionText}ing hall:`, error);
-                showAlert(`Error ${actionText}ing hall: ` + error.message, 'danger');
             }
         }
     </script>

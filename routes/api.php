@@ -272,6 +272,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('payment-admissions')->group(function () {
+        Route::get('/chart/{year}/{month}', [AdmissionPaymentsController::class, 'fetchPayAdmissionsStaticCart']);
         Route::get('/students/paid', [AdmissionPaymentsController::class, 'fetchPayAdmissions']);
         Route::post('/store-pay-admission/bulk', [AdmissionPaymentsController::class, 'storeBulkAdmissionPayment']);
         Route::get('/student', [AdmissionPaymentsController::class, 'fetchStudentAdmissions']);
@@ -290,9 +291,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/monthly-income', [TeacherPaymentsController::class, 'fetchTeacherPaymentsCurrentMonth']);
         Route::get('/monthly-income/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'fetchTeacherClassPayments']);
         Route::get('/class-wise/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'getTeacherClassWiseStudentPaymentStatus']);
-                Route::get('/student-pay/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'studentPaymentMonthCheck']);
+        Route::get('/student-pay/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'studentPaymentMonthCheck']);
         Route::get('/salary-slip/{teacherId}/{yearMonth}', [TeacherPaymentsController::class, 'fetchSalarySlipDataTest']);
+        Route::get('/expenses/{yearMonth}', [TeacherPaymentsController::class, 'teachersExpenses']);
         Route::get('/monthly-income/{yearMonth}', [TeacherPaymentsController::class, 'getMonthlyPayments']);
+        Route::post('/{id}/toggle-status', [TeacherPaymentsController::class, 'togglePaymentStatus']);
         Route::post('/', [TeacherPaymentsController::class, 'storeTeacherPayments']);
     });
 
@@ -308,6 +311,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('ledger')->group(function () {
+        Route::get('/test/{yearMonth}', [LedgerSummaryController::class, 'testMonth'])
+            ->where('yearMonth', '[0-9]{4}-[0-9]{2}');
         Route::get('/monthly/{yearMonth}', [LedgerSummaryController::class, 'getMonthlySummary'])
             ->where('yearMonth', '[0-9]{4}-[0-9]{2}');
     });

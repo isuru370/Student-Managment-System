@@ -186,6 +186,7 @@ class ClassHallsService
             'hall_name' => 'required|string|max:255',
             'hall_type' => 'required|string|max:255',
             'hall_price' => 'required|numeric|min:0',
+            'status' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -211,6 +212,7 @@ class ClassHallsService
                 'hall_name' => $request->hall_name,
                 'hall_type' => $request->hall_type,
                 'hall_price' => $request->hall_price,
+                'status' => $request->has('status') ? $request->status : $classHall->status,
             ]);
 
             return response()->json([

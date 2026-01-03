@@ -446,7 +446,7 @@
 
                 // Use the correct delete URL
                 $.ajax({
-                    url: `http://127.0.0.1:8000/api/institute-payments/extra-income/delete/${id}`,
+                    url: `/api/institute-payments/extra-income/delete/${id}`,
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),

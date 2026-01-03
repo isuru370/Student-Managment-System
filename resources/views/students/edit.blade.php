@@ -51,7 +51,7 @@
                                         <div class="text-center mb-3">
                                             <img id="studentImagePreview" class="img-thumbnail rounded-circle"
                                                 style="width: 200px; height: 200px; object-fit: cover;"
-                                                onerror="this.onerror=null; this.src='http://127.0.0.1:8000/uploads/logo/logo.png'">
+                                                onerror="this.onerror=null; this.src='/uploads/logo/logo.png'">
                                             <div id="imagePlaceholder" class="text-muted p-4 border rounded"
                                                 style="display: none;">
                                                 <i class="fas fa-user fa-3x mb-3"></i>
@@ -366,7 +366,7 @@
 
         // ================= INITIALIZATION =================
         document.addEventListener('DOMContentLoaded', function () {
-            // Get custom_id from URL: http://127.0.0.1:8000/students/SA10095/edit
+            // Get custom_id from URL: /students/SA10095/edit
             const pathSegments = window.location.pathname.split('/');
             currentCustomId = pathSegments[pathSegments.length - 2]; // Get SA10095 from URL
 

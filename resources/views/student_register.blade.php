@@ -71,7 +71,7 @@
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-auto">
-                    <img src="http://127.0.0.1:8000/uploads/logo/logo.png" alt="Success Academy Logo"
+                    <img src="/uploads/logo/logo.png" alt="Success Academy Logo"
                         class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;"
                         onerror="this.style.display='none'">
                 </div>
@@ -604,7 +604,7 @@
                     // Handle different response formats
                     const imageUrl = data.image_url || data.data?.image_url || data.url;
                     if (imageUrl) {
-                        studentImageUrl = imageUrl.startsWith('http') ? imageUrl : "http://127.0.0.1:8000/uploads/images/" + imageUrl;
+                        studentImageUrl = imageUrl.startsWith('http') ? imageUrl : "/uploads/images/" + imageUrl;
                         updateImagePreview(studentImageUrl, `Uploaded via ${source}`);
                         showAlert('Photo uploaded successfully!', 'success');
                     } else {

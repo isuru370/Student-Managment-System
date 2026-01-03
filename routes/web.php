@@ -20,6 +20,8 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentIdCardController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TeacherPaymentsController;
+use App\Http\Controllers\WelfarePaymentController;
+use App\Http\Controllers\WelfareSettingController;
 use Illuminate\Support\Facades\Route;
 
 // Welcome Page Route
@@ -194,6 +196,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('teacher-payment')->name('teacher_payment.')->group(function () {
         Route::get('/', [TeacherPaymentsController::class, 'indexPage'])->name('index');
+        Route::get('/expenses', [TeacherPaymentsController::class, 'expensesPage'])->name('expenses');
         Route::get('/pay/{teacherId}', [TeacherPaymentsController::class, 'paymentPage'])->name('salary');
         Route::get('/history/{teacherId}', [TeacherPaymentsController::class, 'historyPage'])->name('history');
         Route::get('/view/{teacherId}', [TeacherPaymentsController::class, 'viewPage'])->name('view');
@@ -214,5 +217,24 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports', [DashboardController::class, 'reports'])->name('reports');
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/', [SettingsCodeController::class, 'indexPage'])->name('index');
+    });
+
+
+    Route::prefix('welfare-payments')->name('welfare_payments.')->group(function () {
+        Route::get('/', [WelfarePaymentController::class, 'index'])->name('index');
+        Route::get('/create', [WelfarePaymentController::class, 'create'])->name('create');
+        Route::post('/', [WelfarePaymentController::class, 'store'])->name('store');
+        Route::get('/{id}', [WelfarePaymentController::class, 'show'])->whereNumber('id')->name('show');
+        Route::get('/{id}/edit', [WelfarePaymentController::class, 'edit'])->whereNumber('id')->name('edit');
+        Route::put('/{id}', [WelfarePaymentController::class, 'update'])->whereNumber('id')->name('update');
+        Route::delete('/{id}', [WelfarePaymentController::class, 'destroy'])->whereNumber('id')->name('destroy');
+        Route::patch('/{id}/restore', [WelfarePaymentController::class, 'restore'])->whereNumber('id')->name('restore');
+    });
+
+
+    Route::prefix('welfare-settings')->name('welfare_settings.')->group(function () {
+        Route::get('/', [WelfareSettingController::class, 'indexPage'])->name('index');
+        Route::post('/', [WelfareSettingController::class, 'store'])->name('store');
+        Route::delete('/{id}', [WelfareSettingController::class, 'destroy'])->name('destroy');
     });
 });

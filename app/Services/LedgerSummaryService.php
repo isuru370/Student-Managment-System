@@ -8,9 +8,12 @@ use App\Models\InstitutePayment;
 use App\Models\Payments;
 use App\Models\Teacher;
 use App\Models\TeacherPayment;
+use App\Models\WelfarePayment;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Log;
+use Throwable;
+use Illuminate\Support\Collection;
 
 class LedgerSummaryService
 {
@@ -31,11 +34,14 @@ class LedgerSummaryService
                 ->merge($this->admissionEntries($start, $end))
                 ->merge($this->extraIncomeEntries($start, $end))
                 ->merge($this->teacherPaymentEntries($start, $end))
+                ->merge($this->welfareEntries($start, $end))
                 ->merge($this->instituteExpenseEntries($start, $end))
                 ->sortBy('date')
                 ->values();
 
             $ledger = $this->applyRunningBalance($entries, $openingBalance);
+
+            $summary = $this->calculateSummary($ledger);
 
             return [
                 'status' => 'success',
@@ -47,11 +53,11 @@ class LedgerSummaryService
                     ],
                     'opening_balance' => round($openingBalance, 2),
                     'ledger' => $ledger,
-                    'summary' => $this->calculateSummary($ledger),
+                    'summary' => $summary,
                 ]
             ];
         } catch (Exception $e) {
-            Log::error('Ledger Summary Error', ['error' => $e->getMessage()]);
+            Log::error('Ledger Summary Error', ['error' => $e->getMessage(), 'month' => $yearMonth]);
             return [
                 'status' => 'error',
                 'message' => 'Ledger calculation failed'
@@ -60,375 +66,192 @@ class LedgerSummaryService
     }
 
     /**
-     * Get Daily Amounts for a specific month
+     * Get Opening Balance (Previous Month Closing Balance)
      */
-    public function getDailyAmounts(string $yearMonth): array
-    {
-        try {
-            $date = Carbon::createFromFormat('Y-m', $yearMonth);
-            $start = $date->copy()->startOfMonth();
-            $end = $date->copy()->endOfMonth();
-
-            // Get all entries grouped by date
-            $entries = collect()
-                ->merge($this->classIncomeEntries($start, $end))
-                ->merge($this->admissionEntries($start, $end))
-                ->merge($this->extraIncomeEntries($start, $end))
-                ->merge($this->teacherPaymentEntries($start, $end))
-                ->merge($this->instituteExpenseEntries($start, $end));
-
-            // Group by date and calculate daily totals
-            $dailyTotals = [];
-
-            foreach ($entries as $entry) {
-                $dateKey = Carbon::parse($entry['date'])->format('Y-m-d');
-
-                if (!isset($dailyTotals[$dateKey])) {
-                    $dailyTotals[$dateKey] = [
-                        'date' => $dateKey,
-                        'receipt' => 0,
-                        'payment' => 0,
-                    ];
-                }
-
-                $dailyTotals[$dateKey]['receipt'] += $entry['receipt'];
-                $dailyTotals[$dateKey]['payment'] += $entry['payment'];
-            }
-
-            // Sort by date
-            ksort($dailyTotals);
-
-            // Format the results
-            $formattedDailyTotals = array_map(function ($day) {
-                return [
-                    'date' => Carbon::parse($day['date'])->format('d M Y'),
-                    'receipt' => number_format($day['receipt'], 2),
-                    'payment' => number_format($day['payment'], 2),
-                    'net' => number_format($day['receipt'] - $day['payment'], 2),
-                ];
-            }, array_values($dailyTotals));
-
-            return [
-                'status' => 'success',
-                'data' => [
-                    'daily_totals' => $formattedDailyTotals,
-                    'monthly_summary' => [
-                        'total_receipts' => number_format(array_sum(array_column($dailyTotals, 'receipt')), 2),
-                        'total_payments' => number_format(array_sum(array_column($dailyTotals, 'payment')), 2),
-                        'net_total' => number_format(
-                            array_sum(array_column($dailyTotals, 'receipt')) -
-                                array_sum(array_column($dailyTotals, 'payment')),
-                            2
-                        ),
-                    ]
-                ]
-            ];
-        } catch (Exception $e) {
-            Log::error('Daily Amounts Error', ['error' => $e->getMessage()]);
-            return [
-                'status' => 'error',
-                'message' => 'Daily amounts calculation failed'
-            ];
-        }
-    }
-
     /**
-     * Get Daily Cash Flow (with optional opening balance)
-     */
-    public function getDailyCashFlow(string $yearMonth, bool $includeOpeningBalance = false): array
-    {
-        try {
-            $date = Carbon::createFromFormat('Y-m', $yearMonth);
-            $start = $date->copy()->startOfMonth();
-            $end = $date->copy()->endOfMonth();
-
-            $openingBalance = $includeOpeningBalance ? $this->getOpeningBalance($yearMonth) : 0;
-
-            // Get all entries
-            $entries = collect()
-                ->merge($this->classIncomeEntries($start, $end))
-                ->merge($this->admissionEntries($start, $end))
-                ->merge($this->extraIncomeEntries($start, $end))
-                ->merge($this->teacherPaymentEntries($start, $end))
-                ->merge($this->instituteExpenseEntries($start, $end))
-                ->sortBy('date');
-
-            // Group by date
-            $dailyEntries = [];
-            foreach ($entries as $entry) {
-                $dateKey = Carbon::parse($entry['date'])->format('Y-m-d');
-
-                if (!isset($dailyEntries[$dateKey])) {
-                    $dailyEntries[$dateKey] = [
-                        'date' => $dateKey,
-                        'receipt' => 0,
-                        'payment' => 0,
-                        'details' => []
-                    ];
-                }
-
-                $dailyEntries[$dateKey]['receipt'] += $entry['receipt'];
-                $dailyEntries[$dateKey]['payment'] += $entry['payment'];
-                $dailyEntries[$dateKey]['details'][] = [
-                    'description' => $entry['description'],
-                    'receipt' => $entry['receipt'],
-                    'payment' => $entry['payment']
-                ];
-            }
-
-            // Sort by date
-            ksort($dailyEntries);
-
-            // Calculate running balance
-            $balance = $openingBalance;
-            $dailyCashFlow = [];
-
-            foreach ($dailyEntries as $day) {
-                $net = $day['receipt'] - $day['payment'];
-                $balance += $net;
-
-                $dailyCashFlow[] = [
-                    'date' => Carbon::parse($day['date'])->format('d M Y'),
-                    'receipt' => number_format($day['receipt'], 2),
-                    'payment' => number_format($day['payment'], 2),
-                    'net_change' => number_format($net, 2),
-                    'balance' => number_format($balance, 2),
-                    'details' => $day['details']
-                ];
-            }
-
-            return [
-                'status' => 'success',
-                'data' => [
-                    'opening_balance' => number_format($openingBalance, 2),
-                    'daily_cash_flow' => $dailyCashFlow,
-                    'closing_balance' => end($dailyCashFlow)['balance'] ?? number_format($openingBalance, 2)
-                ]
-            ];
-        } catch (Exception $e) {
-            Log::error('Daily Cash Flow Error', ['error' => $e->getMessage()]);
-            return [
-                'status' => 'error',
-                'message' => 'Daily cash flow calculation failed'
-            ];
-        }
-    }
-
-    /**
-     * Get Date-wise Detailed Report
-     */
-    public function getDatewiseReport(string $date): array
-    {
-        try {
-            $targetDate = Carbon::parse($date);
-            $start = $targetDate->copy()->startOfDay();
-            $end = $targetDate->copy()->endOfDay();
-
-            $entries = collect()
-                ->merge($this->classIncomeEntries($start, $end))
-                ->merge($this->admissionEntries($start, $end))
-                ->merge($this->extraIncomeEntries($start, $end))
-                ->merge($this->teacherPaymentEntries($start, $end))
-                ->merge($this->instituteExpenseEntries($start, $end))
-                ->sortBy('date')
-                ->values();
-
-            $totalReceipt = $entries->sum('receipt');
-            $totalPayment = $entries->sum('payment');
-            $netTotal = $totalReceipt - $totalPayment;
-
-            $formattedEntries = $entries->map(function ($e) {
-                return [
-                    'date' => Carbon::parse($e['date'])->format('h:i A'),
-                    'description' => $e['description'],
-                    'receipt' => $e['receipt'] > 0 ? number_format($e['receipt'], 2) : '',
-                    'payment' => $e['payment'] > 0 ? number_format($e['payment'], 2) : '',
-                ];
-            });
-
-            return [
-                'status' => 'success',
-                'data' => [
-                    'date' => $targetDate->format('d M Y'),
-                    'entries' => $formattedEntries,
-                    'totals' => [
-                        'total_receipt' => number_format($totalReceipt, 2),
-                        'total_payment' => number_format($totalPayment, 2),
-                        'net_total' => number_format($netTotal, 2),
-                    ]
-                ]
-            ];
-        } catch (Exception $e) {
-            Log::error('Datewise Report Error', ['error' => $e->getMessage()]);
-            return [
-                'status' => 'error',
-                'message' => 'Datewise report calculation failed'
-            ];
-        }
-    }
-
-    /**
-     * Opening balance from previous month (cash net)
+     * Get Opening Balance (Previous Month Closing Balance)
+     * SIMPLE NON-RECURSIVE VERSION
      */
     private function getOpeningBalance(string $yearMonth): float
     {
         try {
-            $startOfMonth = Carbon::createFromFormat('Y-m', $yearMonth)
-                ->subMonth()
-                ->startOfMonth();
+            if (!preg_match('/^\d{4}-\d{2}$/', $yearMonth)) return 0.0;
 
-            $endOfMonth = Carbon::createFromFormat('Y-m', $yearMonth)
-                ->subMonth()
-                ->endOfMonth();
-
-            // Admission payments
-            $admissionPayment = AdmissionPayments::whereBetween(
-                'created_at',
-                [$startOfMonth, $endOfMonth]
-            )->sum('amount');
-
-            // Institution income from classes (teacher percentage deducted)
-            $teachers = Teacher::where('is_active', 1)->get();
-
-            $totalIncomeFromClasses = 0;
-
-            foreach ($teachers as $teacher) {
-                $payments = Payments::where('status', 1)
-                    ->whereBetween('payment_date', [$startOfMonth, $endOfMonth])
-                    ->whereHas('studentStudentClass.studentClass', function ($q) use ($teacher) {
-                        $q->where('teacher_id', $teacher->id);
-                    })
-                    ->sum('amount');
-
-                $teacherShare = round(($payments * $teacher->precentage) / 100, 2);
-                $institutionShare = round($payments - $teacherShare, 2);
-
-                $totalIncomeFromClasses += $institutionShare;
+            // If it's the first month (2024-01), return 0
+            if ($yearMonth <= '2024-01') {
+                return 0.0;
             }
 
-            // Extra income
-            $extraIncome = ExtraIncomes::whereBetween(
-                'created_at',
-                [$startOfMonth, $endOfMonth]
-            )->sum('amount');
+            // Get previous month
+            $prevMonth = Carbon::createFromFormat('Y-m', $yearMonth)->subMonth();
+            $prevYearMonth = $prevMonth->format('Y-m');
 
-            // Institute expenses ONLY
-            $totalExpenses = InstitutePayment::where('status', 1)
-                ->whereBetween('date', [$startOfMonth, $endOfMonth])
-                ->sum('payment');
+            // Calculate ALL months from start to previous month
+            $startDate = Carbon::createFromFormat('Y-m', '2024-01');
+            $runningBalance = 0.0;
 
-            // Final hand total
-            $grossIncome = $totalIncomeFromClasses + $extraIncome;
-            $netTotal = $admissionPayment + ($grossIncome - $totalExpenses);
+            // Loop through each month from start to previous month
+            $currentDate = $startDate->copy();
+            while ($currentDate->format('Y-m') < $yearMonth) {
+                $monthStart = $currentDate->copy()->startOfMonth();
+                $monthEnd = $currentDate->copy()->endOfMonth();
 
-            return round($netTotal, 2);
-        } catch (Exception $e) {
-            Log::error('Opening balance error: ' . $e->getMessage());
-            return 0;
+                // Calculate this month's net change
+                $monthNetChange = $this->calculateMonthNetChange($monthStart, $monthEnd);
+                $runningBalance += $monthNetChange;
+
+                // Move to next month
+                $currentDate->addMonth();
+            }
+
+            return round($runningBalance, 2);
+        } catch (Throwable $e) {
+            Log::error('Opening balance error', ['month' => $yearMonth, 'error' => $e->getMessage()]);
+            return 0.0;
         }
     }
 
-
     /**
-     * Ledger entries – class income
+     * Calculate net change for a specific month
      */
-    private function classIncomeEntries($start, $end)
+    private function calculateMonthNetChange(Carbon $start, Carbon $end): float
     {
-        return Payments::where('status', 1)
+        // 1. TOTAL RECEIPTS (FULL amounts, no deductions)
+        $classIncome = (float) Payments::where('status', 1)
             ->whereBetween('payment_date', [$start, $end])
-            ->selectRaw('DATE(payment_date) as payment_day, SUM(amount) as daily_total, COUNT(*) as fee_count')
-            ->groupBy('payment_day')
-            ->get()
-            ->map(function ($p) {
-                $description = 'Class Fee';
-                if ($p->fee_count > 0) {
-                    $description .= ' (' . $p->fee_count . ($p->fee_count === 1 ? ' fee' : ' fees') . ')';
-                }
+            ->sum('amount');
 
-                return [
-                    'date' => Carbon::parse($p->payment_day)->startOfDay(),
-                    'description' => $description,
-                    'receipt' => (float) $p->daily_total,
-                    'payment' => 0
-                ];
-            });
+        $admission = (float) AdmissionPayments::whereBetween('created_at', [$start, $end])->sum('amount');
+        $extraIncome = (float) ExtraIncomes::whereBetween('created_at', [$start, $end])->sum('amount');
+        $welfareIncome = (float) WelfarePayment::where('status', 1)
+            ->whereBetween('payment_date', [$start, $end])->sum('amount');
+
+        $totalReceipts = $classIncome + $admission + $extraIncome + $welfareIncome;
+
+        // 2. TOTAL PAYMENTS
+        $teacherPayment = (float) TeacherPayment::where('status', 1)
+            ->whereBetween('date', [$start, $end])->sum('payment');
+
+        $instituteExpenses = (float) InstitutePayment::where('status', 1)
+            ->whereBetween('date', [$start, $end])->sum('payment');
+
+        $totalPayments = $teacherPayment + $instituteExpenses;
+
+        // 3. NET CHANGE
+        return $totalReceipts - $totalPayments;
     }
 
     /**
-     * Ledger entries – admission fees
+     * Class income ledger entries (FULL AMOUNT - No percentage deduction)
      */
-    private function admissionEntries($start, $end)
+    private function classIncomeEntries(Carbon $start, Carbon $end): Collection
     {
-        // First, group by date and sum the amounts
-        $groupedAdmissions = AdmissionPayments::whereBetween('created_at', [$start, $end])
-            ->selectRaw('DATE(created_at) as admission_date, SUM(amount) as total_amount')
-            ->groupBy('admission_date')
-            ->get();
-
-        return $groupedAdmissions->map(fn($group) => [
-            'date' => Carbon::parse($group->admission_date)->startOfDay(),
-            'description' => 'Admission Fee',
-            'receipt' => (float) $group->total_amount,
-            'payment' => 0
-        ]);
-    }
-
-    /**
-     * Ledger entries – extra income
-     */
-    private function extraIncomeEntries($start, $end)
-    {
-        return ExtraIncomes::whereBetween('created_at', [$start, $end])
+        return Payments::query()
+            ->where('status', 1)
+            ->whereBetween('payment_date', [$start, $end])
+            ->selectRaw('DATE(payment_date) as day, SUM(amount) as total, COUNT(*) as count')
+            ->groupBy('day')
+            ->orderBy('day')
             ->get()
-            ->map(fn($e) => [
-                'date' => $e->created_at,
-                'description' => $e->reason ?? 'Extra Income',
-                'receipt' => (float) $e->amount,
-                'payment' => 0
+            ->map(fn($p) => [
+                'date' => Carbon::parse($p->day)->startOfDay(),
+                'description' => "Class Fee ({$p->count})",
+                'receipt' => (float)$p->total,  // FULL AMOUNT - no deduction
+                'payment' => 0.0
             ]);
     }
 
     /**
-     * Ledger entries – teacher payments
-     * Filtered by payment_for field (e.g., "05 2025")
+     * Admission ledger entries
      */
-    private function teacherPaymentEntries($start, $end)
+    private function admissionEntries(Carbon $start, Carbon $end): Collection
+    {
+        return AdmissionPayments::query()
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw('DATE(created_at) as day, SUM(amount) as total')
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get()
+            ->map(fn($p) => [
+                'date' => Carbon::parse($p->day)->startOfDay(),
+                'description' => 'Admission Fee',
+                'receipt' => (float)$p->total,
+                'payment' => 0.0
+            ]);
+    }
+
+    /**
+     * Extra income ledger entries
+     */
+    private function extraIncomeEntries(Carbon $start, Carbon $end): Collection
+    {
+        return ExtraIncomes::whereBetween('created_at', [$start, $end])
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn($e) => [
+                'date' => Carbon::parse($e->created_at)->startOfDay(),
+                'description' => $e->reason ?: 'Extra Income',
+                'receipt' => (float)$e->amount,
+                'payment' => 0.0
+            ]);
+    }
+
+    /**
+     * Teacher payment ledger entries
+     */
+    private function teacherPaymentEntries(Carbon $start, Carbon $end): Collection
     {
         return TeacherPayment::with('teacher:id,fname,lname')
             ->where('status', 1)
             ->whereBetween('date', [$start, $end])
+            ->orderBy('date')
             ->get()
-            ->map(function ($t) {
-                $name = trim(($t->teacher->fname ?? '') . ' ' . ($t->teacher->lname ?? ''));
-
-                // Format: "reason_code - teacher_name"
-                if ($t->reason_code) {
-                    $description = $t->reason_code . ' - ' . $name;
-                } else {
-                    $description = $name; // Fallback if no reason_code
-                }
-
-                return [
-                    'date' => $t->date,
-                    'description' => $description,
-                    'receipt' => 0,
-                    'payment' => (float) $t->payment
-                ];
-            });
+            ->map(fn($t) => [
+                'date' => Carbon::parse($t->date)->startOfDay(),
+                'description' => $t->reason_code ? $t->reason_code . ' - ' . trim($t->teacher->fname . ' ' . $t->teacher->lname) : trim($t->teacher->fname . ' ' . $t->teacher->lname),
+                'receipt' => 0.0,
+                'payment' => (float)$t->payment
+            ]);
     }
+
     /**
-     * Ledger entries – institute expenses
+     * Welfare ledger entries
      */
-    private function instituteExpenseEntries($start, $end)
+    /**
+     * Welfare ledger entries
+     */
+    /**
+     * Welfare ledger entries - Teacher pays to Institute (INCOME for institute)
+     */
+    private function welfareEntries(Carbon $start, Carbon $end): Collection
+    {
+        return WelfarePayment::with('teacher')
+            ->where('status', 1)
+            ->whereBetween('payment_date', [$start, $end])
+            ->orderBy('payment_date')
+            ->get()
+            ->map(fn($w) => [
+                'date' => Carbon::parse($w->payment_date)->startOfDay(),
+                'description' => ($w->reason ?: 'Welfare Contribution') . ' - ' . ($w->teacher ? trim($w->teacher->fname . ' ' . $w->teacher->lname) : ''),
+                'receipt' => (float)$w->amount,  // CORRECTED: This is INCOME for institute
+                'payment' => 0.0  // Not an expense for institute
+            ]);
+    }
+
+    /**
+     * Institute expense ledger entries
+     */
+    private function instituteExpenseEntries(Carbon $start, Carbon $end): Collection
     {
         return InstitutePayment::where('status', 1)
             ->whereBetween('date', [$start, $end])
+            ->orderBy('date')
             ->get()
             ->map(fn($e) => [
-                'date' => $e->date,
-                'description' => $e->reason ?? 'Institute Expense',
-                'receipt' => 0,
-                'payment' => (float) $e->payment
+                'date' => Carbon::parse($e->date)->startOfDay(),
+                'description' => $e->reason ?: 'Institute Expense',
+                'receipt' => 0.0,
+                'payment' => (float)$e->payment
             ]);
     }
 
@@ -441,7 +264,6 @@ class LedgerSummaryService
 
         return $entries->map(function ($e) use (&$balance) {
             $balance += $e['receipt'] - $e['payment'];
-
             return [
                 'date' => Carbon::parse($e['date'])->format('d M Y'),
                 'description' => $e['description'],
@@ -453,7 +275,7 @@ class LedgerSummaryService
     }
 
     /**
-     * Ledger summary
+     * Calculate summary
      */
     private function calculateSummary($ledger)
     {

@@ -150,8 +150,20 @@
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="mb-3">
-                                                <label for="experience" class="form-label">Experience (Years)</label>
-                                                <input type="number" class="form-control" id="experience" name="experience" min="0" placeholder="0">
+                                              <label for="experience" class="form-label">Experience</label>
+                                                <select class="form-select" id="experience" name="experience">
+                                                    <option value="">Select Experience</option>
+                                                    <option value="Less than a year">Less than a year</option>
+                                                    <option value="One year">One year</option>
+                                                    <option value="Two years" >Two years</option>
+                                                    <option value="Less than two years">Less than two years</option>
+                                                    <option value="Three years">Three years</option>
+                                                    <option value="Less than three years">Less than three years</option>
+                                                    <option value="Four years">Four years</option>
+                                                    <option value="Less than four years">Less than four years</option>
+                                                    <option value="Five years">Five years</option>
+                                                    <option value="More than five years">More than five years</option>
+                                                </select>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
@@ -306,6 +318,21 @@ function initializeCreateTeacherPage() {
 
     // Real-time validation
     setupRealTimeValidation();
+    
+    // Set default values for optional fields
+    setDefaultValues();
+}
+
+function setDefaultValues() {
+    // Set default experience to "Less than a year"
+    document.getElementById('experience').value = 'Less than a year';
+    
+    // Set default percentage to 0
+    document.getElementById('precentage').value = 0;
+    
+    // Set default for address fields (required by DB schema)
+    document.getElementById('address1').value = '';
+    document.getElementById('address2').value = '';
 }
 
 function setupRealTimeValidation() {
@@ -314,16 +341,45 @@ function setupRealTimeValidation() {
         input.addEventListener('blur', function() {
             validateField(this);
         });
+        input.addEventListener('input', function() {
+            validateField(this);
+        });
     });
 }
 
 function validateField(field) {
-    if (field.value.trim() === '') {
-        field.classList.add('is-invalid');
-        field.classList.remove('is-valid');
-    } else {
-        field.classList.remove('is-invalid');
-        field.classList.add('is-valid');
+    const value = field.value.trim();
+    
+    // Email validation
+    if (field.type === 'email') {
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (value === '' || !emailPattern.test(value)) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+        } else {
+            field.classList.remove('is-invalid');
+            field.classList.add('is-valid');
+        }
+    }
+    // Mobile validation (basic)
+    else if (field.name === 'mobile') {
+        if (value === '' || value.length < 9) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+        } else {
+            field.classList.remove('is-invalid');
+            field.classList.add('is-valid');
+        }
+    }
+    // Other required fields
+    else {
+        if (value === '') {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+        } else {
+            field.classList.remove('is-invalid');
+            field.classList.add('is-valid');
+        }
     }
 }
 
@@ -331,7 +387,12 @@ function loadBanks() {
     showLoading();
     
     fetch('/api/banks/dropdown')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             hideLoading();
             if (data.status === 'success') {
@@ -345,11 +406,12 @@ function loadBanks() {
                     bankSelect.appendChild(option);
                 });
             } else {
-                showError('Failed to load banks: ' + data.message);
+                showError('Failed to load banks: ' + (data.message || 'Unknown error'));
             }
         })
         .catch(error => {
             hideLoading();
+            console.error('Error loading banks:', error);
             showError('Error loading banks: ' + error.message);
         });
 }
@@ -360,7 +422,12 @@ function loadBankBranches(bankId) {
     branchSelect.disabled = true;
 
     fetch(`/api/bank-branches/${bankId}/dropdown`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.status === 'success') {
                 branchSelect.innerHTML = '<option value="">Select Bank Branch</option>';
@@ -392,6 +459,15 @@ function saveTeacher() {
     if (!form.checkValidity()) {
         form.classList.add('was-validated');
         showError('Please fill in all required fields correctly.');
+        scrollToFirstError();
+        return;
+    }
+
+    // Validate percentage
+    const percentage = document.getElementById('precentage').value;
+    if (percentage < 0 || percentage > 100) {
+        showError('Percentage must be between 0 and 100.');
+        document.getElementById('precentage').focus();
         return;
     }
 
@@ -399,39 +475,81 @@ function saveTeacher() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
 
-    const formData = new FormData(form);
+    // Create FormData with all required fields
+    const formData = new FormData();
+    
+    // Add all form fields
+    const formElements = form.elements;
+    for (let element of formElements) {
+        if (element.name && element.type !== 'button' && element.type !== 'submit') {
+            if (element.type === 'checkbox') {
+                formData.append(element.name, element.checked ? '1' : '0');
+            } else if (element.type === 'number') {
+                formData.append(element.name, element.value || '0');
+            } else if (element.type === 'select-one') {
+                formData.append(element.name, element.value || '');
+            } else {
+                formData.append(element.name, element.value || '');
+            }
+        }
+    }
+
+    // Add is_active field (default to true for new teachers)
+    if (!formData.has('is_active')) {
+        formData.append('is_active', '1');
+    }
 
     fetch('/api/teachers', {
         method: 'POST',
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json',
         },
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.status === 'success') {
             showSuccess('Teacher created successfully!');
-            form.reset();
-            form.classList.remove('was-validated');
             
             // Redirect to teachers list after 2 seconds
             setTimeout(() => {
                 window.location.href = '/teachers';
-            }, 1000);
+            }, 2000);
         } else {
             throw new Error(data.message || 'Failed to create teacher');
         }
     })
     .catch(error => {
         console.error('Error saving teacher:', error);
-        showError('Error creating teacher: ' + error.message);
+        
+        // Handle validation errors
+        if (error.message.includes('validation') || error.message.includes('Validation')) {
+            showError('Please check the form for errors: ' + error.message);
+        } else {
+            showError('Error creating teacher: ' + error.message);
+        }
     })
     .finally(() => {
         // Re-enable submit button
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Teacher';
     });
+}
+
+function scrollToFirstError() {
+    const firstInvalid = document.querySelector('.is-invalid');
+    if (firstInvalid) {
+        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstInvalid.focus();
+    }
 }
 
 // Helper functions
@@ -450,6 +568,11 @@ function showError(message) {
     
     // Scroll to error message
     errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        errorDiv.classList.add('d-none');
+    }, 5000);
 }
 
 function showSuccess(message) {
@@ -459,6 +582,11 @@ function showSuccess(message) {
     
     // Scroll to success message
     successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+        successDiv.classList.add('d-none');
+    }, 3000);
 }
 </script>
 @endpush

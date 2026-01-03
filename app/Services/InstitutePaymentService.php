@@ -280,6 +280,9 @@ class InstitutePaymentService
             $monthLabels = [];
             $monthlyGrossIncomes = [];
 
+            $admission = AdmissionPayments::whereYear('created_at', $year)
+                ->sum('amount');
+
             // Get all active teachers with their percentages
             $teachers = Teacher::where('is_active', 1)
                 ->select('id', 'precentage')

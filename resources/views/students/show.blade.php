@@ -55,7 +55,7 @@
                                     <div class="card-body text-center">
                                         <img id="studentPhoto" class="img-thumbnail rounded-circle mb-3" 
                                              style="width: 200px; height: 200px; object-fit: cover;"
-                                             onerror="this.onerror=null; this.src='http://127.0.0.1:8000/uploads/logo/logo.png'">
+                                             onerror="this.onerror=null; this.src='/uploads/logo/logo.png'">
                                         <h4 id="studentName" class="mb-1"></h4>
                                         <h5 class="text-primary mb-2" id="studentId"></h5>
                                         <p class="text-muted mb-1" id="studentGrade"></p>
@@ -278,7 +278,7 @@
             if (student.img_url && isValidImageUrl(student.img_url)) {
                 studentPhoto.src = student.img_url;
             } else {
-                studentPhoto.src = 'http://127.0.0.1:8000/uploads/logo/logo.png';
+                studentPhoto.src = '/uploads/logo/logo.png';
             }
 
             // Personal Information

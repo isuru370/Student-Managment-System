@@ -318,6 +318,7 @@
         let studentImageUrl = null;
         let cameraStream = null;
         let selectedQuickImageId = null;
+        let currentAlert = null;
 
         // ================= INITIALIZATION =================
         document.addEventListener('DOMContentLoaded', function () {
@@ -357,11 +358,52 @@
             // File upload
             document.getElementById('fileInput').addEventListener('change', handleFileUpload);
 
+            // Drag and drop for file upload area
+            const uploadArea = document.querySelector('.file-upload-area');
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('drop', handleDrop);
+
             // Quick image search
             document.getElementById('searchQuickImage').addEventListener('click', searchQuickImages);
+            document.getElementById('quickImageSearch').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    searchQuickImages();
+                }
+            });
 
             // Form submission
             document.getElementById('studentRegistrationForm').addEventListener('submit', handleFormSubmit);
+        }
+
+        // ================= DRAG AND DROP HANDLERS =================
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.style.borderColor = '#0d6efd';
+            e.currentTarget.style.backgroundColor = '#e7f1ff';
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const uploadArea = e.currentTarget;
+            uploadArea.style.borderColor = '#dee2e6';
+            uploadArea.style.backgroundColor = '#f8f9fa';
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                    if (file.size > 5 * 1024 * 1024) {
+                        showAlert('Image size should be less than 5MB', 'danger');
+                        return;
+                    }
+                    uploadImage(file, 'file');
+                } else {
+                    showAlert('Please select a valid image file', 'danger');
+                }
+            }
         }
 
         // ================= CAMERA FUNCTIONS =================
@@ -404,10 +446,14 @@
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             canvas.toBlob(blob => {
-                const file = new File([blob], "student_capture.jpg", { type: "image/jpeg" });
+                const file = new File([blob], "student_capture_" + Date.now() + ".jpg", {
+                    type: "image/jpeg",
+                    lastModified: Date.now()
+                });
                 uploadImage(file, 'camera');
                 closeCamera();
             }, "image/jpeg", 0.8);
@@ -427,6 +473,8 @@
                 }
                 uploadImage(file, 'file');
             }
+            // Reset the input so the same file can be uploaded again
+            e.target.value = '';
         }
 
         // ================= QUICK IMAGE FUNCTIONS =================
@@ -438,6 +486,7 @@
             }
 
             try {
+                showAlert('Searching quick images...', 'info');
                 const response = await fetch('/api/quick-photos/active');
                 if (!response.ok) throw new Error('Failed to fetch quick images');
 
@@ -449,12 +498,17 @@
                 );
 
                 displayQuickImages(filteredImages);
+
+                if (filteredImages.length === 0) {
+                    showAlert('No quick images found for: ' + searchTerm, 'warning');
+                } else {
+                    showAlert(`Found ${filteredImages.length} quick image(s)`, 'success');
+                }
             } catch (e) {
                 console.error('Error searching quick images:', e);
                 showAlert('Failed to search quick images', 'danger');
             }
         }
-
 
         function selectQuickImage(id, imageUrl, customId) {
             // Remove previous selection
@@ -477,6 +531,11 @@
 
         // ================= IMAGE UPLOAD =================
         async function uploadImage(file, source) {
+            // Clear any existing alert first
+            if (currentAlert) {
+                currentAlert.remove();
+            }
+
             try {
                 showAlert('Uploading image...', 'info');
 
@@ -492,10 +551,11 @@
                 });
 
                 const data = await res.json();
+                console.log('Upload response:', data);
 
                 if (data.status === 'success') {
-                    // FIX: Construct proper localhost URL for uploaded images
-                    studentImageUrl = "{{ url('/uploads/') }}/" + data.image_url;
+                    // FIX: Use the image_url directly from response
+                    studentImageUrl = data.image_url;
                     updateImagePreview(studentImageUrl, `Uploaded via ${source}`);
                     showAlert('Image uploaded successfully!', 'success');
                 } else {
@@ -512,20 +572,48 @@
             const placeholder = document.getElementById('imagePlaceholder');
             const imageInfo = document.getElementById('selectedImageInfo');
 
-            preview.src = imageUrl;
+            // Add cache busting to prevent cached images
+            const cacheBuster = '?t=' + Date.now();
+
+            preview.src = imageUrl + cacheBuster;
             preview.style.display = 'block';
             placeholder.style.display = 'none';
             imageInfo.style.display = 'block';
             document.getElementById('imageSource').textContent = source;
+
+            // Handle image load error
+            preview.onerror = function () {
+                console.error('Failed to load image:', imageUrl);
+                showAlert('Failed to load image preview. The image may have been moved or deleted.', 'warning');
+                preview.style.display = 'none';
+                placeholder.style.display = 'block';
+                imageInfo.style.display = 'none';
+                studentImageUrl = null;
+            };
         }
 
         // ================= FORM SUBMISSION =================
-        // In your handleFormSubmit function, add more detailed error logging:
         async function handleFormSubmit(e) {
             e.preventDefault();
 
             if (!studentImageUrl) {
-                showAlert('Please upload a student image', 'warning');
+                showAlert('Please upload or select a student image', 'warning');
+                return;
+            }
+
+            // Validate required fields
+            const requiredFields = ['fname', 'lname', 'mobile', 'bday', 'gender', 'address1', 'guardian_fname', 'guardian_mobile', 'grade_id'];
+            const missingFields = [];
+
+            requiredFields.forEach(field => {
+                const input = document.querySelector(`[name="${field}"]`);
+                if (!input.value.trim()) {
+                    missingFields.push(field.replace('_', ' '));
+                }
+            });
+
+            if (missingFields.length > 0) {
+                showAlert(`Please fill in required fields: ${missingFields.join(', ')}`, 'danger');
                 return;
             }
 
@@ -541,6 +629,8 @@
                     // Convert string '0'/'1' to boolean for specific fields
                     if (['admission', 'is_freecard'].includes(key)) {
                         studentData[key] = value === '1';
+                    } else if (key === 'grade_id') {
+                        studentData[key] = parseInt(value) || value;
                     } else {
                         studentData[key] = value;
                     }
@@ -548,8 +638,9 @@
             }
 
             try {
-                document.getElementById('submitBtn').disabled = true;
-                document.getElementById('submitBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Registering...';
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Registering...';
 
                 console.log('Submitting student data:', studentData);
 
@@ -564,38 +655,40 @@
                     body: JSON.stringify(studentData)
                 });
 
-                console.log('Response status:', studentResponse.status);
-
                 const studentResult = await studentResponse.json();
-                console.log('Response data:', studentResult);
+                console.log('Registration response:', studentResult);
 
-                if (studentResult.status === 'success') {
+                if (studentResult.status === 'success' || studentResponse.ok) {
                     // If quick image was used, deactivate it
                     if (selectedQuickImageId) {
                         await deactivateQuickImage(selectedQuickImageId);
                     }
 
-                    showAlert('Student registered successfully! Student ID: ' + (studentResult.data?.custom_id || ''), 'success');
-                    resetForm();
+                    const studentId = studentResult.data?.custom_id || studentResult.custom_id || 'N/A';
+                    showAlert(`Student registered successfully! Student ID: ${studentId}`, 'success');
+
+                    // Reset form after delay
+                    setTimeout(() => {
+                        resetForm();
+                    }, 2000);
 
                 } else if (studentResult.status === 'error' && studentResult.errors) {
                     // Handle validation errors
                     const errorMessages = Object.values(studentResult.errors).flat().join(', ');
                     throw new Error('Validation failed: ' + errorMessages);
+                } else if (studentResult.message && studentResult.message.includes('Duplicate entry')) {
+                    throw new Error('Student ID already exists. Please use a different ID.');
                 } else {
                     throw new Error(studentResult.message || 'Registration failed');
                 }
 
             } catch (e) {
                 console.error('Registration error:', e);
-                console.error('Full error details:', {
-                    message: e.message,
-                    studentData: studentData
-                });
                 showAlert('Failed to register student: ' + e.message, 'danger');
             } finally {
-                document.getElementById('submitBtn').disabled = false;
-                document.getElementById('submitBtn').innerHTML = '<i class="fas fa-user-plus me-2"></i>Register Student';
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-user-plus me-2"></i>Register Student';
             }
         }
 
@@ -631,25 +724,52 @@
             preview.style.display = 'none';
             placeholder.style.display = 'block';
             imageInfo.style.display = 'none';
+
+            // Clear quick image results
+            document.getElementById('quickImageResults').innerHTML = '';
+            document.getElementById('quickImageSearch').value = '';
+
+            // Reset camera if open
+            closeCamera();
         }
 
         function showAlert(message, type) {
+            // Remove existing alert
+            if (currentAlert) {
+                currentAlert.remove();
+            }
+
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 500px;';
+
+            const icon = type === 'success' ? 'fa-check-circle' :
+                type === 'warning' ? 'fa-exclamation-triangle' :
+                    type === 'info' ? 'fa-info-circle' : 'fa-times-circle';
+
             alertDiv.innerHTML = `
-                                        <strong>${type === 'success' ? 'Success!' : type === 'warning' ? 'Warning!' : 'Error!'}</strong> ${message}
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                    `;
+                    <div class="d-flex align-items-start">
+                        <i class="fas ${icon} fa-lg me-3 mt-1"></i>
+                        <div class="flex-grow-1">
+                            <strong>${type === 'success' ? 'Success!' : type === 'warning' ? 'Warning!' : type === 'info' ? 'Info:' : 'Error!'}</strong> 
+                            <span>${message}</span>
+                        </div>
+                        <button type="button" class="btn-close ms-2" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
 
             document.body.appendChild(alertDiv);
+            currentAlert = alertDiv;
 
+            // Auto remove after delay
             setTimeout(() => {
                 if (alertDiv.parentNode) {
                     alertDiv.remove();
+                    currentAlert = null;
                 }
-            }, 5000);
+            }, type === 'success' ? 3000 : 5000);
         }
+
         function displayQuickImages(images) {
             const resultsContainer = document.getElementById('quickImageResults');
 
@@ -659,24 +779,26 @@
             }
 
             resultsContainer.innerHTML = images.map(img => {
-                // FIX: Construct proper URL for quick images too
-                const imageUrl = img.quick_img.startsWith('http') ?
-                    img.quick_img :
-                    "{{ url('/uploads/') }}/" + img.quick_img;
+                // Use the image URL directly from API response
+                const imageUrl = img.quick_img || img.image_url || '';
+
+                if (!imageUrl) {
+                    return '';
+                }
 
                 return `
-                                <div class="quick-image-item card mb-2 p-2" onclick="selectQuickImage(${img.id}, '${imageUrl}', '${img.custom_id || 'No ID'}')">
-                                    <div class="row g-2 align-items-center">
-                                        <div class="col-3">
-                                            <img src="${imageUrl}" class="img-fluid rounded" style="height: 60px; object-fit: cover;">
-                                        </div>
-                                        <div class="col-9">
-                                            <small class="fw-bold">ID: ${img.custom_id || 'No ID'}</small><br>
-                                            <small class="text-muted">Grade: ${img.grade?.grade_name || 'N/A'}</small>
-                                        </div>
-                                    </div>
+                        <div class="quick-image-item card mb-2 p-2" onclick="selectQuickImage(${img.id}, '${imageUrl}', '${img.custom_id || 'No ID'}')">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-3">
+                                    <img src="${imageUrl}" class="img-fluid rounded" style="height: 60px; object-fit: cover; width: 100%;">
                                 </div>
-                                `;
+                                <div class="col-9">
+                                    <small class="fw-bold">ID: ${img.custom_id || 'No ID'}</small><br>
+                                    <small class="text-muted">Grade: ${img.grade?.grade_name || 'N/A'}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
             }).join('');
         }
     </script>

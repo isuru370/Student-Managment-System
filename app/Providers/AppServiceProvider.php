@@ -31,7 +31,9 @@ use App\Services\SubjectService;
 use App\Services\SystemUserService;
 use App\Services\TeacherPaymentsService;
 use App\Services\TeacherService;
+use App\Services\TituteService;
 use App\Services\UserTypesService;
+use App\Services\WelfarePaymentService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -124,8 +126,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TeacherService::class, function ($app) {
             return new TeacherService();
         });
+        $this->app->bind(TituteService::class, function ($app) {
+            return new TituteService();
+        });
         $this->app->bind(UserTypesService::class, function ($app) {
             return new UserTypesService();
+        });
+               $this->app->bind(WelfarePaymentService::class, function ($app) {
+            return new WelfarePaymentService();
         });
     }
 

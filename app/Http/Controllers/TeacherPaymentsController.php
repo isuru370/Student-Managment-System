@@ -27,9 +27,9 @@ class TeacherPaymentsController extends Controller
     {
         return $this->teacherPaymentsService->fetchTeacherClassPaymentsByMonth($teacherId, $yearMonth);
     }
-    public function getTeacherClassWiseStudentPaymentStatus($teacherId, $yearMonth)
+    public function getTeacherClassWiseStudentPaymentStatus($teacherId, $yearMonth, Request $request)
     {
-        return $this->teacherPaymentsService->getTeacherClassWiseStudentPaymentStatus($teacherId, $yearMonth);
+        return $this->teacherPaymentsService->getTeacherClassWiseStudentPaymentStatus($teacherId, $yearMonth, $request);
     }
     public function fetchSalarySlipDataTest($teacherId, $yearMonth)
     {
@@ -65,6 +65,7 @@ class TeacherPaymentsController extends Controller
                 'deductions' => $data['deductions'],
                 'totalAddition' => $data['total_addition'],
                 'totalDeductions' => $data['total_deductions'],
+                'teacherWelfare' => $data['teacher_welfare'] ?? 0,
                 'netSalary' => $data['net_salary'],
                 'paymentMethod' => $data['payment_method'],
                 'success' => true
@@ -81,6 +82,15 @@ class TeacherPaymentsController extends Controller
 
 
 
+    public function teachersExpenses($yearMonth)
+    {
+        return $this->teacherPaymentsService->teachersExpenses($yearMonth);
+    }
+
+    public function togglePaymentStatus(Request $request, $id)
+    {
+        return $this->teacherPaymentsService->togglePaymentStatus($request, $id);
+    }
     public function storeTeacherPayments(Request $request)
     {
         return $this->teacherPaymentsService->storeTeacherPayments($request);
@@ -105,5 +115,9 @@ class TeacherPaymentsController extends Controller
     public function viewPage($teacherId)
     {
         return view('teacher_payment.view', ['teacherId' => $teacherId]);
+    }
+    public function expensesPage()
+    {
+        return view('teacher_payment.expenses');
     }
 }

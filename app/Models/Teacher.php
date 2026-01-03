@@ -45,4 +45,9 @@ class Teacher extends Model
     {
         return $this->belongsTo(BankBranch::class);
     }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', 1); // or your field for active
+    }
 }

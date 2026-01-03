@@ -161,201 +161,218 @@
     </div>
 @endsection
 
-@push('scripts')
-    <script>
-        const teacherId = {{ $id }};
-        let allClasses = [];
+<script>
+    const teacherId = {{ $id }};
+    let allClasses = [];
 
-        document.addEventListener('DOMContentLoaded', function () {
-            loadTeacherClasses();
+    document.addEventListener('DOMContentLoaded', function () {
+        loadTeacherClasses();
 
-            // Search functionality
-            const searchInput = document.getElementById('searchInput');
-            const clearSearch = document.getElementById('clearSearch');
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const clearSearch = document.getElementById('clearSearch');
 
-            searchInput.addEventListener('input', function () {
-                filterClasses(this.value);
-            });
-
-            clearSearch.addEventListener('click', function () {
-                searchInput.value = '';
-                filterClasses('');
-            });
+        searchInput.addEventListener('input', function () {
+            filterClasses(this.value);
         });
 
-        function loadTeacherClasses() {
-            showLoadingState();
+        clearSearch.addEventListener('click', function () {
+            searchInput.value = '';
+            filterClasses('');
+        });
+    });
 
-            fetch(`/api/class-rooms/teacher/${teacherId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('API Response:', data);
+    function loadTeacherClasses() {
+        showLoadingState();
 
-                    if (data.status === 'success' && data.data && data.data.length > 0) {
-                        allClasses = data.data;
-                        displayClasses(allClasses);
-                        updateStats(allClasses);
-                        updateTeacherInfo(data.data[0]?.teacher);
-                        showClassesGrid();
-                    } else if (data.status === 'error') {
-                        showEmptyState();
-                        updateTeacherInfoFromAPI();
-                    } else {
-                        showEmptyState();
-                        updateTeacherInfoFromAPI();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading classes:', error);
-                    showErrorState();
+        fetch(`/api/class-rooms/teacher/${teacherId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('API Response:', data);
+
+                // Check if the response has the expected structure
+                if (data.status === 'success' && data.data && data.data.length > 0) {
+                    // Response structure: {status: "success", data: [...]}
+                    allClasses = data.data;
+                    displayClasses(allClasses);
+                    updateStats(allClasses);
+                    updateTeacherInfo(allClasses[0]?.teacher);
+                    showClassesGrid();
+                } else if (data.status === 'error' || !data.data || data.data.length === 0) {
+                    // No classes found or error response
+                    showEmptyState();
                     updateTeacherInfoFromAPI();
-                });
+                } else {
+                    // Fallback for unexpected response structure
+                    showEmptyState();
+                    updateTeacherInfoFromAPI();
+                }
+            })
+            .catch(error => {
+                console.error('Error loading classes:', error);
+                showErrorState();
+                updateTeacherInfoFromAPI();
+            });
+    }
+
+    function updateTeacherInfoFromAPI() {
+        fetch(`/api/teachers/${teacherId}`)
+            .then(response => {
+                if (!response.ok) throw new Error('Teacher not found');
+                return response.json(); // FIXED: removed line break
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('teacherName').textContent =
+                        `${data.data.fname} ${data.data.lname}`;
+                    document.getElementById('teacherId').textContent =
+                        `ID: ${data.data.custom_id}`;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading teacher info:', error);
+                document.getElementById('teacherName').textContent = 'Teacher Not Found';
+            });
+    }
+
+    function displayClasses(classes) {
+        const classesGrid = document.getElementById('classesGrid');
+
+        if (!classes || classes.length === 0) {
+            classesGrid.innerHTML = '';
+            return;
         }
 
-        function updateTeacherInfoFromAPI() {
-            fetch(`/api/teachers/${teacherId}`)
-                .then(response => {
-                    if (!response.ok) throw new Error('Teacher not found');
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.status === 'success') {
-                        document.getElementById('teacherName').textContent =
-                            `${data.data.fname} ${data.data.lname}`;
-                        document.getElementById('teacherId').textContent =
-                            `ID: ${data.data.custom_id}`;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading teacher info:', error);
-                    document.getElementById('teacherName').textContent = 'Teacher Not Found';
-                });
-        }
+        classesGrid.innerHTML = classes.map(classRoom => {
+            // Safely handle potentially undefined properties
+            const className = classRoom.class_name || 'Unnamed Class';
+            const subjectName = classRoom.subject?.subject_name || 'N/A';
+            const gradeName = classRoom.grade?.grade_name || 'N/A';
+            const createdDate = classRoom.created_at ?
+                new Date(classRoom.created_at).toLocaleDateString() :
+                'N/A';
 
-        function displayClasses(classes) {
-            const classesGrid = document.getElementById('classesGrid');
-
-            classesGrid.innerHTML = classes.map(classRoom => `
-                <div class="col-xl-4 col-lg-6 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-header bg-light">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-0 text-dark">${classRoom.class_name}</h5>
-                                <div class="d-flex gap-1">
-                                    <span class="badge ${classRoom.is_active ? 'bg-success' : 'bg-secondary'}">
-                                        ${classRoom.is_active ? 'Active' : 'Inactive'}
-                                    </span>
-                                    ${classRoom.is_ongoing ? '<span class="badge bg-info">Ongoing</span>' : ''}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-2">
-                                <div class="col-12">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-book text-primary me-2"></i>
-                                        <div>
-                                            <small class="text-muted">Subject</small>
-                                            <p class="mb-0 fw-semibold">${classRoom.subject?.subject_name || 'N/A'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-graduation-cap text-warning me-2"></i>
-                                        <div>
-                                            <small class="text-muted">Grade</small>
-                                            <p class="mb-0 fw-semibold">Grade ${classRoom.grade?.grade_name || 'N/A'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-calendar text-success me-2"></i>
-                                        <div>
-                                            <small class="text-muted">Created</small>
-                                            <p class="mb-0 fw-semibold">${new Date(classRoom.created_at).toLocaleDateString()}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-footer bg-white border-top-0">
-                            <div class="d-flex">
-                                <a href="/teachers/view_student/${classRoom.id}" class="btn btn-outline-warning btn-sm flex-fill">
-                                    <i class="fas fa-users me-1"></i> View Students
-                                </a>
+            return `
+            <div class="col-xl-4 col-lg-6 mb-3">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-light">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h5 class="card-title mb-0 text-dark">${className}</h5>
+                            <div class="d-flex gap-1">
+                                <span class="badge ${classRoom.is_active ? 'bg-success' : 'bg-secondary'}">
+                                    ${classRoom.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                                ${classRoom.is_ongoing ? '<span class="badge bg-info">Ongoing</span>' : ''}
                             </div>
                         </div>
                     </div>
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-book text-primary me-2"></i>
+                                    <div>
+                                        <small class="text-muted">Subject</small>
+                                        <p class="mb-0 fw-semibold">${subjectName}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-graduation-cap text-warning me-2"></i>
+                                    <div>
+                                        <small class="text-muted">Grade</small>
+                                        <p class="mb-0 fw-semibold">${gradeName}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-calendar text-success me-2"></i>
+                                    <div>
+                                        <small class="text-muted">Created</small>
+                                        <p class="mb-0 fw-semibold">${createdDate}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white border-top-0">
+                        <div class="d-flex">
+                            <a href="/teachers/view_student/${classRoom.id}" class="btn btn-outline-warning btn-sm flex-fill">
+                                <i class="fas fa-users me-1"></i> View Students
+                            </a>
+                        </div>
+                    </div>
                 </div>
-            `).join('');
+            </div>
+        `;
+        }).join('');
+    }
+
+    function filterClasses(searchTerm) {
+        const filteredClasses = allClasses.filter(classRoom => {
+            const searchLower = searchTerm.toLowerCase();
+            return (
+                classRoom.class_name.toLowerCase().includes(searchLower) ||
+                (classRoom.subject?.subject_name || '').toLowerCase().includes(searchLower) ||
+                (classRoom.grade?.grade_name || '').toLowerCase().includes(searchLower)
+            );
+        });
+
+        displayClasses(filteredClasses);
+        updateStats(filteredClasses);
+    }
+
+    function updateStats(classes) {
+        const totalClasses = classes.length;
+        const activeClasses = classes.filter(c => c.is_active).length;
+        const ongoingClasses = classes.filter(c => c.is_ongoing).length;
+        const subjectsCount = new Set(classes.map(c => c.subject?.subject_name).filter(Boolean)).size;
+
+        document.getElementById('totalClasses').textContent = totalClasses;
+        document.getElementById('activeClasses').textContent = activeClasses;
+        document.getElementById('ongoingClasses').textContent = ongoingClasses;
+        document.getElementById('subjectsCount').textContent = subjectsCount;
+    }
+
+    function updateTeacherInfo(teacher) {
+        if (teacher) {
+            document.getElementById('teacherName').textContent = `${teacher.fname} ${teacher.lname}`;
+            document.getElementById('teacherId').textContent = `ID: ${teacher.custom_id}`;
         }
+    }
 
-        function filterClasses(searchTerm) {
-            const filteredClasses = allClasses.filter(classRoom => {
-                const searchLower = searchTerm.toLowerCase();
-                return (
-                    classRoom.class_name.toLowerCase().includes(searchLower) ||
-                    (classRoom.subject?.subject_name || '').toLowerCase().includes(searchLower) ||
-                    (classRoom.grade?.grade_name || '').toLowerCase().includes(searchLower)
-                );
-            });
+    function showLoadingState() {
+        document.getElementById('loadingState').style.display = 'block';
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('errorState').style.display = 'none';
+        document.getElementById('classesGrid').style.display = 'none';
+    }
 
-            displayClasses(filteredClasses);
-            updateStats(filteredClasses);
-        }
+    function showClassesGrid() {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('errorState').style.display = 'none';
+        document.getElementById('classesGrid').style.display = 'flex';
+    }
 
-        function updateStats(classes) {
-            const totalClasses = classes.length;
-            const activeClasses = classes.filter(c => c.is_active).length;
-            const ongoingClasses = classes.filter(c => c.is_ongoing).length;
-            const subjectsCount = new Set(classes.map(c => c.subject?.subject_name).filter(Boolean)).size;
+    function showEmptyState() {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'block';
+        document.getElementById('errorState').style.display = 'none';
+        document.getElementById('classesGrid').style.display = 'none';
+    }
 
-            document.getElementById('totalClasses').textContent = totalClasses;
-            document.getElementById('activeClasses').textContent = activeClasses;
-            document.getElementById('ongoingClasses').textContent = ongoingClasses;
-            document.getElementById('subjectsCount').textContent = subjectsCount;
-        }
-
-        function updateTeacherInfo(teacher) {
-            if (teacher) {
-                document.getElementById('teacherName').textContent = `${teacher.fname} ${teacher.lname}`;
-                document.getElementById('teacherId').textContent = `ID: ${teacher.custom_id}`;
-            }
-        }
-
-        function showLoadingState() {
-            document.getElementById('loadingState').style.display = 'block';
-            document.getElementById('emptyState').style.display = 'none';
-            document.getElementById('errorState').style.display = 'none';
-            document.getElementById('classesGrid').style.display = 'none';
-        }
-
-        function showClassesGrid() {
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('emptyState').style.display = 'none';
-            document.getElementById('errorState').style.display = 'none';
-            document.getElementById('classesGrid').style.display = 'flex';
-        }
-
-        function showEmptyState() {
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('emptyState').style.display = 'block';
-            document.getElementById('errorState').style.display = 'none';
-            document.getElementById('classesGrid').style.display = 'none';
-        }
-
-        function showErrorState() {
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('emptyState').style.display = 'none';
-            document.getElementById('errorState').style.display = 'block';
-            document.getElementById('classesGrid').style.display = 'none';
-        }
-    </script>
-@endpush
+    function showErrorState() {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('errorState').style.display = 'block';
+        document.getElementById('classesGrid').style.display = 'none';
+    }
+</script>

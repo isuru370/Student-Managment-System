@@ -31,6 +31,11 @@ class AdmissionPaymentsController extends Controller
         return $this->admissionPyamentsService->storeBulkAdmissionPayment($request);
     }
 
+     public function fetchPayAdmissionsStaticCart($yser, $month)
+    {
+        return $this->admissionPyamentsService->fetchPayAdmissionsStaticCart($yser, $month);
+    }
+
 
     /*
      * web page route

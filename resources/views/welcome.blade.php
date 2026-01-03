@@ -196,10 +196,10 @@
     
     <div class="container">
         <div class="logo-container">
-            <img src="http://127.0.0.1:8000/uploads/logo/logo.png" alt="Success Academy Logo" class="logo">
+            <img src="{{ asset('uploads/logo/logo.png') }}" alt="Success Academy Logo" class="logo">
         </div>
         
-        <h1>Welcome to <span class="accent">Success Academy</span></h1>
+        <h1>Welcome to <span class="accent">Success Adadamy</span></h1>
         <p class="tagline">Empowering minds, shaping futures through excellence in education</p>
         
         <div class="redirect-message">
