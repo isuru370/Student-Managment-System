@@ -16,6 +16,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str; // Add this import
 
 class StudentService
 {
@@ -97,6 +98,73 @@ class StudentService
             ], 500);
         }
     }
+
+    // StudentService.php හි
+    public function fetchActiveStudentsLimitPage(Request $request, $returnJson = false)
+    {
+        try {
+            $perPage = $request->input('per_page', 20);
+            $page = $request->input('page', 1);
+            $search = $request->input('search', '');
+
+            $query = Student::with(['grade:id,grade_name'])
+                ->where('is_active', 1);
+
+            // Search
+            if (!empty($search)) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('custom_id', 'like', "%{$search}%")
+                        ->orWhere('fname', 'like', "%{$search}%")
+                        ->orWhere('lname', 'like', "%{$search}%")
+                        ->orWhereRaw("CONCAT(fname,' ',lname) LIKE ?", ["%{$search}%"]);
+                });
+            }
+
+            $students = $query->orderByDesc('id')->paginate($perPage, ['*'], 'page', $page);
+
+            // Transform image URLs
+            $students->getCollection()->transform(function ($student) {
+                if (
+                    !empty($student->img_url) &&
+                    !Str::startsWith($student->img_url, ['http://', 'https://', '//'])
+                ) {
+                    $student->img_url = Str::startsWith($student->img_url, 'uploads/')
+                        ? asset($student->img_url)
+                        : asset('uploads/' . $student->img_url);
+                }
+                return $student;
+            });
+
+            if ($returnJson) {
+                return response()->json([
+                    'status' => 'success',
+                    'data' => $students->items(),
+                    'pagination' => [
+                        'current_page' => $students->currentPage(),
+                        'last_page' => $students->lastPage(),
+                        'per_page' => $students->perPage(),
+                        'total' => $students->total(),
+                        'next_page_url' => $students->nextPageUrl(),
+                        'prev_page_url' => $students->previousPageUrl(),
+                        'has_more_pages' => $students->hasMorePages(),
+                    ]
+                ]);
+            }
+
+            return $students; // Return paginator object for web
+
+        } catch (Exception $e) {
+            if ($returnJson) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to fetch active students',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+            throw $e; // For web, throw exception
+        }
+    }
+
 
     public function fetchNotPaidAdmissionStudent()
     {

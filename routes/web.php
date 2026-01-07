@@ -15,6 +15,7 @@ use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\SettingsCodeController;
 use App\Http\Controllers\StudentAttendancesController;
 use App\Http\Controllers\SystemUserController;
+use App\Http\Controllers\TeacherLedgerSummaryController;
 use App\Http\Controllers\UserTypesController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentIdCardController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TeacherPaymentsController;
 use App\Http\Controllers\WelfarePaymentController;
 use App\Http\Controllers\WelfareSettingController;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
 // Welcome Page Route
@@ -84,7 +86,6 @@ Route::middleware(['auth'])->group(function () {
         // PUT THIS ABOVE THE {id} ROUTE
         Route::get('/studentImages', [StudentController::class, 'studentImages'])->name('students.studentImages');
         Route::get('/images', [StudentController::class, 'allImages'])->name('students.images');
-
         // ✅ FIX: Remove the duplicate 'students' from the URL
         Route::get('/add_student_to_class/{class_id}', [StudentController::class, 'addStudentToClass'])->name('students.add_student_to_class');
         Route::get('/add_student_to_single_class/{student_id}', [StudentController::class, 'addStudentToSingleClass'])->name('students.add_student_to_single_class');
@@ -184,7 +185,31 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::prefix('send-mail')->name('emails.')->group(function () {
-        Route::get('/{teacherId}/{month?}', [EmailsController::class, 'sendPaymentReport']);
+        Route::get('/{teacherId}/{yearMonth}', [EmailsController::class, 'sendPaymentReport'])
+            ->where('yearMonth', '\d{4}-\d{2}'); // Ensure format is YYYY-MM
+        Route::get('/test-email-connection', function () {
+            try {
+                Mail::raw('This is a test email from Student Management System', function ($message) {
+                    $message->to('isurufernando000@gmail.com')
+                        ->subject('Test Email Connection');
+                });
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Test email sent successfully!'
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'config' => [
+                        'host' => config('mail.mailers.smtp.host'),
+                        'port' => config('mail.mailers.smtp.port'),
+                        'encryption' => config('mail.mailers.smtp.encryption')
+                    ]
+                ], 500);
+            }
+        });
     });
 
     // routes/web.php
@@ -236,5 +261,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [WelfareSettingController::class, 'indexPage'])->name('index');
         Route::post('/', [WelfareSettingController::class, 'store'])->name('store');
         Route::delete('/{id}', [WelfareSettingController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('teacher-ledger-summary')->name('teacher_ledger_summary.')->group(function () {
+        Route::get('/', [TeacherLedgerSummaryController::class, 'index'])->name('index');
     });
 });

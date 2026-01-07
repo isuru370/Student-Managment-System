@@ -8,6 +8,7 @@ use App\Models\InstitutePayment;
 use App\Models\Payments;
 use App\Models\Teacher;
 use App\Models\TeacherPayment;
+use App\Models\WelfarePayment;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -17,31 +18,33 @@ class InstitutePaymentService
 
     public function fetchInstitutePaymentByMonth($yearMonth)
     {
-        $monthYear = now()->format('m Y'); // "05 2025"
         try {
             $startOfMonth = Carbon::createFromFormat('Y-m', $yearMonth)->startOfMonth();
             $endOfMonth   = Carbon::createFromFormat('Y-m', $yearMonth)->endOfMonth();
+            $monthYear    = now()->format('m Y');
 
+            // --- ආදායම් ---
             $admissionPayment = AdmissionPayments::whereBetween('created_at', [$startOfMonth, $endOfMonth])
                 ->sum('amount');
 
-            $teacherAdvance = TeacherPayment::where('reason_code', "!=", 'salary')
+            $teacherAdvance = TeacherPayment::where('status', 1)
+                ->where('reason_code', '!=', 'salary')
                 ->whereBetween('date', [$startOfMonth, $endOfMonth])
                 ->sum('payment');
 
-            $teacherSalary = TeacherPayment::where('reason_code', 'salary')
+            $teacherSalary = TeacherPayment::where('status', 1)
+                ->where('reason_code', 'salary')
                 ->where('payment_for', $monthYear)
                 ->sum('payment');
 
-
-            // Extra income
-            $extraIncome = (float) ExtraIncomes::whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            $extraIncome = ExtraIncomes::whereBetween('created_at', [$startOfMonth, $endOfMonth])
                 ->sum('amount');
 
-            $totalExpenese = (float) InstitutePayment::where('status', 1)
+            $totalExpenese = InstitutePayment::where('status', 1)
                 ->whereBetween('date', [$startOfMonth, $endOfMonth])
                 ->sum('payment');
 
+            // --- ගුරුවරුන් ---
             $teachers = Teacher::select('id', 'fname', 'lname', 'precentage')
                 ->where('is_active', 1)
                 ->get();
@@ -50,23 +53,21 @@ class InstitutePaymentService
             $totalInstituteIncome = 0;
             $totalTeacherPayments = 0;
             $totalTeacherEarnings = 0;
-            $totalTeacherNetEarnings = 0; // Added for net teacher earnings
+            $totalTeacherNetEarnings = 0;
 
             foreach ($teachers as $teacher) {
+
                 $payments = Payments::where('status', 1)
                     ->whereBetween('payment_date', [$startOfMonth, $endOfMonth])
                     ->whereHas('studentStudentClass.studentClass', function ($q) use ($teacher) {
-                        $q->where('teacher_id', $teacher->id);
+                        $q->where('is_active', 1)
+                            ->where('teacher_id', $teacher->id);
                     })
                     ->with('studentStudentClass.studentClass')
                     ->get();
 
-                /** CLASS WISE SUMMARY */
                 $classWiseTotals = $payments
-                    ->filter(fn($p) => $p->studentStudentClass &&
-                        $p->studentStudentClass->studentClass &&
-                        $p->studentStudentClass->studentClass->teacher_id == $teacher->id)
-                    ->groupBy(fn($payment) => $payment->studentStudentClass->studentClass->id)
+                    ->groupBy(fn($p) => optional($p->studentStudentClass->studentClass)->id)
                     ->map(function ($group) use ($teacher) {
                         $class = $group->first()->studentStudentClass->studentClass;
                         $classTotal = $group->sum('amount');
@@ -75,11 +76,11 @@ class InstitutePaymentService
                         $instituteIncome = round($classTotal - $teacherPremium, 2);
 
                         return [
-                            'class_id'          => $class->id,
-                            'class_name'        => $class->class_name,
-                            'total_amount'      => round($classTotal, 2),
-                            'teacher_earning'   => $teacherPremium,
-                            'institute_income'  => $instituteIncome
+                            'class_id' => $class->id,
+                            'class_name' => $class->class_name,
+                            'total_amount' => round($classTotal, 2),
+                            'teacher_earning' => $teacherPremium,
+                            'institute_income' => $instituteIncome
                         ];
                     })
                     ->values();
@@ -94,7 +95,6 @@ class InstitutePaymentService
                     ]];
                 }
 
-                /** TEACHER TOTALS */
                 $totalForMonth = $payments->sum('amount');
                 $teacherTotalEarning = round(($totalForMonth * $teacher->precentage) / 100, 2);
                 $institutionTotalIncome = round($totalForMonth - $teacherTotalEarning, 2);
@@ -103,9 +103,8 @@ class InstitutePaymentService
                 $totalTeacherPayments += $totalForMonth;
                 $totalTeacherEarnings += $teacherTotalEarning;
 
-                // Calculate teacher's individual advance and salary for this month
                 $teacherMonthlyAdvance = TeacherPayment::where('teacher_id', $teacher->id)
-                    ->where('reason_code', "!=", 'salary')
+                    ->where('reason_code', '!=', 'salary')
                     ->whereBetween('date', [$startOfMonth, $endOfMonth])
                     ->sum('payment');
 
@@ -114,8 +113,20 @@ class InstitutePaymentService
                     ->where('payment_for', $monthYear)
                     ->sum('payment');
 
+                // ✅ Teacher-wise welfare
+                $teacherWelfare = WelfarePayment::where('status', 1)
+                    ->where('teacher_id', $teacher->id)
+                    ->whereBetween('payment_date', [$startOfMonth, $endOfMonth])
+                    ->sum('amount');
 
-                $teacherNetEarning = round($teacherTotalEarning - ($teacherMonthlyAdvance + $teacherMonthlySalary), 2);
+                // ✅ Correct net earning (advance + salary + welfare deducted)
+                $teacherNetEarning = round(
+                    $teacherTotalEarning
+                        - ($teacherMonthlyAdvance + $teacherMonthlySalary + $teacherWelfare),
+                    2
+                );
+
+
                 $totalTeacherNetEarnings += $teacherNetEarning;
 
                 $result[] = [
@@ -132,12 +143,9 @@ class InstitutePaymentService
                 ];
             }
 
-            // Calculate net institute income
             $calculatedInstituteIncome = round($totalTeacherPayments - $totalTeacherEarnings, 2);
             $instituteIncomeWithAdmission = round($totalInstituteIncome + $admissionPayment, 2);
             $totalWithExtraIncome = round($instituteIncomeWithAdmission + $extraIncome, 2);
-
-            // Calculate net income after expenses
             $netIncome = round($totalWithExtraIncome - $totalExpenese, 2);
 
             return response()->json([
@@ -168,6 +176,9 @@ class InstitutePaymentService
             ], 500);
         }
     }
+
+
+
 
     public function fetchExtraIncome($date)
     {

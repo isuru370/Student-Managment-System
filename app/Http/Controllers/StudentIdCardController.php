@@ -17,136 +17,69 @@ class StudentIdCardController extends Controller
     }
 
     /**
-     * Display bulk ID card generator page with search/sort functionality
+     * ID කාඩ්පත් ජනන පිටුව පෙන්වීම
      */
     public function ganarateStudentId(Request $request)
     {
         try {
-            // Get parameters from request
-            $searchTerm = $request->input('search');
-            $startDate = $request->input('start_date');
-            $endDate = $request->input('end_date');
-            $sortBy = $request->input('sort_by', 'created_at');
-            $sortOrder = $request->input('sort_order', 'desc');
-
-            // Validate sort parameters
-            $validSortColumns = ['created_at', 'custom_id', 'lname', 'fname'];
-            $validSortOrders = ['asc', 'desc'];
-
-            $sortBy = in_array($sortBy, $validSortColumns) ? $sortBy : 'created_at';
-            $sortOrder = in_array($sortOrder, $validSortOrders) ? $sortOrder : 'desc';
-
-            // If search term or date filters exist, use search method
-            if ($searchTerm || $startDate || $endDate) {
-                $students = $this->studentIdCardService->searchStudents(
-                    $searchTerm,
-                    $startDate,
-                    $endDate,
-                    $sortBy,
-                    $sortOrder
-                );
-            } else {
-                // Get all students with sorting
-                $students = $this->studentIdCardService->getAllStudentsForIdCard($sortBy, $sortOrder);
+            // Search parameters ලබා ගැනීම
+            $searchName = $request->input('search_name');
+            $searchCustomId = $request->input('search_custom_id');
+            $searchDate = $request->input('search_date');
+            
+            // Search filters සමග සිසුන් ලබා ගැනීම
+            $students = $this->studentIdCardService->getAllStudentsForIdCard(
+                'created_at', 
+                'desc', 
+                20,
+                $searchDate,
+                $searchName,
+                $searchCustomId
+            );
+            
+            if (isset($students['status']) && $students['status'] === 'error') {
+                throw new Exception($students['message']);
             }
 
-            // Pass search parameters back to view for form persistence
-            return view('students.ganarate-student-id', compact('students', 'searchTerm', 'startDate', 'endDate', 'sortBy', 'sortOrder'));
+            // Pagination query parameters
+            $paginationQuery = '';
+            if ($request->filled('search_name')) {
+                $paginationQuery .= '&search_name=' . urlencode($request->input('search_name'));
+            }
+            if ($request->filled('search_custom_id')) {
+                $paginationQuery .= '&search_custom_id=' . urlencode($request->input('search_custom_id'));
+            }
+            if ($request->filled('search_date')) {
+                $paginationQuery .= '&search_date=' . $request->input('search_date');
+            }
+
+            return view('students.ganarate-student-id', compact('students', 'searchDate', 'searchName', 'searchCustomId', 'paginationQuery'));
         } catch (Exception $e) {
             Log::error("Error loading ID card generation page: " . $e->getMessage());
             return redirect()->route('dashboard')
-                ->with('error', 'Failed to load ID card generation page. Please try again.');
+                ->with('error', 'Failed to load the ID card generation page.');
         }
     }
 
     /**
-     * Display single student ID card preview
+     * තනි සිසුවෙකුගේ ID කාඩ්පත පෙරදසුන
      */
     public function previewCard($custom_id)
     {
         try {
-            // Call service to get student details
             $student = $this->studentIdCardService->getStudentForIdCard($custom_id);
 
             if (!$student) {
-                // Student not found
-                abort(404, 'Student ID card not found');
+                abort(404, 'Students ID card not found');
             }
 
-            // Pass student array directly to Blade
             return view('id-cards.design1', compact('student'));
         } catch (Exception $e) {
-            // Log error and show friendly page
-            Log::error("Student ID card fetch error: " . $e->getMessage());
+            Log::error("Error getting student ID card:" . $e->getMessage());
             return view('id-cards.design1', [
                 'student' => null,
-                'error' => 'Failed to load student ID card. Please try again.'
+                'error' => 'Student ID card loading failed.'
             ]);
         }
-    }
-
-    /**
-     * Generate ID cards for selected students
-     */
-    public function generateBulkCards(Request $request)
-    {
-        try {
-            $studentIds = $request->input('student_ids', []);
-            $sortBy = $request->input('sort_by', 'created_at');
-            $sortOrder = $request->input('sort_order', 'desc');
-
-            if (empty($studentIds)) {
-                return redirect()->route('student-id-card.ganarateStudentId')
-                    ->with('error', 'Please select at least one student.');
-            }
-
-            // Get selected students with sorting
-            $students = $this->studentIdCardService->getMultipleStudentsForIdCard($studentIds, $sortBy, $sortOrder);
-
-            if (!$students || $students->isEmpty()) {
-                return redirect()->route('student-id-card.ganarateStudentId')
-                    ->with('error', 'No students found for the selected IDs.');
-            }
-
-            // Return bulk preview view
-            return view('id-cards.bulk-preview', compact('students'));
-        } catch (Exception $e) {
-            Log::error("Bulk ID card generation error: " . $e->getMessage());
-            return redirect()->route('student-id-card.ganarateStudentId')
-                ->with('error', 'Failed to generate ID cards. Please try again.');
-        }
-    }
-
-    /**
-     * Generate ID card for all students
-     */
-    public function generateAllCards(Request $request)
-    {
-        try {
-            $sortBy = $request->input('sort_by', 'created_at');
-            $sortOrder = $request->input('sort_order', 'desc');
-
-            $students = $this->studentIdCardService->getAllStudentsForIdCard($sortBy, $sortOrder);
-
-            if (!$students || $students->isEmpty()) {
-                return redirect()->route('student-id-card.ganarateStudentId')
-                    ->with('error', 'No students found to generate ID cards.');
-            }
-
-            // Return bulk preview view
-            return view('id-cards.bulk-preview', compact('students'));
-        } catch (Exception $e) {
-            Log::error("All ID cards generation error: " . $e->getMessage());
-            return redirect()->route('student-id-card.ganarateStudentId')
-                ->with('error', 'Failed to generate ID cards. Please try again.');
-        }
-    }
-
-    /**
-     * Clear search filters
-     */
-    public function clearFilters()
-    {
-        return redirect()->route('student-id-card.ganarateStudentId');
     }
 }

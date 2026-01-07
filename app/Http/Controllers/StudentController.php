@@ -6,6 +6,7 @@ use App\Models\Student;
 use App\Services\StudentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class StudentController extends Controller
 {
@@ -25,6 +26,7 @@ class StudentController extends Controller
     {
         return $this->studentService->fetchActiveStudents();
     }
+
     public function fetchNotPaidAdmissionStudent()
     {
         return $this->studentService->fetchNotPaidAdmissionStudent();
@@ -111,12 +113,51 @@ class StudentController extends Controller
         return view('students.student_images');
     }
 
-    public function allImages()
+    public function allImages(Request $request)
     {
-        return view('students.images');
+        try {
+            $perPage = $request->input('per_page', 12);
+            $search = $request->input('search', '');
+
+            $query = Student::with(['grade:id,grade_name'])
+                ->where('is_active', 1)
+                ->orderBy('created_at', 'desc');
+
+            // Search
+            if (!empty($search)) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('custom_id', 'like', "%{$search}%")
+                        ->orWhere('fname', 'like', "%{$search}%")
+                        ->orWhere('lname', 'like', "%{$search}%")
+                        ->orWhereRaw("CONCAT(fname,' ',lname) LIKE ?", ["%{$search}%"]);
+                });
+            }
+
+            $students = $query->paginate($perPage);
+
+            // Transform image URLs
+            foreach ($students as $student) {
+                if (
+                    !empty($student->img_url) &&
+                    !Str::startsWith($student->img_url, ['http://', 'https://'])
+                ) {
+                    $student->img_url = Str::startsWith($student->img_url, 'uploads/')
+                        ? asset($student->img_url)
+                        : asset('uploads/' . $student->img_url);
+                }
+            }
+
+            // Get all active students for dropdown
+            $allStudents = Student::where('is_active', 1)
+                ->orderBy('custom_id')
+                ->get(['custom_id', 'fname', 'lname', 'img_url']);
+
+            return view('students.images', compact('students', 'allStudents'));
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Failed to load student images: ' . $e->getMessage());
+        }
     }
-
-
 
     public function addStudentToClass($class_id)
     {

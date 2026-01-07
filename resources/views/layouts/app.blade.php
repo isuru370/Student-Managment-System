@@ -672,7 +672,13 @@
                                         <li class="nav-item">
                                             <a class="nav-link {{ request()->routeIs('teacher_payment.expenses') ? 'active' : '' }}"
                                                 href="{{ route('teacher_payment.expenses') }}">
-                                                <i class="fas fa-plus-circle"></i> Teacher Expenses
+                                                <i class="fas fa-plus-circle"></i> Teacher Advance
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {{ request()->routeIs('teacher_ledger_summary.index') ? 'active' : '' }}"
+                                                href="{{ route('teacher_ledger_summary.index') }}">
+                                                <i class="fas fa-plus-circle"></i> Ledger
                                             </a>
                                         </li>
                                     </ul>

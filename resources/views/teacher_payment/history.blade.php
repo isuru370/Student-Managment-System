@@ -1758,31 +1758,41 @@
         }
 
         // Report email send function
-        function sendPaymentReportToTeacher(teacherId, monthYear) {
-            // Format month year for URL (e.g., "2025-02")
-            const formattedMonthYear = formatMonthYearForURL(monthYear);
+        // Report email send function - DIRECT PASSING
+            function sendPaymentReportToTeacher(teacherId, displayMonthYear) {
 
-            // Send email API call
-            fetch(`/send-mail/${teacherId}/${formattedMonthYear}`, {
-                method: 'GET',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('Report email sent successfully:', data);
-                } else {
-                    console.warn('Report email may not have been sent:', data);
-                }
-            })
-            .catch(error => {
-                console.error('Error sending report email:', error);
-                // Don't show error to user - email sending failure shouldn't affect payment
-            });
-        }
+                
+                // Get the selected values from dropdowns
+                const selectedMonth = monthSelect.value; // e.g., "04"
+                const selectedYear = yearSelect.value; // e.g., "2025"
+                
+                // Create the format backend expects: "2025-04"
+                const yearMonthForBackend = `${selectedYear}-${selectedMonth}`;
+                
+                // Send email API call - use the direct format
+                fetch(`/send-mail/${teacherId}/${yearMonthForBackend}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Email API Response:', data);
+                    if (data.success) {
+                        console.log('✅ Report email sent successfully for:', yearMonthForBackend);
+                        showToast(`Report sent for ${displayMonthYear}`, 'success');
+                    } else {
+                        console.warn('❌ Report email failed:', data);
+                        showToast(`Failed to send report: ${data.message || 'Unknown error'}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error sending report email:', error);
+                    showToast('Network error sending report', 'error');
+                });
+            }
 
         // Month format conversion
         function formatMonthYearForURL(monthYear) {

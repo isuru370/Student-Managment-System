@@ -97,7 +97,7 @@
             </p>
             
             <p>Best regards,<br>
-            <strong>Student Management System</strong><br>
+            <strong>Success Academy</strong><br>
             Accounts Department</p>
         </div>
         

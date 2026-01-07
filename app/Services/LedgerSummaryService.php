@@ -7,8 +7,6 @@ use App\Models\ExtraIncomes;
 use App\Models\InstitutePayment;
 use App\Models\Payments;
 use App\Models\Teacher;
-use App\Models\TeacherPayment;
-use App\Models\WelfarePayment;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Log;
@@ -33,8 +31,6 @@ class LedgerSummaryService
                 ->merge($this->classIncomeEntries($start, $end))
                 ->merge($this->admissionEntries($start, $end))
                 ->merge($this->extraIncomeEntries($start, $end))
-                ->merge($this->teacherPaymentEntries($start, $end))
-                ->merge($this->welfareEntries($start, $end))
                 ->merge($this->instituteExpenseEntries($start, $end))
                 ->sortBy('date')
                 ->values();
@@ -68,97 +64,122 @@ class LedgerSummaryService
     /**
      * Get Opening Balance (Previous Month Closing Balance)
      */
-    /**
-     * Get Opening Balance (Previous Month Closing Balance)
-     * SIMPLE NON-RECURSIVE VERSION
-     */
     private function getOpeningBalance(string $yearMonth): float
     {
         try {
-            if (!preg_match('/^\d{4}-\d{2}$/', $yearMonth)) return 0.0;
+            // YYYY-MM format validate කරනවා
+            if (!preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
+                return 0.0;
+            }
 
-            // If it's the first month (2024-01), return 0
+            // 2024-01 නම් opening balance 0
             if ($yearMonth <= '2024-01') {
                 return 0.0;
             }
 
-            // Get previous month
+            // Previous month dates
             $prevMonth = Carbon::createFromFormat('Y-m', $yearMonth)->subMonth();
-            $prevYearMonth = $prevMonth->format('Y-m');
+            $prevMonthStart = $prevMonth->copy()->startOfMonth();
+            $prevMonthEnd   = $prevMonth->copy()->endOfMonth();
 
-            // Calculate ALL months from start to previous month
-            $startDate = Carbon::createFromFormat('Y-m', '2024-01');
-            $runningBalance = 0.0;
+            // 1. ආදායම් (Institute Share පමණක්)
+            $totalInstituteReceipts = 0;
 
-            // Loop through each month from start to previous month
-            $currentDate = $startDate->copy();
-            while ($currentDate->format('Y-m') < $yearMonth) {
-                $monthStart = $currentDate->copy()->startOfMonth();
-                $monthEnd = $currentDate->copy()->endOfMonth();
+            // Class payments (teacher කොටස අඩු කරලා)
+            $classPayments = Payments::with(['studentStudentClass.studentClass.teacher'])
+                ->where('status', 1)
+                ->whereBetween('payment_date', [$prevMonthStart, $prevMonthEnd])
+                ->get();
 
-                // Calculate this month's net change
-                $monthNetChange = $this->calculateMonthNetChange($monthStart, $monthEnd);
-                $runningBalance += $monthNetChange;
+            foreach ($classPayments as $payment) {
+                $teacher = $payment->studentStudentClass->studentClass->teacher ?? null;
 
-                // Move to next month
-                $currentDate->addMonth();
+                if ($teacher && $teacher->is_active) {
+                    // Database එකේ precentage column එක භාවිතා කරන්න
+                    $teacherShare = ($payment->amount * $teacher->precentage) / 100;
+                    $instituteShare = $payment->amount - $teacherShare;
+                } else {
+                    $instituteShare = $payment->amount;
+                }
+
+                $totalInstituteReceipts += $instituteShare;
             }
 
-            return round($runningBalance, 2);
+            // Admission payments (සම්පූර්ණයි)
+            $totalInstituteReceipts += (float) AdmissionPayments::whereBetween('created_at', [$prevMonthStart, $prevMonthEnd])
+                ->sum('amount');
+
+            // Extra incomes (සම්පූර්ණයි)
+            $totalInstituteReceipts += (float) ExtraIncomes::whereBetween('created_at', [$prevMonthStart, $prevMonthEnd])
+                ->sum('amount');
+
+            // 2. වියදම් (Institute expenses පමණක්)
+            $totalExpenses = (float) InstitutePayment::where('status', 1)
+                ->whereBetween('date', [$prevMonthStart, $prevMonthEnd])
+                ->sum('payment');
+
+            // Opening balance = Institute receipts - Institute expenses
+            $openingBalance = $totalInstituteReceipts - $totalExpenses;
+
+            return round($openingBalance, 2);
         } catch (Throwable $e) {
-            Log::error('Opening balance error', ['month' => $yearMonth, 'error' => $e->getMessage()]);
+            Log::error('Opening balance error', [
+                'month' => $yearMonth,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return 0.0;
         }
     }
 
     /**
-     * Calculate net change for a specific month
-     */
-    private function calculateMonthNetChange(Carbon $start, Carbon $end): float
-    {
-        // 1. TOTAL RECEIPTS (FULL amounts, no deductions)
-        $classIncome = (float) Payments::where('status', 1)
-            ->whereBetween('payment_date', [$start, $end])
-            ->sum('amount');
-
-        $admission = (float) AdmissionPayments::whereBetween('created_at', [$start, $end])->sum('amount');
-        $extraIncome = (float) ExtraIncomes::whereBetween('created_at', [$start, $end])->sum('amount');
-        $welfareIncome = (float) WelfarePayment::where('status', 1)
-            ->whereBetween('payment_date', [$start, $end])->sum('amount');
-
-        $totalReceipts = $classIncome + $admission + $extraIncome + $welfareIncome;
-
-        // 2. TOTAL PAYMENTS
-        $teacherPayment = (float) TeacherPayment::where('status', 1)
-            ->whereBetween('date', [$start, $end])->sum('payment');
-
-        $instituteExpenses = (float) InstitutePayment::where('status', 1)
-            ->whereBetween('date', [$start, $end])->sum('payment');
-
-        $totalPayments = $teacherPayment + $instituteExpenses;
-
-        // 3. NET CHANGE
-        return $totalReceipts - $totalPayments;
-    }
-
-    /**
-     * Class income ledger entries (FULL AMOUNT - No percentage deduction)
+     * Class income ledger entries (INSTITUTE SHARE ONLY - After teacher percentage deduction)
      */
     private function classIncomeEntries(Carbon $start, Carbon $end): Collection
     {
-        return Payments::query()
+        $entries = collect();
+
+        // Get payments grouped by date
+        $paymentsByDate = Payments::with(['studentStudentClass.studentClass.teacher'])
             ->where('status', 1)
             ->whereBetween('payment_date', [$start, $end])
-            ->selectRaw('DATE(payment_date) as day, SUM(amount) as total, COUNT(*) as count')
-            ->groupBy('day')
-            ->orderBy('day')
+            ->orderBy('payment_date')
             ->get()
-            ->map(fn($p) => [
-                'date' => Carbon::parse($p->day)->startOfDay(),
-                'description' => "Class Fee ({$p->count})",
-                'receipt' => (float)$p->total,  // FULL AMOUNT - no deduction
-                'payment' => 0.0
-            ]);
+            ->groupBy(function ($payment) {
+                return Carbon::parse($payment->payment_date)->format('Y-m-d');
+            });
+
+        foreach ($paymentsByDate as $date => $payments) {
+            $totalForDay = 0;
+            $paymentCount = $payments->count();
+
+            foreach ($payments as $payment) {
+                $teacher = $payment->studentStudentClass->studentClass->teacher ?? null;
+
+                if ($teacher && $teacher->is_active) {
+                    // Teacher's share
+                    $teacherShare = ($payment->amount * $teacher->precentage) / 100;
+                    // Institute's share (full amount minus teacher's share)
+                    $instituteShare = $payment->amount - $teacherShare;
+                } else {
+                    // No teacher assigned or teacher inactive - institute gets full amount
+                    $instituteShare = $payment->amount;
+                }
+
+                $totalForDay += $instituteShare;
+            }
+
+            if ($totalForDay > 0) {
+                $entries->push([
+                    'date' => Carbon::parse($date)->startOfDay(),
+                    'description' => "Class Fee ({$paymentCount})",
+                    'receipt' => (float) round($totalForDay, 2),
+                    'payment' => 0.0
+                ]);
+            }
+        }
+
+        return $entries;
     }
 
     /**
@@ -193,48 +214,6 @@ class LedgerSummaryService
                 'description' => $e->reason ?: 'Extra Income',
                 'receipt' => (float)$e->amount,
                 'payment' => 0.0
-            ]);
-    }
-
-    /**
-     * Teacher payment ledger entries
-     */
-    private function teacherPaymentEntries(Carbon $start, Carbon $end): Collection
-    {
-        return TeacherPayment::with('teacher:id,fname,lname')
-            ->where('status', 1)
-            ->whereBetween('date', [$start, $end])
-            ->orderBy('date')
-            ->get()
-            ->map(fn($t) => [
-                'date' => Carbon::parse($t->date)->startOfDay(),
-                'description' => $t->reason_code ? $t->reason_code . ' - ' . trim($t->teacher->fname . ' ' . $t->teacher->lname) : trim($t->teacher->fname . ' ' . $t->teacher->lname),
-                'receipt' => 0.0,
-                'payment' => (float)$t->payment
-            ]);
-    }
-
-    /**
-     * Welfare ledger entries
-     */
-    /**
-     * Welfare ledger entries
-     */
-    /**
-     * Welfare ledger entries - Teacher pays to Institute (INCOME for institute)
-     */
-    private function welfareEntries(Carbon $start, Carbon $end): Collection
-    {
-        return WelfarePayment::with('teacher')
-            ->where('status', 1)
-            ->whereBetween('payment_date', [$start, $end])
-            ->orderBy('payment_date')
-            ->get()
-            ->map(fn($w) => [
-                'date' => Carbon::parse($w->payment_date)->startOfDay(),
-                'description' => ($w->reason ?: 'Welfare Contribution') . ' - ' . ($w->teacher ? trim($w->teacher->fname . ' ' . $w->teacher->lname) : ''),
-                'receipt' => (float)$w->amount,  // CORRECTED: This is INCOME for institute
-                'payment' => 0.0  // Not an expense for institute
             ]);
     }
 

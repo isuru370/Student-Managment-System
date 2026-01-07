@@ -16,76 +16,80 @@ class EmailsController extends Controller
         $this->teacherPaymentsService = $teacherPaymentsService;
     }
 
-    public function sendPaymentReport($teacherId, $yearMonth = null)
+    public function sendPaymentReport($teacherId, $yearMonth)
     {
         try {
-            // 1. Set default month
-            $yearMonth = $yearMonth ?? date('Y M');
-
-            // 2. Get payment data
-            $paymentData = $this->teacherPaymentsService->studentPaymentMonth($teacherId, $yearMonth);
-
-            dd($paymentData);
-            if (!$paymentData['success']) {
+            // Validate YYYY-MM
+            if (!preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
                 return response()->json([
-                    'error' => 'Failed to fetch payment data',
-                    'message' => $paymentData['message']
+                    'success' => false,
+                    'message' => 'Invalid date format. Use YYYY-MM'
                 ], 400);
             }
 
-            // 3. Prepare data for PDF view - FIXED
+            // Get flat payment data
+            $paymentData = $this->teacherPaymentsService
+                ->studentPaymentMonthFlat($teacherId, $yearMonth);
+
+            if (!$paymentData['success']) {
+                return response()->json($paymentData, 400);
+            }
+
+            /* ---------- CALCULATE TOTALS FROM FLAT DATA ---------- */
+            $students = $paymentData['students'];
+            $totalAmount = collect($students)->sum('amount');
+            $totalStudents = collect($students)->pluck('student_id')->unique()->count();
+
+            /* ---------- FORMAT MONTH FOR DISPLAY ---------- */
+            $formattedMonth = date('F Y', strtotime($yearMonth . '-01')); // මෙතන define කරන්න
+            $fileNameMonth = date('F-Y', strtotime($yearMonth . '-01'));
+
+            /* ---------- PDF DATA ---------- */
             $pdfViewData = [
-                'paymentData' => [
-                    'data' => $paymentData['data'] ?? [], // Use the Blade-compatible 'data' array
-                    'teacher_email' => $paymentData['teacher_email'] ?? 'N/A',
-                    'teacher_name' => $paymentData['teacher_name'] ?? 'Unknown'
-                ],
-                'month' => $paymentData['payment_for_format'] ?? $yearMonth,
-                'teacherName' => $paymentData['teacher_name'] ?? 'Unknown Teacher',
-                'teacherId' => $teacherId,
-                'teacherPercentage' => $paymentData['teacher_percentage'] ?? 0,
-                'totalClassAmount' => $paymentData['total_class_amount'] ?? 0,
-                'totalTeacherAmount' => $paymentData['total_teacher_amount'] ?? 0
+                'students' => $students,
+                'teacher' => $paymentData['teacher'],
+                'yearMonth' => $yearMonth,
+                'month' => $formattedMonth,  // ✅ දැන් හරියටම define කරලා
+                'totalAmount' => $totalAmount,
+                'totalStudents' => $totalStudents
             ];
 
-            // 4. Generate PDF
-            $pdf = Pdf::loadView('emails.payment_report', $pdfViewData);
-            $pdf->setPaper('A4', 'portrait');
+            // Generate PDF
+            $pdf = Pdf::loadView('emails.payment_report', $pdfViewData)
+                ->setPaper('A4', 'portrait');
 
-            // 5. Create file name
-            $fileName = 'payment-report-' . $teacherId . '-' .
-                str_replace(' ', '-', strtolower($yearMonth)) . '.pdf';
+            $fileName = "payment-report-{$teacherId}-{$fileNameMonth}.pdf";
 
-            // 6. Send email
-            $teacherEmail = $paymentData['teacher_email'] ?? 'hitrasitha@gmail.com'; //
+            // Check teacher email
+            $teacherEmail = $paymentData['teacher']['email'] ?? null;
+            if (!$teacherEmail) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Teacher email not found'
+                ], 400);
+            }
 
-            // Create email with proper data
-            Mail::to($teacherEmail)
-                ->send(new PaymentReportMail(
-                    $paymentData,          // Full payment data
-                    $pdf->output(),        // PDF content
-                    $fileName,             // File name
-                    $teacherId,            // Teacher ID
-                    $paymentData['payment_for_format'] ?? $yearMonth // Month for display
-                ));
+            // Send email
+            Mail::to($teacherEmail)->send(new PaymentReportMail(
+                $paymentData,
+                $pdf->output(),
+                $fileName,
+                $teacherId,
+                $formattedMonth
+            ));
 
             return response()->json([
                 'success' => true,
-                'message' => 'Payment report PDF sent to teacher successfully',
-                'teacher_email' => $teacherEmail,
+                'message' => 'Payment report sent successfully',
                 'file_name' => $fileName,
-                'month' => $paymentData['payment_for_format'] ?? $yearMonth,
-                'total_amount' => $paymentData['total_class_amount'],
-                'teacher_amount' => $paymentData['total_teacher_amount'],
-                'total_classes' => $paymentData['total_classes'] ?? 0,
-                'total_students' => $paymentData['total_students'] ?? 0,
-                'total_paid_students' => $paymentData['total_paid_students'] ?? 0,
-                'total_unpaid_students' => $paymentData['total_unpaid_students'] ?? 0
+                'month' => $formattedMonth,
+                'total_students' => $totalStudents,
+                'total_amount' => $totalAmount
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'error' => 'System error: ' . $e->getMessage()
+                'error' => $e->getMessage()
             ], 500);
         }
     }

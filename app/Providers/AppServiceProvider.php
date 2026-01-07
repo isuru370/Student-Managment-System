@@ -29,6 +29,7 @@ use App\Services\StudentService;
 use App\Services\StudentStudentStudentClassService;
 use App\Services\SubjectService;
 use App\Services\SystemUserService;
+use App\Services\TeacherLedgerSummaryService;
 use App\Services\TeacherPaymentsService;
 use App\Services\TeacherService;
 use App\Services\TituteService;
@@ -120,6 +121,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(LedgerSummaryService::class, function ($app) {
             return new LedgerSummaryService();
         });
+        $this->app->bind(TeacherLedgerSummaryService::class, function ($app) {
+            return new TeacherLedgerSummaryService();
+        });
         $this->app->bind(StudentIdCardService::class, function ($app) {
             return new StudentIdCardService();
         });
@@ -132,7 +136,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(UserTypesService::class, function ($app) {
             return new UserTypesService();
         });
-               $this->app->bind(WelfarePaymentService::class, function ($app) {
+        $this->app->bind(WelfarePaymentService::class, function ($app) {
             return new WelfarePaymentService();
         });
     }

@@ -13,212 +13,216 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <style>
-        /* ID Card Styles */
-        .student-id-card {
-            width: 86mm;
-            height: 54mm;
-            background: url('{{ asset('uploads/id/idcard_bg.png') }}') no-repeat center;
-            background-size: cover;
-            border-radius: 3mm;
-            padding: 3mm;
-            box-shadow: 0 2mm 5mm rgba(0, 0, 0, .25);
-            margin: 0 auto;
-            position: relative;
-        }
+    /* Define Monbaiti font */
+    @font-face {
+        font-family: 'Monbaiti';
+        src: url('{{ asset('fonts/monbaiti.ttf') }}') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+    }
 
-        .id-card-profile-box {
-            width: 18mm;
-            height: 22mm;
-            border: 0.3mm solid #ccc;
-            border-radius: 1mm;
-            overflow: hidden;
-            background: #fff;
-        }
+    .student-id-card {
+        width: 86mm;
+        height: 54mm;
+        background: url('{{ asset('uploads/id/idcard_bg.png') }}') no-repeat center;
+        background-size: cover;
+        border-radius: 3mm;
+        padding: 3mm;
+        box-shadow: 0 2mm 5mm rgba(0, 0, 0, .25);
+        margin: 0 auto;
+        position: relative;
+        font-family: 'Monbaiti', serif !important; /* Force Monbaiti font */
+    }
 
-        .id-card-profile-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+    .id-card-profile-box {
+        width: 18mm;
+        height: 22mm;
+        border: 0.3mm solid #ccc;
+        border-radius: 1mm;
+        overflow: hidden;
+        background: #fff;
+    }
 
-        .id-card-student-id {
-            font-family: 'Monbaiti', serif;
-            font-size: 4.5mm;
-            font-weight: bold;
-            line-height: 1.1;
-        }
+    .id-card-profile-box img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
 
-        .id-card-student-name {
-            font-family: 'Monbaiti', serif;
-            font-size: 4.3mm;
-            line-height: 1.2;
-        }
+    .id-card-student-id {
+        font-family: 'Monbaiti', serif !important;
+        font-size: 4.5mm;
+        font-weight: bold;
+        line-height: 1.1;
+        color: #000;
+    }
 
-        .id-card-address {
-            font-family: 'Monbaiti', serif;
-            font-size: 3mm;
-            line-height: 1.2;
-        }
+    .id-card-student-name {
+        font-family: 'Monbaiti', serif !important;
+        font-size: 4.3mm;
+        line-height: 1.2;
+        color: #000;
+        margin-top: 0.5mm;
+    }
 
-        .id-card-qr-img {
-            width: 18mm;
-            height: 18mm;
-            background: #fff;
-            padding: 1mm;
-            border-radius: 1mm;
-        }
+    .id-card-address {
+        font-family: 'Monbaiti', serif !important;
+        font-size: 3mm;
+        line-height: 1.2;
+        color: #000;
+        margin-top: 0.5mm;
+        max-width: 45mm;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* Show only 2 lines */
+        -webkit-box-orient: vertical;
+        word-wrap: break-word;
+    }
 
-        .id-card-logo {
-            width: 4mm;
-        }
+    .id-card-qr-img {
+        width: 18mm;
+        height: 18mm;
+        background: #fff;
+        padding: 1mm;
+        border-radius: 1mm;
+    }
 
-        /* Modal ID Card Styles */
-        .modal-id-card {
-            width: 100%;
-            max-width: 86mm;
-            height: 54mm;
-            background: url('{{ asset('uploads/id/idcard_bg.png') }}') no-repeat center;
-            background-size: cover;
-            border-radius: 3mm;
-            padding: 3mm;
-            box-shadow: 0 2mm 5mm rgba(0, 0, 0, .25);
-            margin: 0 auto;
-        }
+    .id-card-logo {
+        width: 4mm;
+    }
+    /* Pagination Styling */
+.pagination {
+    margin-bottom: 0;
+}
 
-        /* Bulk Preview Grid */
-        .bulk-preview-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(90mm, 1fr));
-            gap: 10px;
-            margin-bottom: 20px;
-        }
+.page-item {
+    margin: 0 2px;
+}
 
-        .bulk-preview-item {
-            page-break-inside: avoid;
-        }
+.page-link {
+    color: #495057;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+}
 
-        @media print {
-            .bulk-preview-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-    </style>
+.page-link:hover {
+    color: #fff;
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
 
-    <!-- Advanced Search and Sort Form -->
-    <form method="GET" action="{{ route('student-id-card.ganarateStudentId') }}" class="mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Advanced Search & Sort</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <!-- Search Input -->
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Search</label>
-                        <input type="text" name="search" class="form-control" placeholder="Search by ID, name, or address"
-                            value="{{ $searchTerm ?? '' }}">
-                    </div>
+.page-item.active .page-link {
+    color: #fff;
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
 
-                    <!-- Date Range -->
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">From Date</label>
-                        <input type="date" name="start_date" class="form-control" value="{{ $startDate ?? '' }}">
-                    </div>
+.page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
 
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">To Date</label>
-                        <input type="date" name="end_date" class="form-control" value="{{ $endDate ?? '' }}">
-                    </div>
+.pagination-lg .page-link {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.25rem;
+}
 
-                    <!-- Sort By -->
-                    <div class="col-md-2 mb-3">
-                        <label class="form-label">Sort By</label>
-                        <select name="sort_by" class="form-select">
-                            <option value="created_at" {{ ($sortBy ?? 'created_at') == 'created_at' ? 'selected' : '' }}>
-                                Registration Date</option>
-                            <option value="custom_id" {{ ($sortBy ?? '') == 'custom_id' ? 'selected' : '' }}>Student ID
-                            </option>
-                            <option value="lname" {{ ($sortBy ?? '') == 'lname' ? 'selected' : '' }}>Last Name</option>
-                            <option value="fname" {{ ($sortBy ?? '') == 'fname' ? 'selected' : '' }}>First Name</option>
-                        </select>
-                    </div>
-
-                    <!-- Sort Order -->
-                    <div class="col-md-2 mb-3">
-                        <label class="form-label">Sort Order</label>
-                        <select name="sort_order" class="form-select">
-                            <option value="desc" {{ ($sortOrder ?? 'desc') == 'desc' ? 'selected' : '' }}>Newest First
-                            </option>
-                            <option value="asc" {{ ($sortOrder ?? '') == 'asc' ? 'selected' : '' }}>Oldest First</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="row">
-                    <div class="col-md-12">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-1"></i> Apply Filters
-                        </button>
-                        <a href="{{ route('student-id-card.clear-filters') }}" class="btn btn-secondary">
-                            <i class="fas fa-times me-1"></i> Clear Filters
-                        </a>
-                        <span class="ms-3 text-muted">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Showing {{ $students ? $students->count() : 0 }} students
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </form>
+.pagination-sm .page-link {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+</style>
 
     <div class="card">
         <div class="card-header">
             <div class="row">
                 <div class="col-md-6">
-                    <h4 class="card-title mb-0">Generate Student ID Cards</h4>
-                    <p class="text-muted mb-0">Select students to generate ID cards in bulk</p>
-                </div>
-                <div class="col-md-6 text-end">
-                    <button type="button" class="btn btn-primary" onclick="generateSelectedCards()">
-                        <i class="fas fa-id-card"></i> Generate Selected
-                    </button>
-                    <button type="button" class="btn btn-success" onclick="generateAllCards()">
-                        <i class="fas fa-id-card-alt"></i> Generate All
-                    </button>
-                    <button type="button" class="btn btn-warning text-white" onclick="previewSelectedCards()">
-                        <i class="fas fa-eye"></i> Preview Selected
-                    </button>
-                    <button type="button" class="btn btn-info" onclick="downloadSelectedCards()">
-                        <i class="fas fa-download"></i> Download Selected
-                    </button>
+                    <h4 class="card-title mb-0">Student ID Cards</h4>
+                    <p class="text-muted mb-0">Click preview to view and download ID cards</p>
                 </div>
             </div>
         </div>
 
         <div class="card-body">
-            <!-- Client-side Search and Filter Section (for UI filtering within current results) -->
-            <div class="row mb-3">
-                <div class="col-md-8">
-                    <div class="input-group">
-                        <input type="text" id="searchInput" class="form-control"
-                            placeholder="Filter within results by ID, Name, or Address...">
-                        <button class="btn btn-outline-secondary" type="button" onclick="searchStudents()">
-                            <i class="fas fa-search"></i> Filter
-                        </button>
-                        <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
-                            <i class="fas fa-times"></i> Clear
-                        </button>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-calendar"></i></span>
-                        <input type="date" id="dateFilter" class="form-control" placeholder="Filter by Created Date">
-                        <button class="btn btn-outline-secondary" type="button" onclick="filterByDate()">
-                            Filter
-                        </button>
+            <!-- Search Form -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <form method="GET" action="{{ route('student-id-card.ganarateStudentId') }}" class="row g-3 align-items-center">
+                                <!-- Name Search -->
+                                <div class="col-md-3">
+                                    <label for="search_name" class="form-label">Search by Name</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="search_name" 
+                                           name="search_name" 
+                                           value="{{ request('search_name') }}"
+                                           placeholder="First or Last name">
+                                </div>
+                                
+                                <!-- Custom ID Search -->
+                                <div class="col-md-3">
+                                    <label for="search_custom_id" class="form-label">Search by Student ID</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="search_custom_id" 
+                                           name="search_custom_id" 
+                                           value="{{ request('search_custom_id') }}"
+                                           placeholder="Student ID">
+                                </div>
+                                
+                                <!-- Date Search -->
+                                <div class="col-md-3">
+                                    <label for="search_date" class="form-label">Search by Date</label>
+                                    <input type="date" 
+                                           class="form-control" 
+                                           id="search_date" 
+                                           name="search_date" 
+                                           value="{{ request('search_date') }}"
+                                           placeholder="Creation date">
+                                </div>
+                                
+                                <!-- Action Buttons -->
+                                <div class="col-md-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-search me-1"></i> Search
+                                        </button>
+                                        @if(request()->anyFilled(['search_name', 'search_custom_id', 'search_date']))
+                                            <a href="{{ route('student-id-card.ganarateStudentId') }}" class="btn btn-secondary">
+                                                <i class="fas fa-times me-1"></i> Clear
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
+                                
+                                <!-- Search Summary -->
+                                @if(request()->anyFilled(['search_name', 'search_custom_id', 'search_date']))
+                                <div class="col-md-12 mt-3">
+                                    <div class="alert alert-info py-2 mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Showing results for:
+                                        @if(request('search_name'))
+                                            <strong>Name: "{{ request('search_name') }}"</strong>
+                                        @endif
+                                        @if(request('search_custom_id'))
+                                            @if(request('search_name')) | @endif
+                                            <strong>ID: "{{ request('search_custom_id') }}"</strong>
+                                        @endif
+                                        @if(request('search_date'))
+                                            @if(request('search_name') || request('search_custom_id')) | @endif
+                                            <strong>Date: {{ request('search_date') }}</strong>
+                                        @endif
+                                    </div>
+                                </div>
+                                @endif
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -230,17 +234,18 @@
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <i class="fas fa-info-circle me-2"></i>
-                                <span id="selectedCount">0</span> students selected out of
-                                <span id="totalCount">{{ $students ? $students->count() : 0 }}</span> total
+                                Showing: <span id="totalCount">{{ $students->count() }}</span> students
+                                @if($students->total() != $students->count())
+                                    ({{ $students->total() }} total)
+                                @endif
                             </div>
+                            @if(request()->anyFilled(['search_name', 'search_custom_id', 'search_date']))
                             <div>
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAll()">
-                                    <i class="fas fa-check-square"></i> Select All
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAll()">
-                                    <i class="fas fa-square"></i> Deselect All
-                                </button>
+                                <a href="{{ route('student-id-card.ganarateStudentId') }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye me-1"></i> View All
+                                </a>
                             </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -248,21 +253,16 @@
 
             <!-- Students Grid -->
             <div class="row" id="studentsGrid">
-                @if($students && $students->count() > 0)
+                @if($students->count() > 0)
                     @foreach($students as $student)
-                        <div class="col-xl-4 col-lg-6 col-md-6 col-sm-12 mb-4 student-card" data-id="{{ $student['custom_id'] }}"
-                            data-name="{{ strtolower($student['fname'] . ' ' . $student['lname']) }}"
-                            data-address="{{ strtolower($student['address']) }}" data-created="{{ $student['created_at'] ?? '' }}"
-                            data-student='@json($student)'>
+                        <div class="col-xl-4 col-lg-6 col-md-6 col-sm-12 mb-4 student-card" 
+                             data-id="{{ $student['custom_id'] }}"
+                             data-student='@json($student)'>
                             <div class="card h-100">
                                 <div class="card-body p-3">
-                                    <!-- Checkbox -->
-                                    <div class="form-check mb-3">
-                                        <input class="form-check-input student-checkbox" type="checkbox"
-                                            value="{{ $student['custom_id'] }}" id="student_{{ $student['custom_id'] }}">
-                                        <label class="form-check-label fw-bold" for="student_{{ $student['custom_id'] }}">
-                                            {{ $student['custom_id'] }}
-                                        </label>
+                                    <!-- Student ID -->
+                                    <div class="mb-3">
+                                        <h6 class="fw-bold text-primary">{{ $student['custom_id'] }}</h6>
                                     </div>
 
                                     <!-- Student ID Card Embedded -->
@@ -273,26 +273,12 @@
                                                 <div class="col-8 d-flex flex-column">
                                                     <div class="id-card-profile-box mt-1 ms-1">
                                                         @php
-                                                            // Fix image path issue
                                                             $defaultImage = asset('uploads/logo/logo.png');
-                                                            $studentImage = null;
-
-                                                            if (isset($student['img_url']) && !empty($student['img_url'])) {
-                                                                // Check if it's already a full URL
-                                                                if (filter_var($student['img_url'], FILTER_VALIDATE_URL)) {
-                                                                    $studentImage = $student['img_url'];
-                                                                } else {
-                                                                    // Remove leading slash if present
-                                                                    $imagePath = ltrim($student['img_url'], '/');
-                                                                    $studentImage = asset($imagePath);
-                                                                }
-                                                            } else {
-                                                                $studentImage = $defaultImage;
-                                                            }
+                                                            $studentImage = $student['img_url'] ?? $defaultImage;
                                                         @endphp
-
                                                         <img src="{{ $studentImage }}" alt="Student Photo"
-                                                            onerror="this.onerror=null;this.src='{{ $defaultImage }}'">
+                                                            onerror="this.onerror=null;this.src='{{ $defaultImage }}'"
+                                                            id="student-img-{{ $student['custom_id'] }}">
                                                     </div>
 
                                                     <div class="ms-1 mt-3">
@@ -300,8 +286,9 @@
                                                         <div class="id-card-student-name mt-1">
                                                             {{ $student['lname'] }}
                                                         </div>
-                                                        <div class="id-card-address mt-1">
-                                                            {{ Str::limit($student['address'] ?? 'Address not available', 40) }}
+                                                        <div class="id-card-address mt-1" 
+                                                             style="max-width: 45mm; overflow: hidden; text-overflow: ellipsis; max-lines: 2;">
+                                                            {{ $student['address'] ?? 'Address not available' }}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -312,12 +299,11 @@
                                                         $qrData = $student['custom_id'] ?? 'N/A';
                                                         $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=' . urlencode($qrData);
                                                     @endphp
-
                                                     <img src="{{ $qrUrl }}" class="id-card-qr-img mt-1" alt="QR Code"
-                                                        crossorigin="anonymous">
-
+                                                        id="qr-img-{{ $student['custom_id'] }}">
                                                     <img src="{{ asset('uploads/logo/logo.png') }}"
-                                                        class="id-card-logo mt-auto mb-1" alt="Logo">
+                                                        class="id-card-logo mt-auto mb-1" alt="Logo"
+                                                        id="logo-img-{{ $student['custom_id'] }}">
                                                 </div>
                                             </div>
                                         </div>
@@ -343,15 +329,11 @@
                                         </small>
                                     </div>
 
-                                    <!-- Actions -->
-                                    <div class="d-flex justify-content-between mt-2">
-                                        <button type="button" class="btn btn-sm btn-outline-primary preview-single-card"
+                                    <!-- Action Button -->
+                                    <div class="d-flex justify-content-center mt-2">
+                                        <button type="button" class="btn btn-primary preview-single-card"
                                             data-student-id="{{ $student['custom_id'] }}">
-                                            <i class="fas fa-expand"></i> Preview
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-info toggle-select"
-                                            data-id="{{ $student['custom_id'] }}">
-                                            <i class="fas fa-check"></i> Select
+                                            <i class="fas fa-eye me-1"></i> Preview & Download
                                         </button>
                                     </div>
                                 </div>
@@ -362,47 +344,109 @@
                     <div class="col-12">
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle me-2"></i>
-                            No students found. Please add students first.
+                            @if(request()->anyFilled(['search_name', 'search_custom_id', 'search_date']))
+                                No students found matching your search criteria.
+                            @else
+                                No students found. Please add students first.
+                            @endif
                         </div>
                     </div>
                 @endif
             </div>
 
-            <!-- No Results Message (Hidden by default) -->
-            <div id="noResults" class="d-none">
-                <div class="col-12">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-search me-2"></i>
-                        No students found matching your search criteria.
-                    </div>
-                </div>
+            <!-- Pagination -->
+            <!-- Pagination -->
+@if($students->hasPages())
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {{-- Previous Page Link --}}
+                    @if ($students->onFirstPage())
+                        <li class="page-item disabled">
+                            <span class="page-link" aria-hidden="true">&laquo;</span>
+                        </li>
+                    @else
+                        <li class="page-item">
+                            <a class="page-link" href="{{ $students->previousPageUrl() }}{{ $paginationQuery }}" rel="prev" aria-label="@lang('pagination.previous')">&laquo;</a>
+                        </li>
+                    @endif
+
+                    {{-- Pagination Elements --}}
+                    @php
+                        $current = $students->currentPage();
+                        $last = $students->lastPage();
+                        $start = max(1, $current - 2);
+                        $end = min($last, $current + 2);
+                        
+                        if ($end - $start < 4) {
+                            if ($current <= 3) {
+                                $end = min(5, $last);
+                            } else {
+                                $start = max(1, $last - 4);
+                            }
+                        }
+                    @endphp
+
+                    {{-- First Page Link --}}
+                    @if($start > 1)
+                        <li class="page-item">
+                            <a class="page-link" href="{{ $students->url(1) }}{{ $paginationQuery }}">1</a>
+                        </li>
+                        @if($start > 2)
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        @endif
+                    @endif
+
+                    {{-- Page Numbers --}}
+                    @for ($i = $start; $i <= $end; $i++)
+                        @if ($i == $students->currentPage())
+                            <li class="page-item active" aria-current="page">
+                                <span class="page-link">{{ $i }}</span>
+                            </li>
+                        @else
+                            <li class="page-item">
+                                <a class="page-link" href="{{ $students->url($i) }}{{ $paginationQuery }}">{{ $i }}</a>
+                            </li>
+                        @endif
+                    @endfor
+
+                    {{-- Last Page Link --}}
+                    @if($end < $last)
+                        @if($end < $last - 1)
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        @endif
+                        <li class="page-item">
+                            <a class="page-link" href="{{ $students->url($last) }}{{ $paginationQuery }}">{{ $last }}</a>
+                        </li>
+                    @endif
+
+                    {{-- Next Page Link --}}
+                    @if ($students->hasMorePages())
+                        <li class="page-item">
+                            <a class="page-link" href="{{ $students->nextPageUrl() }}{{ $paginationQuery }}" rel="next" aria-label="@lang('pagination.next')">&raquo;</a>
+                        </li>
+                    @else
+                        <li class="page-item disabled">
+                            <span class="page-link" aria-hidden="true">&raquo;</span>
+                        </li>
+                    @endif
+                </ul>
+            </nav>
+            
+            {{-- Page Info --}}
+            <div class="text-center text-muted mt-2">
+                <small>
+                    Showing {{ $students->firstItem() }} to {{ $students->lastItem() }} of {{ $students->total() }} entries
+                </small>
             </div>
         </div>
-
-        <!-- Bulk Actions Footer -->
-        <div class="card-footer">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
-                        <label class="form-check-label" for="selectAllCheckbox">
-                            Select/Deselect All
-                        </label>
-                    </div>
-                </div>
-                <div class="col-md-6 text-end">
-                    <button type="button" class="btn btn-warning text-white" onclick="previewSelectedCards()">
-                        <i class="fas fa-eye"></i> Preview Selected ( <span id="selectedBadge"
-                            class="badge bg-white text-warning">0</span> )
-                    </button>
-                    <button type="button" class="btn btn-info" onclick="downloadSelectedCards()">
-                        <i class="fas fa-download"></i> Download Selected
-                    </button>
-                    <a href="{{ route('students.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back
-                    </a>
-                </div>
-            </div>
+    </div>
+@endif
         </div>
     </div>
 
@@ -419,68 +463,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="downloadSingleCard()">
-                        <i class="fas fa-download"></i> Download
+                    <button type="button" class="btn btn-primary" onclick="downloadCardAsPNG()">
+                        <i class="fas fa-download me-1"></i> Download as PNG
                     </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bulk Preview Modal -->
-    <div class="modal fade" id="bulkPreviewModal" tabindex="-1" aria-labelledby="bulkPreviewModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="bulkPreviewModalLabel">
-                        <i class="fas fa-id-card-alt me-2"></i> Bulk ID Cards Preview
-                        (<span id="bulkPreviewCount">0</span> cards)
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-outline-primary" onclick="downloadAsPNG()">
-                                <i class="fas fa-file-image"></i> Download as PNG
-                            </button>
-                            <button type="button" class="btn btn-outline-success" onclick="downloadAsJPG()">
-                                <i class="fas fa-file-image"></i> Download as JPG
-                            </button>
-                            <button type="button" class="btn btn-outline-info" onclick="generatePDF()">
-                                <i class="fas fa-file-pdf"></i> Download as PDF
-                            </button>
-                            <button type="button" class="btn btn-outline-warning" onclick="printBulkCards()">
-                                <i class="fas fa-print"></i> Print
-                            </button>
-                        </div>
-                        <div class="form-check form-check-inline ms-3">
-                            <input class="form-check-input" type="checkbox" id="includeGridLines" checked>
-                            <label class="form-check-label" for="includeGridLines">Show grid lines</label>
-                        </div>
-                    </div>
-
-                    <div id="bulkPreviewContainer" class="bulk-preview-grid">
-                        <!-- Cards will be loaded here -->
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Loading Modal -->
-    <div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-body text-center p-5">
-                    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <h5 class="mb-3">Generating ID Cards...</h5>
-                    <p class="text-muted" id="loadingMessage">Please wait while we prepare your ID cards for download.</p>
                 </div>
             </div>
         </div>
@@ -489,932 +474,248 @@
 
 @push('styles')
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-    <style>
-        /* Responsive ID Card */
-        @media (max-width: 1200px) {
-            .student-id-card {
-                transform: scale(0.9);
-                transform-origin: center;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .student-id-card {
-                transform: scale(0.8);
-            }
-        }
-
-        /* Card hover effect */
-        .student-card .card:hover {
-            border-color: #3498db;
-        }
-
-        .student-card .card {
-            transition: all 0.3s ease;
-        }
-
-        /* Modal styles */
-        .modal-id-card {
-            transform: scale(1.2);
-            transform-origin: center;
-            margin: 20px auto;
-        }
-
-        @media (max-width: 768px) {
-            .modal-id-card {
-                transform: scale(1);
-            }
-        }
-
-        /* Grid lines for bulk preview */
-        .grid-line {
-            border: 1px dashed #ddd;
-            padding: 5px;
-        }
-    </style>
 @endpush
 
 @push('scripts')
-    <!-- Load html2canvas FIRST -->
+    <!-- Load html2canvas for image generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- Load jsPDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- Load SweetAlert2 LAST -->
+    <!-- Load SweetAlert2 for alerts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
-        // Global variables
-        let selectedStudentForSinglePreview = null;
-        let selectedStudentsForBulk = [];
-
-        // Debug: Check if html2canvas is loaded
-        console.log('html2canvas loaded:', typeof html2canvas !== 'undefined');
-        console.log('SweetAlert2 loaded:', typeof Swal !== 'undefined');
+        let selectedStudentData = null;
 
         document.addEventListener('DOMContentLoaded', function () {
-            updateSelectedCount();
-
-            // Select All Checkbox
-            document.getElementById('selectAllCheckbox').addEventListener('change', function () {
-                const checkboxes = document.querySelectorAll('.student-checkbox:not(:disabled)');
-                const isChecked = this.checked;
-
-                checkboxes.forEach(checkbox => {
-                    checkbox.checked = isChecked;
-                    updateCardSelection(checkbox.value, isChecked);
-                });
-
-                updateSelectedCount();
-            });
-
-            // Individual checkbox change
-            document.querySelectorAll('.student-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function () {
-                    updateCardSelection(this.value, this.checked);
-                    updateSelectedCount();
-                    updateSelectAllCheckbox();
-                });
-            });
-
-            // Toggle select buttons
-            document.querySelectorAll('.toggle-select').forEach(button => {
-                button.addEventListener('click', function () {
-                    const studentId = this.getAttribute('data-id');
-                    const checkbox = document.querySelector(`#student_${studentId}`);
-                    checkbox.checked = !checkbox.checked;
-                    checkbox.dispatchEvent(new Event('change'));
-                });
-            });
-
-            // Single card preview buttons
-            document.querySelectorAll('.preview-single-card').forEach(button => {
-                button.addEventListener('click', function () {
-                    const studentId = this.getAttribute('data-student-id');
+            // Event delegation for preview buttons
+            document.addEventListener('click', function (e) {
+                if (e.target.classList.contains('preview-single-card') || 
+                    e.target.closest('.preview-single-card')) {
+                    const button = e.target.classList.contains('preview-single-card') ? 
+                        e.target : e.target.closest('.preview-single-card');
+                    const studentId = button.getAttribute('data-student-id');
                     previewSingleCard(studentId);
-                });
-            });
-
-            // Search input enter key
-            document.getElementById('searchInput').addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') {
-                    searchStudents();
-                }
-            });
-
-            // Date filter enter key
-            document.getElementById('dateFilter').addEventListener('change', function () {
-                if (this.value) {
-                    filterByDate();
                 }
             });
         });
 
-        // Preview single card
         function previewSingleCard(studentId) {
             const cardElement = document.querySelector(`.student-card[data-id="${studentId}"]`);
             if (!cardElement) return;
 
             try {
                 const studentData = JSON.parse(cardElement.getAttribute('data-student'));
-                selectedStudentForSinglePreview = studentData;
+                selectedStudentData = studentData;
 
-                const modalContainer = document.getElementById('modalCardContainer');
-                modalContainer.innerHTML = generateCardHTML(studentData);
-
+                // Generate card HTML
+                const cardHTML = generateCardHTML(studentData);
+                document.getElementById('modalCardContainer').innerHTML = cardHTML;
+                
+                // Show modal
                 const modal = new bootstrap.Modal(document.getElementById('singleCardModal'));
                 modal.show();
+                
+                // Load images before showing
+                setTimeout(loadImagesForDownload, 100);
             } catch (error) {
-                console.error('Error previewing single card:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Failed to preview ID card. Please try again.',
-                    confirmButtonColor: '#d33',
-                });
+                console.error('Error previewing card:', error);
+                showAlert('error', 'Error', 'Failed to preview ID card.');
             }
         }
 
-        // Preview selected cards
-        function previewSelectedCards() {
-            const selectedIds = getSelectedStudentIds();
-
-            if (selectedIds.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'No Selection',
-                    text: 'Please select at least one student to preview.',
-                    confirmButtonColor: '#3085d6',
-                });
-                return;
-            }
-
-            selectedStudentsForBulk = [];
-            const bulkContainer = document.getElementById('bulkPreviewContainer');
-            bulkContainer.innerHTML = '';
-
-            // Get student data for selected IDs
-            selectedIds.forEach(studentId => {
-                const cardElement = document.querySelector(`.student-card[data-id="${studentId}"]`);
-                if (cardElement) {
-                    try {
-                        const studentData = JSON.parse(cardElement.getAttribute('data-student'));
-                        selectedStudentsForBulk.push(studentData);
-
-                        // Add card to bulk preview
-                        const cardDiv = document.createElement('div');
-                        cardDiv.className = 'bulk-preview-item';
-                        cardDiv.innerHTML = generateCardHTML(studentData);
-                        bulkContainer.appendChild(cardDiv);
-                    } catch (error) {
-                        console.error('Error parsing student data:', error);
-                    }
-                }
-            });
-
-            document.getElementById('bulkPreviewCount').textContent = selectedStudentsForBulk.length;
-
-            const modal = new bootstrap.Modal(document.getElementById('bulkPreviewModal'));
-            modal.show();
-        }
-
-        // Generate card HTML with fixed image paths
         function generateCardHTML(student) {
             const defaultImage = '{{ asset('uploads/logo/logo.png') }}';
-            let studentImage = defaultImage;
-
-            // Fix image path
-            if (student.img_url && student.img_url.trim() !== '') {
-                if (student.img_url.startsWith('http') || student.img_url.startsWith('//')) {
-                    studentImage = student.img_url;
-                } else {
-                    // Remove leading slash if present
-                    const cleanPath = student.img_url.startsWith('/') ? student.img_url.substring(1) : student.img_url;
-                    studentImage = '{{ asset('') }}' + cleanPath;
-                }
+            let studentImage = student.img_url || defaultImage;
+            
+            // Ensure image is a full URL
+            if (studentImage && !studentImage.startsWith('http')) {
+                studentImage = '{{ asset('') }}' + studentImage.replace(/^\//, '');
             }
 
             const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(student.custom_id || 'N/A')}`;
 
             return `
-                    <div class="student-id-card">
-                        <div class="row h-100">
-                            <div class="col-8 d-flex flex-column">
-                                <div class="id-card-profile-box mt-1 ms-1">
-                                    <img src="${studentImage}" 
-                                         alt="Student Photo" 
-                                         crossorigin="anonymous"
-                                         onerror="this.onerror=null;this.src='${defaultImage}'">
-                                </div>
-                                <div class="ms-1 mt-3">
-                                    <div class="id-card-student-id">${student.custom_id || 'N/A'}</div>
-                                    <div class="id-card-student-name mt-1">${student.lname || ''}</div>
-                                    <div class="id-card-address mt-1">${student.address ? student.address.substring(0, 40) : 'Address not available'}</div>
-                                </div>
-                            </div>
-                            <div class="col-4 d-flex flex-column align-items-center">
-                                <img src="${qrUrl}" class="id-card-qr-img mt-1" alt="QR Code" crossorigin="anonymous">
-                                <img src="{{ asset('uploads/logo/logo.png') }}" class="id-card-logo mt-auto mb-1" alt="Logo">
-                            </div>
-                        </div>
-                    </div>
-                `;
+<div class="student-id-card" id="downloadableCard">
+
+    <!-- INNER FLEX WRAPPER -->
+    <div style="display:flex; flex-direction:row; width:100%; height:100%;">
+
+        <!-- LEFT SIDE -->
+        <div style="width:70%; display:flex; flex-direction:column; align-items:flex-start;">
+
+            <div class="id-card-profile-box" style="margin-top:1mm; margin-left:1mm;">
+                <img src="${studentImage}"
+                     alt="Student Photo"
+                     crossorigin="anonymous"
+                     onerror="this.onerror=null;this.src='${defaultImage}'">
+            </div>
+
+            <div style="margin-left:1mm; margin-top:3mm; text-align:left;">
+                <div class="id-card-student-id">${student.custom_id || 'N/A'}</div>
+                <div class="id-card-student-name" style="margin-top:1mm;">
+                    ${student.lname || ''}
+                </div>
+                <div class="id-card-address"
+                     style="margin-top:1mm; max-width:45mm; overflow:hidden;">
+                    ${student.address || 'Address not available'}
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE -->
+        <div style="width:30%; display:flex; flex-direction:column; align-items:center;">
+
+            <img src="${qrUrl}"
+                 class="id-card-qr-img"
+                 alt="QR Code"
+                 crossorigin="anonymous"
+                 style="margin-top:1mm;">
+
+            <img src="{{ asset('uploads/logo/logo.png') }}"
+                 class="id-card-logo"
+                 alt="Logo"
+                 crossorigin="anonymous"
+                 style="margin-top:auto; margin-bottom:1mm;">
+        </div>
+
+    </div>
+</div>
+`;
+
         }
 
-        // Download single card
-        function downloadSingleCard() {
-            if (!selectedStudentForSinglePreview) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'No Card Selected',
-                    text: 'Please select a card to download.',
-                    confirmButtonColor: '#3085d6',
-                });
-                return;
-            }
+        function loadImagesForDownload() {
+            // Ensure all images are loaded before download
+            const images = document.querySelectorAll('#downloadableCard img');
+            images.forEach(img => {
+                img.crossOrigin = 'anonymous';
+            });
+        }
 
-            showLoading('Downloading ID card...');
+        function downloadCardAsPNG() {
+    if (!selectedStudentData) {
+        showAlert('warning', 'No Card Selected', 'Please select a card first.');
+        return;
+    }
 
-            const cardContainer = document.getElementById('modalCardContainer');
-            const cardElement = cardContainer.querySelector('.student-id-card');
+    const cardElement = document.getElementById('downloadableCard');
+    if (!cardElement) {
+        showAlert('error', 'Error', 'Card element not found.');
+        return;
+    }
 
-            if (!cardElement) {
-                hideLoading();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Card element not found.',
-                    confirmButtonColor: '#d33',
-                });
-                return;
-            }
+    showLoading('Preparing download...');
 
-            // Check if html2canvas is available
-            if (typeof html2canvas === 'undefined') {
-                hideLoading();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Library Error',
-                    text: 'html2canvas library is not loaded. Please refresh the page.',
-                    confirmButtonColor: '#d33',
-                });
-                return;
-            }
+    setTimeout(() => {
+        html2canvas(cardElement, {
+            scale: 3,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null,
+            logging: false,
+            imageTimeout: 15000,
 
-            html2canvas(cardElement, {
-                scale: 4,
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: null,
-                logging: true,
-                onclone: function (clonedDoc) {
-                    // Fix images in cloned document
-                    const images = clonedDoc.querySelectorAll('img');
-                    images.forEach(img => {
-                        img.crossOrigin = 'anonymous';
+            onclone: function (clonedDoc) {
+
+                /* ===============================
+                   FORCE STUDENT IMAGE CROP
+                   =============================== */
+                clonedDoc
+                    .querySelectorAll('.id-card-profile-box img')
+                    .forEach(img => {
+                        img.style.width = '100%';
+                        img.style.height = '100%';
+                        img.style.objectFit = 'cover';
+                        img.style.objectPosition = 'center';
                     });
-                }
-            }).then(canvas => {
-                const link = document.createElement('a');
-                link.href = canvas.toDataURL('image/png');
-                link.download = `ID_${selectedStudentForSinglePreview.custom_id || 'student'}_${Date.now()}.png`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                hideLoading();
 
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Download Complete',
-                    text: 'ID card downloaded successfully!',
-                    confirmButtonColor: '#3085d6',
-                    timer: 2000
+                /* ===============================
+                   CORS SAFETY
+                   =============================== */
+                clonedDoc.querySelectorAll('img').forEach(img => {
+                    img.crossOrigin = 'anonymous';
                 });
-            }).catch(error => {
-                console.error('Download failed:', error);
-                hideLoading();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Download Failed',
-                    text: 'Failed to download ID card. Please try again.',
-                    confirmButtonColor: '#d33',
-                });
-            });
-        }
 
-        // Download selected cards
-        function downloadSelectedCards() {
-            const selectedIds = getSelectedStudentIds();
+                /* ===============================
+                   FONT SAFETY
+                   =============================== */
+                const style = clonedDoc.createElement('style');
+                style.textContent = `
+                    @font-face {
+                        font-family: 'Monbaiti';
+                        src: url('{{ asset('fonts/monbaiti.ttf') }}') format('truetype');
+                    }
 
-            if (selectedIds.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'No Selection',
-                    text: 'Please select at least one student to download.',
-                    confirmButtonColor: '#3085d6',
-                });
-                return;
-            }
-
-            // Show download options
-            Swal.fire({
-                title: 'Download Options',
-                text: `You have selected ${selectedIds.length} ID card(s).`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Download All as PDF',
-                cancelButtonText: 'Download Individual PNGs',
-                showDenyButton: true,
-                denyButtonText: 'Download as Single Image',
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    generatePDF(selectedIds);
-                } else if (result.isDenied) {
-                    downloadAsSingleImage(selectedIds);
-                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    downloadIndividualCards(selectedIds);
-                }
-            });
-        }
-
-        // Download as single image
-        function downloadAsSingleImage(selectedIds) {
-            showLoading('Creating single image file...');
-
-            // Create a container for all cards
-            const tempContainer = document.createElement('div');
-            tempContainer.style.cssText = `
-                    position: absolute;
-                    left: -9999px;
-                    top: -9999px;
-                    width: 100%;
-                    padding: 20px;
-                    background: white;
+                    .student-id-card,
+                    .id-card-student-id,
+                    .id-card-student-name,
+                    .id-card-address {
+                        font-family: 'Monbaiti', serif !important;
+                    }
                 `;
-
-            selectedIds.forEach(studentId => {
-                const cardElement = document.querySelector(`.student-card[data-id="${studentId}"] .student-id-card`);
-                if (cardElement) {
-                    const clone = cardElement.cloneNode(true);
-                    clone.style.marginBottom = '20px';
-                    tempContainer.appendChild(clone);
-                }
-            });
-
-            document.body.appendChild(tempContainer);
-
-            html2canvas(tempContainer, {
-                scale: 2,
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff',
-                logging: false
-            }).then(canvas => {
-                const link = document.createElement('a');
-                link.href = canvas.toDataURL('image/png');
-                link.download = `ID_Cards_Bulk_${Date.now()}.png`;
-                link.click();
-
-                // Clean up
-                document.body.removeChild(tempContainer);
-                hideLoading();
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Download Complete',
-                    text: 'All ID cards downloaded as single image!',
-                    confirmButtonColor: '#3085d6',
-                    timer: 2000
-                });
-            }).catch(error => {
-                console.error('Download failed:', error);
-                document.body.removeChild(tempContainer);
-                hideLoading();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Download Failed',
-                    text: 'Failed to generate image. Please try again.',
-                    confirmButtonColor: '#d33',
-                });
-            });
-        }
-
-        // Download as PNG from bulk preview
-        function downloadAsPNG() {
-            const container = document.getElementById('bulkPreviewContainer');
-            if (!container.children.length) return;
-
-            showLoading('Generating PNG file...');
-
-            html2canvas(container, {
-                scale: 2,
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff',
-                logging: false
-            }).then(canvas => {
-                const link = document.createElement('a');
-                link.href = canvas.toDataURL('image/png');
-                link.download = `ID_Cards_Bulk_${Date.now()}.png`;
-                link.click();
-                hideLoading();
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Download Complete',
-                    text: 'PNG file downloaded successfully!',
-                    confirmButtonColor: '#3085d6',
-                    timer: 2000
-                });
-            }).catch(error => {
-                console.error('Download failed:', error);
-                hideLoading();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Download Failed',
-                    text: 'Failed to generate PNG file. Please try again.',
-                    confirmButtonColor: '#d33',
-                });
-            });
-        }
-
-        // Download as JPG from bulk preview
-        function downloadAsJPG() {
-            const container = document.getElementById('bulkPreviewContainer');
-            if (!container.children.length) return;
-
-            showLoading('Generating JPG file...');
-
-            html2canvas(container, {
-                scale: 2,
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff',
-                logging: false
-            }).then(canvas => {
-                const link = document.createElement('a');
-                link.href = canvas.toDataURL('image/jpeg', 0.9);
-                link.download = `ID_Cards_Bulk_${Date.now()}.jpg`;
-                link.click();
-                hideLoading();
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Download Complete',
-                    text: 'JPG file downloaded successfully!',
-                    confirmButtonColor: '#3085d6',
-                    timer: 2000
-                });
-            }).catch(error => {
-                console.error('Download failed:', error);
-                hideLoading();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Download Failed',
-                    text: 'Failed to generate JPG file. Please try again.',
-                    confirmButtonColor: '#d33',
-                });
-            });
-        }
-
-        // Generate PDF
-        async function generatePDF(selectedIds = null) {
-            const ids = selectedIds || getSelectedStudentIds();
-            if (ids.length === 0) return;
-
-            showLoading(`Generating PDF with ${ids.length} ID cards...`);
-
-            try {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF('p', 'mm', 'a4');
-
-                let yPos = 10;
-                let xPos = 10;
-                const cardWidth = 86;
-                const cardHeight = 54;
-                const margin = 10;
-
-                for (let i = 0; i < ids.length; i++) {
-                    const studentId = ids[i];
-                    const cardElement = document.querySelector(`.student-card[data-id="${studentId}"] .student-id-card`);
-
-                    if (cardElement) {
-                        const canvas = await html2canvas(cardElement, {
-                            scale: 2,
-                            useCORS: true,
-                            allowTaint: true,
-                            backgroundColor: null,
-                            logging: false
-                        });
-
-                        const imgData = canvas.toDataURL('image/jpeg', 0.9);
-
-                        // Check if we need a new page
-                        if (i % 2 === 0 && i !== 0) {
-                            doc.addPage();
-                            yPos = 10;
-                            xPos = 10;
-                        }
-
-                        // Calculate position
-                        const currentX = (i % 2 === 0) ? xPos : xPos + cardWidth + margin;
-
-                        // Add image to PDF
-                        doc.addImage(imgData, 'JPEG', currentX, yPos, cardWidth, cardHeight);
-
-                        // If we placed 2 cards, move to next row
-                        if (i % 2 === 1) {
-                            yPos += cardHeight + margin;
-                        }
-                    }
-
-                    // Show progress
-                    updateLoadingMessage(`Processing card ${i + 1} of ${ids.length}...`);
-                }
-
-                // Save PDF
-                doc.save(`ID_Cards_${Date.now()}.pdf`);
-                hideLoading();
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'PDF Generated',
-                    text: `PDF with ${ids.length} ID cards downloaded successfully!`,
-                    confirmButtonColor: '#3085d6',
-                    timer: 3000
-                });
-
-            } catch (error) {
-                console.error('PDF generation failed:', error);
-                hideLoading();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'PDF Generation Failed',
-                    text: 'Failed to generate PDF. Please try again.',
-                    confirmButtonColor: '#d33',
-                });
+                clonedDoc.head.appendChild(style);
             }
-        }
 
-        // Download individual cards
-        function downloadIndividualCards(selectedIds) {
-            showLoading(`Downloading ${selectedIds.length} individual cards...`);
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = `ID_${selectedStudentData.custom_id}_${Date.now()}.png`;
 
-            let downloaded = 0;
-            const total = selectedIds.length;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
 
-            selectedIds.forEach((studentId, index) => {
-                setTimeout(() => {
-                    const cardElement = document.querySelector(`.student-card[data-id="${studentId}"] .student-id-card`);
-                    if (cardElement) {
-                        html2canvas(cardElement, {
-                            scale: 4,
-                            useCORS: true,
-                            allowTaint: true,
-                            backgroundColor: null,
-                            logging: false
-                        }).then(canvas => {
-                            const link = document.createElement('a');
-                            link.href = canvas.toDataURL('image/png');
-                            link.download = `ID_${studentId}_${Date.now()}.png`;
-                            link.style.display = 'none';
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
+            hideLoading();
 
-                            downloaded++;
-                            updateLoadingMessage(`Downloaded ${downloaded} of ${total} cards...`);
+            showAlert(
+                'success',
+                'Download Complete',
+                'ID card downloaded successfully as PNG!',
+                2000
+            );
+        }).catch(error => {
+            console.error('Download failed:', error);
+            hideLoading();
 
-                            if (downloaded === total) {
-                                hideLoading();
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Download Complete',
-                                    text: `Successfully downloaded ${total} ID cards.`,
-                                    confirmButtonColor: '#3085d6',
-                                    timer: 3000
-                                });
-                            }
-                        }).catch(error => {
-                            console.error(`Failed to download card ${studentId}:`, error);
-                            downloaded++;
-                            if (downloaded === total) {
-                                hideLoading();
-                            }
-                        });
-                    } else {
-                        downloaded++;
-                        if (downloaded === total) {
-                            hideLoading();
-                        }
-                    }
-                }, index * 500); // Stagger downloads
-            });
-        }
+            showAlert(
+                'error',
+                'Download Failed',
+                'Failed to download ID card. Please try again.<br><small>Note: Make sure all images are properly loaded.</small>'
+            );
+        });
+    }, 500);
+}
 
-        // Print bulk cards
-        function printBulkCards() {
-            const container = document.getElementById('bulkPreviewContainer');
-            const printContent = container.innerHTML;
-
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>Print ID Cards</title>
-                        <style>
-                            body { 
-                                margin: 0; 
-                                padding: 20px; 
-                                background: white;
-                            }
-                            .bulk-preview-grid {
-                                display: grid;
-                                grid-template-columns: repeat(2, 1fr);
-                                gap: 10px;
-                            }
-                            .student-id-card {
-                                width: 86mm !important;
-                                height: 54mm !important;
-                                page-break-inside: avoid;
-                                break-inside: avoid;
-                            }
-                            @media print {
-                                @page { 
-                                    margin: 10mm;
-                                    size: A4;
-                                }
-                                body { margin: 0; }
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        ${printContent}
-                        <script>
-                            window.onload = function() {
-                                window.print();
-                                setTimeout(function() {
-                                    window.close();
-                                }, 1000);
-                            };
-                        <\/script>
-                    </body>
-                    </html>
-                `);
-            printWindow.document.close();
-        }
-
-        // Helper functions
-        function getSelectedStudentIds() {
-            return Array.from(document.querySelectorAll('.student-checkbox:checked'))
-                .map(checkbox => checkbox.value);
-        }
 
         function showLoading(message = 'Please wait...') {
-            document.getElementById('loadingMessage').textContent = message;
-            const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
-            modal.show();
-        }
-
-        function updateLoadingMessage(message) {
-            document.getElementById('loadingMessage').textContent = message;
+            Swal.fire({
+                title: 'Processing',
+                text: message,
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
         }
 
         function hideLoading() {
-            const modal = bootstrap.Modal.getInstance(document.getElementById('loadingModal'));
-            if (modal) {
-                modal.hide();
+            Swal.close();
+        }
+
+        function showAlert(icon, title, text, timer = null) {
+            const config = {
+                icon: icon,
+                title: title,
+                html: text,
+                confirmButtonColor: icon === 'error' ? '#d33' : '#3085d6',
+            };
+            
+            if (timer) {
+                config.timer = timer;
+                config.showConfirmButton = false;
             }
-        }
-
-        function updateCardSelection(studentId, isSelected) {
-            const card = document.querySelector(`.student-card[data-id="${studentId}"]`);
-            if (card) {
-                if (isSelected) {
-                    card.querySelector('.card').classList.add('border-primary', 'shadow-sm');
-                    card.querySelector('.toggle-select').classList.replace('btn-outline-info', 'btn-info');
-                    card.querySelector('.toggle-select').innerHTML = '<i class="fas fa-check"></i> Selected';
-                } else {
-                    card.querySelector('.card').classList.remove('border-primary', 'shadow-sm');
-                    card.querySelector('.toggle-select').classList.replace('btn-info', 'btn-outline-info');
-                    card.querySelector('.toggle-select').innerHTML = '<i class="fas fa-check"></i> Select';
-                }
-            }
-        }
-
-        function updateSelectedCount() {
-            const selected = document.querySelectorAll('.student-checkbox:checked').length;
-            const total = document.querySelectorAll('.student-checkbox').length;
-
-            document.getElementById('selectedCount').textContent = selected;
-            document.getElementById('selectedBadge').textContent = selected;
-            document.getElementById('totalCount').textContent = total;
-        }
-
-        function updateSelectAllCheckbox() {
-            const checkboxes = document.querySelectorAll('.student-checkbox:not(:disabled)');
-            const checked = document.querySelectorAll('.student-checkbox:checked:not(:disabled)');
-            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-
-            if (checkboxes.length === checked.length) {
-                selectAllCheckbox.checked = true;
-                selectAllCheckbox.indeterminate = false;
-            } else if (checked.length === 0) {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-            } else {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = true;
-            }
-        }
-
-        function selectAll() {
-            document.querySelectorAll('.student-checkbox:not(:disabled)').forEach(checkbox => {
-                checkbox.checked = true;
-                checkbox.dispatchEvent(new Event('change'));
-            });
-            document.getElementById('selectAllCheckbox').checked = true;
-            document.getElementById('selectAllCheckbox').indeterminate = false;
-        }
-
-        function deselectAll() {
-            document.querySelectorAll('.student-checkbox:not(:disabled)').forEach(checkbox => {
-                checkbox.checked = false;
-                checkbox.dispatchEvent(new Event('change'));
-            });
-            document.getElementById('selectAllCheckbox').checked = false;
-            document.getElementById('selectAllCheckbox').indeterminate = false;
-        }
-
-        // Client-side filtering functions (within current results)
-        function searchStudents() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-            const cards = document.querySelectorAll('.student-card');
-            let visibleCount = 0;
-
-            cards.forEach(card => {
-                const name = card.getAttribute('data-name');
-                const address = card.getAttribute('data-address');
-                const id = card.getAttribute('data-id');
-
-                if (searchTerm === '' ||
-                    name.includes(searchTerm) ||
-                    address.includes(searchTerm) ||
-                    id.includes(searchTerm)) {
-                    card.classList.remove('d-none');
-                    visibleCount++;
-                } else {
-                    card.classList.add('d-none');
-                }
-            });
-
-            const noResults = document.getElementById('noResults');
-            if (visibleCount === 0 && searchTerm !== '') {
-                noResults.classList.remove('d-none');
-            } else {
-                noResults.classList.add('d-none');
-            }
-
-            updateVisibleStats();
-        }
-
-        function filterByDate() {
-            const dateFilter = document.getElementById('dateFilter').value;
-            const cards = document.querySelectorAll('.student-card');
-            let visibleCount = 0;
-
-            cards.forEach(card => {
-                const createdDate = card.getAttribute('data-created');
-
-                if (!dateFilter || !createdDate) {
-                    card.classList.remove('d-none');
-                    visibleCount++;
-                } else if (createdDate.startsWith(dateFilter)) {
-                    card.classList.remove('d-none');
-                    visibleCount++;
-                } else {
-                    card.classList.add('d-none');
-                }
-            });
-
-            const noResults = document.getElementById('noResults');
-            if (visibleCount === 0 && dateFilter !== '') {
-                noResults.classList.remove('d-none');
-            } else {
-                noResults.classList.add('d-none');
-            }
-
-            updateVisibleStats();
-        }
-
-        function clearSearch() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('dateFilter').value = '';
-
-            document.querySelectorAll('.student-card').forEach(card => {
-                card.classList.remove('d-none');
-            });
-
-            document.getElementById('noResults').classList.add('d-none');
-            updateVisibleStats();
-        }
-
-        function updateVisibleStats() {
-            const visibleCards = document.querySelectorAll('.student-card:not(.d-none)');
-            const visibleCount = visibleCards.length;
-            const totalCount = document.querySelectorAll('.student-card').length;
-
-            document.getElementById('totalCount').textContent = visibleCount;
-
-            const visibleSelected = Array.from(visibleCards).filter(card => {
-                const checkbox = card.querySelector('.student-checkbox');
-                return checkbox && checkbox.checked;
-            }).length;
-
-            document.getElementById('selectedCount').textContent = visibleSelected;
-        }
-
-        // Server-side generation functions
-        function generateSelectedCards() {
-            const selectedIds = getSelectedStudentIds();
-
-            if (selectedIds.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'No Selection',
-                    text: 'Please select at least one student to generate ID cards.',
-                    confirmButtonColor: '#3085d6',
-                });
-                return;
-            }
-
-            showLoading();
-
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '{{ route("student-id-card.generate.bulk") }}';
-            form.style.display = 'none';
-
-            const csrfToken = document.createElement('input');
-            csrfToken.type = 'hidden';
-            csrfToken.name = '_token';
-            csrfToken.value = '{{ csrf_token() }}';
-            form.appendChild(csrfToken);
-
-            // Pass sort parameters
-            const sortByInput = document.createElement('input');
-            sortByInput.type = 'hidden';
-            sortByInput.name = 'sort_by';
-            sortByInput.value = '{{ $sortBy ?? "created_at" }}';
-            form.appendChild(sortByInput);
-
-            const sortOrderInput = document.createElement('input');
-            sortOrderInput.type = 'hidden';
-            sortOrderInput.name = 'sort_order';
-            sortOrderInput.value = '{{ $sortOrder ?? "desc" }}';
-            form.appendChild(sortOrderInput);
-
-            selectedIds.forEach(id => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'student_ids[]';
-                input.value = id;
-                form.appendChild(input);
-            });
-
-            document.body.appendChild(form);
-            form.submit();
-        }
-
-        function generateAllCards() {
-            showLoading();
-            // Pass sort parameters to server
-            const url = new URL('{{ route("student-id-card.generate.all") }}');
-            url.searchParams.append('sort_by', '{{ $sortBy ?? "created_at" }}');
-            url.searchParams.append('sort_order', '{{ $sortOrder ?? "desc" }}');
-            window.location.href = url.toString();
+            
+            Swal.fire(config);
         }
     </script>
-
-    @if(session('error'))
-        <script>
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: '{{ session('error') }}',
-                confirmButtonColor: '#d33',
-            });
-        </script>
-    @endif
-
-    @if(session('success'))
-        <script>
-            Swal.fire({
-                icon: 'success',
-                title: 'Success',
-                text: '{{ session('success') }}',
-                confirmButtonColor: '#3085d6',
-            });
-        </script>
-    @endif
 @endpush

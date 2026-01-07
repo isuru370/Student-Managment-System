@@ -108,18 +108,9 @@ class TeacherService
             $validated = $request->validate([
                 'fname' => 'required|string|max:255',
                 'lname' => 'required|string|max:255',
-                'email' => [
-                    'required',
-                    'email',
-                    Rule::unique('teachers', 'email')
-                ],
+                'email' => 'required|string|max:255',
                 'mobile' => 'required|string|max:15',
-                'nic' => [
-                    'nullable',
-                    'string',
-                    'max:20',
-                    Rule::unique('teachers', 'nic')
-                ],
+                'nic' => 'required|| string||max:20',
                 'bday' => 'nullable|date',
                 'gender' => 'nullable|in:male,female,other',
                 'address1' => 'nullable|string|max:255',
@@ -207,18 +198,9 @@ class TeacherService
             $validated = $request->validate([
                 'fname' => 'required|string|max:255',
                 'lname' => 'required|string|max:255',
-                'email' => [
-                    'required',
-                    'email',
-                    Rule::unique('teachers', 'email')->ignore($id)
-                ],
+                'email' => 'required|string|max:255',
                 'mobile' => 'required|string|max:15',
-                'nic' => [
-                    'nullable',
-                    'string',
-                    'max:20',
-                    Rule::unique('teachers', 'nic')->ignore($id)
-                ],
+                'nic' => 'required|| string||max:20',
                 'bday' => 'nullable|date',
                 'gender' => 'nullable|in:male,female,other',
                 'address1' => 'nullable|string|max:255',
