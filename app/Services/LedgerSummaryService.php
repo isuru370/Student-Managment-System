@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AdmissionPayments;
 use App\Models\ExtraIncomes;
+use App\Models\HallFee;
 use App\Models\InstitutePayment;
 use App\Models\Payments;
 use App\Models\Teacher;
@@ -30,6 +31,7 @@ class LedgerSummaryService
             $entries = collect()
                 ->merge($this->classIncomeEntries($start, $end))
                 ->merge($this->admissionEntries($start, $end))
+                ->merge($this->hallFeesEntries($start, $end))
                 ->merge($this->extraIncomeEntries($start, $end))
                 ->merge($this->instituteExpenseEntries($start, $end))
                 ->sortBy('date')
@@ -189,17 +191,38 @@ class LedgerSummaryService
     {
         return AdmissionPayments::query()
             ->whereBetween('created_at', [$start, $end])
-            ->selectRaw('DATE(created_at) as day, SUM(amount) as total')
+            ->selectRaw('DATE(created_at) as day, SUM(amount) as total, COUNT(*) as count')
             ->groupBy('day')
             ->orderBy('day')
             ->get()
             ->map(fn($p) => [
                 'date' => Carbon::parse($p->day)->startOfDay(),
-                'description' => 'Admission Fee',
+                'description' => "Admission Fee ({$p->count})", // include count
                 'receipt' => (float)$p->total,
                 'payment' => 0.0
             ]);
     }
+
+
+    private function hallFeesEntries(Carbon $start, Carbon $end): Collection
+    {
+        // Get hall fees between start and end
+        $hallFees = HallFee::where('status', 1)
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw('DATE(created_at) as day, SUM(amount) as total, COUNT(*) as count')
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get();
+
+        // Map to collection format
+        return $hallFees->map(fn($p) => [
+            'date' => Carbon::parse($p->day)->startOfDay(),
+            'description' => "Hall Fees ({$p->count})", // correct interpolation
+            'receipt' => (float)$p->total,
+            'payment' => 0.0
+        ]);
+    }
+
 
     /**
      * Extra income ledger entries

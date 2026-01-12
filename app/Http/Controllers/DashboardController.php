@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ClassRoom;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\SystemUser;
+use App\Models\Teacher;
 use App\Models\User;
 
 class DashboardController extends Controller
@@ -16,23 +19,18 @@ class DashboardController extends Controller
         
         // Get user statistics
         $totalUsers = User::count();
-        $activeUsers = User::where('is_active', 1)->count();
-        $totalSystemUsers = SystemUser::count();
         $activeSystemUsers = SystemUser::where('is_active', 1)->count();
-        
-        // Get recent system users
-        $recentSystemUsers = SystemUser::with(['user', 'user.userType'])
-            ->orderBy('created_at', 'desc')
-            ->take(5)
-            ->get();
+        $totalStudents = Student::count();
+        $totalActiveTeachers = Teacher::where('is_active', 1)->count();
+        $totalOnGoinClasses = ClassRoom::where('is_ongoing',1)->count(); // Placeholder for ongoing classes count
 
         return view('dashboard.index', [
             'user' => $user,
             'totalUsers' => $totalUsers,
-            'activeUsers' => $activeUsers,
-            'totalSystemUsers' => $totalSystemUsers,
             'activeSystemUsers' => $activeSystemUsers,
-            'recentSystemUsers' => $recentSystemUsers
+            'totalStudents' => $totalStudents,
+            'totalActiveTeachers' => $totalActiveTeachers,
+            'totalOnGoinClasses' => $totalOnGoinClasses
         ]);
     }
 }

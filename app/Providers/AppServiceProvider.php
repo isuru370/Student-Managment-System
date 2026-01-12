@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\WelfareExpenseService;
 use App\Services\AuthService;
 use App\Services\BankBranchService;
 use App\Services\BankService;
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\Schema;
 use App\Services\StudentAttendanceService;
 use App\Services\StudentPaymentService;
 use App\Services\ReadQRCodeService;
+use App\Services\ReportService;
 use App\Services\StudentAdmissionPaymentService;
 use App\Services\StudentClassSeparateService;
 use App\Services\StudentIdCardService;
@@ -133,8 +135,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TituteService::class, function ($app) {
             return new TituteService();
         });
+        $this->app->bind(ReportService::class, function ($app) {
+            return new ReportService();
+        });
         $this->app->bind(UserTypesService::class, function ($app) {
             return new UserTypesService();
+        });
+        $this->app->bind(WelfareExpenseService::class, function ($app) {
+            return new WelfareExpenseService();
         });
         $this->app->bind(WelfarePaymentService::class, function ($app) {
             return new WelfarePaymentService();

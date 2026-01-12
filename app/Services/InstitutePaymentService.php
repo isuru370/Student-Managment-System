@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AdmissionPayments;
 use App\Models\ExtraIncomes;
+use App\Models\HallFee;
 use App\Models\InstitutePayment;
 use App\Models\Payments;
 use App\Models\Teacher;
@@ -40,6 +41,10 @@ class InstitutePaymentService
             $extraIncome = ExtraIncomes::whereBetween('created_at', [$startOfMonth, $endOfMonth])
                 ->sum('amount');
 
+            $hallFees = HallFee::where('status', 1)
+                ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+                ->sum('amount');
+
             $totalExpenese = InstitutePayment::where('status', 1)
                 ->whereBetween('date', [$startOfMonth, $endOfMonth])
                 ->sum('payment');
@@ -54,6 +59,7 @@ class InstitutePaymentService
             $totalTeacherPayments = 0;
             $totalTeacherEarnings = 0;
             $totalTeacherNetEarnings = 0;
+            $totalTeacherWelfare = 0;
 
             foreach ($teachers as $teacher) {
 
@@ -113,11 +119,13 @@ class InstitutePaymentService
                     ->where('payment_for', $monthYear)
                     ->sum('payment');
 
-                // ✅ Teacher-wise welfare
                 $teacherWelfare = WelfarePayment::where('status', 1)
                     ->where('teacher_id', $teacher->id)
                     ->whereBetween('payment_date', [$startOfMonth, $endOfMonth])
                     ->sum('amount');
+
+                // Add to total
+                $totalTeacherWelfare += $teacherWelfare;
 
                 // ✅ Correct net earning (advance + salary + welfare deducted)
                 $teacherNetEarning = round(
@@ -136,6 +144,7 @@ class InstitutePaymentService
                     'total_payments_this_month' => round($totalForMonth, 2),
                     'teacher_total_earning' => $teacherTotalEarning,
                     'teacher_advance' => round($teacherMonthlyAdvance, 2),
+                    'teacher_welfare' => round($teacherWelfare, 2),
                     'teacher_salary' => round($teacherMonthlySalary, 2),
                     'teacher_net_earning' => $teacherNetEarning,
                     'institution_total_income' => $institutionTotalIncome,
@@ -144,7 +153,7 @@ class InstitutePaymentService
             }
 
             $calculatedInstituteIncome = round($totalTeacherPayments - $totalTeacherEarnings, 2);
-            $instituteIncomeWithAdmission = round($totalInstituteIncome + $admissionPayment, 2);
+            $instituteIncomeWithAdmission = round($totalInstituteIncome + $admissionPayment + $hallFees, 2);
             $totalWithExtraIncome = round($instituteIncomeWithAdmission + $extraIncome, 2);
             $netIncome = round($totalWithExtraIncome - $totalExpenese, 2);
 
@@ -155,10 +164,12 @@ class InstitutePaymentService
                     'total_teacher_payments' => round($totalTeacherPayments, 2),
                     'total_teacher_earnings' => round($totalTeacherEarnings, 2),
                     'total_teacher_advances' => round($teacherAdvance, 2),
+                    'total_teacher_welfare' => round($totalTeacherWelfare, 2),
                     'total_teacher_salaries' => round($teacherSalary, 2),
                     'total_teacher_net_earnings' => round($totalTeacherNetEarnings, 2),
                     'total_institute_from_classes' => round($totalInstituteIncome, 2),
                     'admission_payments' => round($admissionPayment, 2),
+                    'hall_fees_payments' => round($hallFees, 2),
                     'extra_income_for_month' => round($extraIncome, 2),
                     'total_institute_expenese' => round($totalExpenese, 2),
                     'institute_gross_income' => $totalWithExtraIncome,

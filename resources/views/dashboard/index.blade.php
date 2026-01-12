@@ -105,7 +105,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Students</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">1,250</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $totalStudents }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-users fa-2x text-gray-300"></i>
@@ -121,7 +121,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Active Teachers</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">48</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $totalActiveTeachers }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-chalkboard-teacher fa-2x text-gray-300"></i>
@@ -137,7 +137,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Ongoing Classes</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="ongoing-classes-count">0</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $totalOnGoinClasses }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-book fa-2x text-gray-300"></i>
@@ -210,7 +210,7 @@
                         </div>
                         <div class="col-md-2 col-sm-6 mb-3">
                             <button class="btn btn-secondary btn-block btn-action"
-                                onclick="showDummyMessage('View Reports feature is coming soon!')">
+                                onclick="window.location.href='{{ route('reports.index') }}'">
                                 <i class="fas fa-chart-bar fa-2x mb-2"></i><br>
                                 View Reports
                             </button>
@@ -721,21 +721,36 @@
             });
         }
 
-        // Existing timetable functions (keep these as they are)
+        // Updated timetable function without ongoing count update
         function loadTimetable() {
-            const loadingSpinner = document.getElementById('loading-spinner');
-            const noClassesMessage = document.getElementById('no-classes-message');
-            const timetableContainer = document.getElementById('timetable-container');
-            const timetableBody = document.getElementById('timetable-body');
-            const subjectsRow = document.getElementById('subjects-row');
-            const subjectsHeader = document.getElementById('subjects-header');
-            const ongoingCount = document.getElementById('ongoing-classes-count');
-            const totalCount = document.getElementById('total-classes-count');
-            const dateFilter = document.getElementById('date-filter');
-            const timetableTitle = document.getElementById('timetable-title');
-            const selectedDateDisplay = document.getElementById('selected-date-display');
-            const emptyStateTitle = document.getElementById('empty-state-title');
-            const emptyStateMessage = document.getElementById('empty-state-message');
+            // Safely get elements with null checks
+            const getElement = (id) => {
+                const element = document.getElementById(id);
+                if (!element) {
+                    console.error(`Element with id '${id}' not found`);
+                    return null;
+                }
+                return element;
+            };
+            
+            const loadingSpinner = getElement('loading-spinner');
+            const noClassesMessage = getElement('no-classes-message');
+            const timetableContainer = getElement('timetable-container');
+            const timetableBody = getElement('timetable-body');
+            const subjectsRow = getElement('subjects-row');
+            const subjectsHeader = getElement('subjects-header');
+            const totalCountElement = getElement('total-classes-count'); // Only keep total count
+            const dateFilter = getElement('date-filter');
+            const timetableTitle = getElement('timetable-title');
+            const selectedDateDisplay = getElement('selected-date-display');
+            const emptyStateTitle = getElement('empty-state-title');
+            const emptyStateMessage = getElement('empty-state-message');
+
+            // Check if essential elements exist
+            if (!dateFilter || !totalCountElement) {
+                console.error('Essential timetable elements not found');
+                return;
+            }
 
             const selectedDate = dateFilter.value;
 
@@ -747,14 +762,14 @@
                 day: 'numeric'
             });
 
-            selectedDateDisplay.textContent = displayDate;
+            if (selectedDateDisplay) selectedDateDisplay.textContent = displayDate;
 
             // Show loading
-            loadingSpinner.classList.remove('d-none');
-            noClassesMessage.classList.add('d-none');
-            timetableContainer.classList.add('d-none');
-            timetableBody.innerHTML = '';
-            subjectsRow.innerHTML = '';
+            if (loadingSpinner) loadingSpinner.classList.remove('d-none');
+            if (noClassesMessage) noClassesMessage.classList.add('d-none');
+            if (timetableContainer) timetableContainer.classList.add('d-none');
+            if (timetableBody) timetableBody.innerHTML = '';
+            if (subjectsRow) subjectsRow.innerHTML = '';
 
             // Build API URL with date parameter
             const apiUrl = `/api/class-attendances/by-date?date=${selectedDate}`;
@@ -765,42 +780,38 @@
                     return response.json();
                 })
                 .then(data => {
-                    loadingSpinner.classList.add('d-none');
+                    if (loadingSpinner) loadingSpinner.classList.add('d-none');
 
                     if (!data.status || !data.data || data.data.length === 0) {
-                        noClassesMessage.classList.remove('d-none');
-                        emptyStateTitle.textContent = 'No classes scheduled';
-                        emptyStateMessage.textContent = `No classes found for ${displayDate}`;
-                        ongoingCount.textContent = '0';
-                        totalCount.textContent = '0';
+                        if (noClassesMessage) noClassesMessage.classList.remove('d-none');
+                        if (emptyStateTitle) emptyStateTitle.textContent = 'No classes scheduled';
+                        if (emptyStateMessage) emptyStateMessage.textContent = `No classes found for ${displayDate}`;
+                        if (totalCountElement) totalCountElement.textContent = '0';
                         return;
                     }
 
-                    // Update counts
+                    // Update counts - only total count
                     const classes = data.data;
-                    const ongoingClasses = classes.filter(classItem =>
-                        classItem.is_ongoing === 1 && classItem.status !== 0
-                    ).length;
-
-                    ongoingCount.textContent = ongoingClasses;
-                    totalCount.textContent = classes.length;
+                    if (totalCountElement) totalCountElement.textContent = classes.length;
 
                     // Update title based on date
-                    const today = new Date().toDateString();
-                    const selected = new Date(selectedDate).toDateString();
-                    if (today === selected) {
-                        timetableTitle.textContent = "Today's Class Schedule";
-                    } else {
-                        timetableTitle.textContent = "Class Schedule";
+                    if (timetableTitle) {
+                        const today = new Date().toDateString();
+                        const selected = new Date(selectedDate).toDateString();
+                        if (today === selected) {
+                            timetableTitle.textContent = "Today's Class Schedule";
+                        } else {
+                            timetableTitle.textContent = "Class Schedule";
+                        }
                     }
 
                     // Render timetable
                     renderTimetable(classes);
-                    timetableContainer.classList.remove('d-none');
+                    if (timetableContainer) timetableContainer.classList.remove('d-none');
                 })
                 .catch(error => {
                     console.error('Error loading timetable:', error);
-                    loadingSpinner.classList.add('d-none');
+                    if (loadingSpinner) loadingSpinner.classList.add('d-none');
                     showError('Failed to load timetable. Please try again later.');
                 });
         }

@@ -649,6 +649,12 @@
                                                 <i class="fas fa-list"></i> Pay Class Fee
                                             </a>
                                         </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {{ request()->routeIs('hall_fees.index') ? 'active' : '' }}"
+                                                href="{{ route('hall_fees.index') }}">
+                                                <i class="fas fa-list"></i> Pay Hall Fee
+                                            </a>
+                                        </li>
                                     </ul>
                                 </div>
                             </li>
@@ -726,10 +732,15 @@
                                         </li>
                                         <li class="nav-item">
                                            <a class="nav-link {{ request()->routeIs('welfare_payments.index') ? 'active' : '' }}"
-   href="{{ route('welfare_payments.index') }}">
-   <i class="fas fa-plus-circle"></i> Welfare Summary
-</a>
-
+                                            href="{{ route('welfare_payments.index') }}">
+                                            <i class="fas fa-plus-circle"></i> Welfare Payment
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                           <a class="nav-link {{ request()->routeIs('welfare_expenses.index') ? 'active' : '' }}"
+                                            href="{{ route('welfare_expenses.index') }}">
+                                            <i class="fas fa-plus-circle"></i> Welfare Expenses
+                                            </a>
                                         </li>
                                     </ul>
                                 </div>
@@ -744,13 +755,13 @@
                         href="{{ route('classes') }}">
                         <i class="fas fa-book"></i> <span>Classes</span>
                     </a>
-                </li>
+                </li>--}}
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('reports') ? 'active' : '' }}"
-                        href="{{ route('reports') }}">
+                    <a class="nav-link {{ request()->routeIs('reports.index') ? 'active' : '' }}"
+                        href="{{ route('reports.index') }}">
                         <i class="fas fa-chart-bar"></i> <span>Reports</span>
                     </a>
-                </li> --}}
+                </li> 
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}"
                         href="{{ route('settings.index') }}">

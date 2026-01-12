@@ -792,6 +792,14 @@
                         iconClass: 'text-purple'
                     },
                     {
+                        label: 'Teacher Welfare',
+                        value: summary.total_teacher_welfare || 0,
+                        icon: 'hand-holding-usd',
+                        color: 'purple',
+                        cardClass: 'teacher-advances',
+                        iconClass: 'text-purple'
+                    },
+                    {
                         label: 'Teacher Net Salary',
                         value: summary.total_teacher_net_earnings || 0,
                         icon: 'calculator',
@@ -818,6 +826,14 @@
                     {
                         label: 'Admission Payments',
                         value: summary.admission_payments || 0,
+                        icon: 'user-graduate',
+                        color: 'cyan',
+                        cardClass: 'admission-payments',
+                        iconClass: 'text-cyan'
+                    },
+                    {
+                        label: 'Hall Fees',
+                        value: summary.hall_fees_payments || 0,
                         icon: 'user-graduate',
                         color: 'cyan',
                         cardClass: 'admission-payments',

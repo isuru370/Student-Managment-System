@@ -8,10 +8,12 @@ use App\Http\Controllers\ClassAttendanceController;
 use App\Http\Controllers\ClassHallsController;
 use App\Http\Controllers\ClassRoomController;
 use App\Http\Controllers\EmailsController;
+use App\Http\Controllers\HallFeeController;
 use App\Http\Controllers\InstitutePaymentController;
 use App\Http\Controllers\PaymentReasonController;
 use App\Http\Controllers\PaymentsController;
 use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsCodeController;
 use App\Http\Controllers\StudentAttendancesController;
 use App\Http\Controllers\SystemUserController;
@@ -21,6 +23,7 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentIdCardController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TeacherPaymentsController;
+use App\Http\Controllers\WelfareExpenseController;
 use App\Http\Controllers\WelfarePaymentController;
 use App\Http\Controllers\WelfareSettingController;
 use Illuminate\Support\Facades\Mail;
@@ -183,10 +186,16 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('payment-reason')->name('payment_reason.')->group(function () {
         Route::get('/', [PaymentReasonController::class, 'indexPage'])->name('index');
     });
-
     Route::prefix('send-mail')->name('emails.')->group(function () {
+
+        // ✅ PDF download – MUST be first
+        Route::get('/pdf/{teacherId}/{yearMonth}', [EmailsController::class, 'downloadPaymentReport'])
+            ->where('yearMonth', '\d{4}-\d{2}');
+
+        // ✅ Send email – generic route AFTER
         Route::get('/{teacherId}/{yearMonth}', [EmailsController::class, 'sendPaymentReport'])
-            ->where('yearMonth', '\d{4}-\d{2}'); // Ensure format is YYYY-MM
+            ->where('yearMonth', '\d{4}-\d{2}');
+
         Route::get('/test-email-connection', function () {
             try {
                 Mail::raw('This is a test email from Student Management System', function ($message) {
@@ -201,12 +210,7 @@ Route::middleware(['auth'])->group(function () {
             } catch (\Exception $e) {
                 return response()->json([
                     'success' => false,
-                    'error' => $e->getMessage(),
-                    'config' => [
-                        'host' => config('mail.mailers.smtp.host'),
-                        'port' => config('mail.mailers.smtp.port'),
-                        'encryption' => config('mail.mailers.smtp.encryption')
-                    ]
+                    'error' => $e->getMessage()
                 ], 500);
             }
         });
@@ -239,7 +243,11 @@ Route::middleware(['auth'])->group(function () {
 
     // Other Pages
     Route::get('/classes', [DashboardController::class, 'classes'])->name('classes');
-    Route::get('/reports', [DashboardController::class, 'reports'])->name('reports');
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', [ReportController::class, 'indexPage'])->name('index');
+        Route::get('/daily-pdf/{day}', [ReportController::class, 'downloadDailyReportPdf'])
+            ->name('daily.pdf');
+    });
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/', [SettingsCodeController::class, 'indexPage'])->name('index');
     });
@@ -256,6 +264,24 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{id}/restore', [WelfarePaymentController::class, 'restore'])->whereNumber('id')->name('restore');
     });
 
+    Route::prefix('welfare-expenses')->name('welfare_expenses.')->group(function () {
+        // Index
+        Route::get('/', [WelfareExpenseController::class, 'index'])->name('index');
+        // Create & Store
+        Route::get('/create', [WelfareExpenseController::class, 'create'])->name('create');
+        Route::post('/', [WelfareExpenseController::class, 'store'])->name('store');
+        // Show single expense
+        Route::get('/{id}', [WelfareExpenseController::class, 'show'])->name('show');
+        // Destroy / Cancel expense (DELETE request)
+        Route::delete('/{id}', [WelfareExpenseController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('hall-fees')->name('hall_fees.')->group(function () {
+        // Index
+        Route::get('/', [HallFeeController::class, 'index'])->name('index');
+        // Destroy / Cancel expense (DELETE request)
+        Route::delete('/{id}', [HallFeeController::class, 'destroy'])->name('destroy');
+    });
 
     Route::prefix('welfare-settings')->name('welfare_settings.')->group(function () {
         Route::get('/', [WelfareSettingController::class, 'indexPage'])->name('index');

@@ -93,4 +93,58 @@ class EmailsController extends Controller
             ], 500);
         }
     }
+
+    public function downloadPaymentReport($teacherId, $yearMonth)
+    {
+        try {
+            // Validate YYYY-MM
+            if (!preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid date format. Use YYYY-MM'
+                ], 400);
+            }
+
+            // Get flat payment data
+            $paymentData = $this->teacherPaymentsService
+                ->studentPaymentMonthFlat($teacherId, $yearMonth);
+
+            if (!$paymentData['success']) {
+                return response()->json($paymentData, 400);
+            }
+
+            /* ---------- CALCULATE TOTALS ---------- */
+            $students = $paymentData['students'];
+            $totalAmount = collect($students)->sum('amount');
+            $totalStudents = collect($students)->pluck('student_id')->unique()->count();
+
+            /* ---------- FORMAT MONTH ---------- */
+            $formattedMonth = date('F Y', strtotime($yearMonth . '-01'));
+            $fileNameMonth = date('F-Y', strtotime($yearMonth . '-01'));
+
+            /* ---------- PDF DATA ---------- */
+            $pdfViewData = [
+                'students' => $students,
+                'teacher' => $paymentData['teacher'],
+                'yearMonth' => $yearMonth,
+                'month' => $formattedMonth,
+                'totalAmount' => $totalAmount,
+                'totalStudents' => $totalStudents
+            ];
+
+            // Generate PDF
+            $pdf = Pdf::loadView('emails.payment_report', $pdfViewData)
+                ->setPaper('A4', 'portrait');
+
+            $fileName = "payment-report-{$teacherId}-{$fileNameMonth}.pdf";
+
+            // Download PDF
+            return $pdf->download($fileName);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

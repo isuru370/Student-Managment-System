@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ClassAttendance;
 use App\Models\ClassCategoryHasStudentClass;
+use App\Models\HallFee;
 use App\Models\Payments;
 use Carbon\Carbon;
 use Exception;
@@ -75,7 +76,7 @@ class StudentPaymentService
             $monthlyData[$yearMonth]['payment_count']++;
             $monthlyData[$yearMonth]['payments'][] = [
                 'id' => $payment->id,
-                'payment_date' => $paymentDate->format('Y-m-d'), 
+                'payment_date' => $paymentDate->format('Y-m-d'),
                 'display_date' => $paymentDate->format('M d, Y'),
                 'amount' => floatval($payment->amount),
                 'payment_for' => $payment->payment_for,
@@ -160,50 +161,30 @@ class StudentPaymentService
 
     public function storePayment(Request $request)
     {
-        // Validate request
         $validated = $request->validate([
             'payment_date' => 'required|date',
-            'status' => 'required|integer|in:0,1', // 0=deleted, 1=active
+            'status' => 'required|integer|in:0,1',
             'amount' => 'required|numeric',
             'student_id' => 'required|integer',
             'student_student_student_classes_id' => 'required|integer',
-            'payment_for' => 'required|string|max:20', // e.g., "2025 Feb"
+            'payment_for' => 'required|string|max:20',
         ]);
 
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
-
-            // For ACTIVE payments (status = 1), check for duplicates
-            if ($validated['status'] == 1) {
-                $existingPayment = Payments::where('payment_for', $validated['payment_for'])
-                    ->where('student_id', $validated['student_id'])
-                    ->where('student_student_student_classes_id', $validated['student_student_student_classes_id'])
-                    ->where('status', 1) // Check only ACTIVE payments
-                    ->first();
-
-                if ($existingPayment) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Duplicate payment found',
-                        'details' => 'An active payment already exists for this student and class for ' . $validated['payment_for']
-                    ], 422);
-                }
-            }
-
-            // For DELETED payments (status = 0), allow duplicates
-            // Or if no duplicate found for active payment, create new record
-
-            // Save record
             $payment = Payments::create($validated);
-
             DB::commit();
+
+            // 🔹 Call receipt print immediately after storing
+            $receipt = $this->receiptPrint($payment->id);
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Payment stored successfully',
-                'data' => $payment
+                'data' => $payment,
+                'receipt' => $receipt['data'] ?? null,
             ], 201);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
             return response()->json([
                 'status' => 'error',
@@ -212,6 +193,7 @@ class StudentPaymentService
             ], 500);
         }
     }
+
 
     // Edit payment amount
     public function updatePayment(Request $request, $id)
@@ -229,7 +211,7 @@ class StudentPaymentService
                 'message' => 'Payment updated successfully',
                 'data' => $payment
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to update payment',
@@ -250,7 +232,7 @@ class StudentPaymentService
                 'message' => 'Payment deleted successfully',
                 'data' => $payment
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to delete payment',
@@ -325,7 +307,7 @@ class StudentPaymentService
                 'message' => 'Payments retrieved successfully.',
                 'data' => $payments
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to retrieve payments.',
@@ -556,9 +538,7 @@ class StudentPaymentService
 
             // Get the class_category_has_student_class record for this category
             $ccsc = ClassCategoryHasStudentClass::where('student_classes_id', $classId)
-                ->whereHas('classCategory', function ($q) use ($category) {
-                    $q->where('category_name', $category);
-                })
+                ->whereHas('classCategory', fn($q) => $q->where('category_name', $category))
                 ->first();
 
             if (!$ccsc) continue;
@@ -570,13 +550,25 @@ class StudentPaymentService
             if (!$attendance) continue;
 
             // Get hall and check hall price
-            $hall = $attendance->hall; // relationship
+            $hall = $attendance->hall;
             if ($hall && $hall->hall_price) {
                 $prices[] = $hall->hall_price;
+
+                // ✅ Insert hall fee directly
+                $this->insertHallFee($hall->id, $hall->hall_price);
             }
         }
 
         // Return first price found or null if none
         return $prices[0] ?? null;
+    }
+
+    private function insertHallFee($hallId, $amount)
+    {
+        return HallFee::create([
+            'hall_id' => $hallId,
+            'amount'  => $amount,
+            'status'  => 1,
+        ]);
     }
 }

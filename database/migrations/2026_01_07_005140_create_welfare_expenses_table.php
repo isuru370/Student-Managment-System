@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('welfare_expenses', function (Blueprint $table) {
             $table->id();
 
-            // Auto-generated receipt number (WEXP-YYYY-XXXX format)
+            // Auto-generated receipt number (SA-YYYY-XXXX format)
             $table->string('receipt_no')->unique();
 
             // Expense details
@@ -26,15 +26,14 @@ return new class extends Migration
             // Payment details
             $table->string('payment_method')->default('cash');
 
-            // Approval/Recording
-            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('restrict');
+            //Recording
             $table->foreignId('recorded_by')->constrained('users')->onDelete('restrict');
 
             $table->text('description')->nullable();
             $table->text('remarks')->nullable();
 
             $table->tinyInteger('status')->default(1)
-                ->comment('1 = Approved/Paid, 2 = Pending, 3 = Rejected, 0 = Cancelled');
+                ->comment('1 = Approved/Paid, 0 = Cancelled');
 
             $table->softDeletes();
             $table->timestamps();
